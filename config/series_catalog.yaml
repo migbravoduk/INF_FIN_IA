@@ -1,0 +1,121 @@
+# ============================================================
+# Catálogo de Series — Banco Central de Chile (BDE API)
+# Documentación: https://si3.bcentral.cl/estadisticas/Principal1/Web_Services/index.htm
+# ============================================================
+
+bcentral:
+  # --- Actividad Económica ---
+  - id: F032.PIB.FLU.R.CLP.EP18.Z.Z.0.T
+    name: PIB Real (encadenado 2018)
+    category: actividad
+    frequency: quarterly
+    unit: millones_CLP_2018
+    description: Producto Interno Bruto real, acumulado trimestral
+
+  - id: F032.PIB.FLU.R.CLP.EP18.Z.Z.0.T.P
+    name: PIB Real trimestral (var. % anual)
+    category: actividad
+    frequency: quarterly
+    unit: porcentaje
+    description: Variación porcentual anual del PIB real
+
+  # --- Precios ---
+  - id: F073.IPC.IND.N.DIC.Z.Z.2023100
+    name: IPC (base diciembre 2023=100)
+    category: precios
+    frequency: monthly
+    unit: indice
+    description: Índice de Precios al Consumidor, base diciembre 2023
+
+  - id: F073.IPC.VAR.N.DIC.Z.Z.M
+    name: IPC Variación mensual
+    category: precios
+    frequency: monthly
+    unit: porcentaje
+    description: Variación mensual del IPC
+
+  - id: F073.IPC.VAR.N.DIC.Z.Z.A
+    name: IPC Variación anual (inflación)
+    category: precios
+    frequency: monthly
+    unit: porcentaje
+    description: Variación anual del IPC (inflación 12 meses)
+
+  # --- Política Monetaria ---
+  - id: F072.TAS.IND.TEC.M.MES.D
+    name: Tasa de Política Monetaria (TPM)
+    category: politica_monetaria
+    frequency: monthly
+    unit: porcentaje_anual
+    description: Tasa de política monetaria nominal, promedio mensual
+
+  # --- Mercado Laboral ---
+  - id: F019.EMP.DES.M.N.MES
+    name: Tasa de Desempleo
+    category: laboral
+    frequency: monthly
+    unit: porcentaje
+    description: Tasa de desocupación nacional (INE, serie mensual)
+
+  # --- Tipo de Cambio ---
+  - id: F016.DEM.DEM_1.USD.MES.Z.Z
+    name: Tipo de Cambio CLP/USD (promedio mensual)
+    category: tipo_de_cambio
+    frequency: monthly
+    unit: CLP_por_USD
+    description: Tipo de cambio peso-dólar, promedio del período
+
+  - id: F016.DEM.DEM_1.USD.DIA.Z.Z
+    name: Tipo de Cambio CLP/USD (diario)
+    category: tipo_de_cambio
+    frequency: daily
+    unit: CLP_por_USD
+    description: Tipo de cambio observado diario
+
+  # --- Balanza de Pagos ---
+  - id: F055.BOP.BOP10.BPM6.Z.Z.ABR.A.CLP.N
+    name: Balanza de Pagos - Cuenta Corriente
+    category: sector_externo
+    frequency: quarterly
+    unit: millones_USD
+    description: Saldo de cuenta corriente de la balanza de pagos
+
+  # --- Sector Fiscal ---
+  - id: F048.FIS.FIS.FIS.N.DIF.A.CLP
+    name: Balance Fiscal del Gobierno Central
+    category: fiscal
+    frequency: annual
+    unit: millones_CLP
+    description: Balance fiscal efectivo del Gobierno Central
+
+  # --- Precios de Materias Primas ---
+  - id: F051.PRE.PRE07.PRE07.USD.MES
+    name: Precio del Cobre (¢US/lb)
+    category: materias_primas
+    frequency: monthly
+    unit: centavos_USD_por_libra
+    description: Precio de bolsa del cobre, promedio mensual
+
+
+# ============================================================
+# Fase 2 — Series adicionales del Banco Central
+# UF, UTM, IVP se obtienen del BCCh (misma BDE API) o del SII vía scraping
+# ============================================================
+# bcentral_fase2:
+#   - UF diaria          (BCCh BDE API)
+#   - UTM mensual        (BCCh BDE API o scraping SII)
+#   - IVP mensual        (BCCh BDE API)
+#   - IMACEC mensual     (BCCh BDE API — proxy mensual del PIB)
+#   - Reservas Internacionales (BCCh BDE API)
+
+# ============================================================
+# Fase 3 — CMF: Estados Financieros de Empresas
+# Acceso vía portal web CMF (www.cmfchile.cl) — SIN API pública
+# Formatos: XBRL (estándar FECU) y PDF (memorias, notas)
+# ============================================================
+# cmf_eeff:
+#   - Listado de empresas fiscalizadas (scraping)
+#   - Estados financieros XBRL trimestrales/anuales
+#   - Estadísticas de fondos mutuos (portal CMF)
+#   - Estadísticas de seguros (portal CMF)
+#   - Estadísticas de mercado de valores (portal CMF)

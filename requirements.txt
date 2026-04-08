@@ -1,0 +1,29 @@
+# Core
+httpx>=0.27.0
+python-dotenv>=1.0.0
+pydantic>=2.7.0
+pydantic-settings>=2.3.0
+
+# Database
+duckdb>=0.10.0
+
+# Scheduler
+APScheduler>=3.10.4
+
+# Config
+PyYAML>=6.0.1
+
+# CLI
+click>=8.1.7
+rich>=13.7.0
+
+# PDF Extraction (Fase 3)
+# pdfplumber>=0.11.0
+# camelot-py[cv]>=0.11.0
+
+# XBRL (Fase 3)
+# python-xbrl>=1.1.4
+
+# API (Fase 5)
+# fastapi>=0.111.0
+# uvicorn[standard]>=0.30.0
