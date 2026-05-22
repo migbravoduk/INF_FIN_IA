@@ -76,32 +76,36 @@ class Database:
 
     def upsert_observations(self, series_id: str, records: list[dict]) -> tuple[int, int]:
         """
-        Inserta o actualiza observaciones.
+        Inserta o actualiza observaciones de forma eficiente (bulk).
         Retorna (nuevas, actualizadas).
         """
+        if not records:
+            return 0, 0
+
         new_count = 0
         updated_count = 0
 
+        # 1. Insertar todos los registros nuevos ignorando conflictos de clave única
         for rec in records:
-            # Verificar si ya existe
-            existing = self.conn.execute(
-                "SELECT value FROM observations WHERE series_id = ? AND date = ?",
-                [series_id, rec['date']]
-            ).fetchone()
-
-            if existing is None:
-                self.conn.execute(f"""
+            try:
+                self.conn.execute("""
                     INSERT INTO observations (id, series_id, date, value)
                     VALUES (nextval('obs_seq'), ?, ?, ?)
                 """, [series_id, rec['date'], rec['value']])
                 new_count += 1
-            elif existing[0] != rec['value']:
-                self.conn.execute("""
-                    UPDATE observations 
-                    SET value = ?, is_revised = true, fetched_at = now()
-                    WHERE series_id = ? AND date = ?
-                """, [rec['value'], series_id, rec['date']])
-                updated_count += 1
+            except Exception:
+                # Ya existe — verificar si el valor cambió (revisión)
+                existing = self.conn.execute(
+                    "SELECT value FROM observations WHERE series_id = ? AND date = ?",
+                    [series_id, rec['date']]
+                ).fetchone()
+                if existing and existing[0] != rec['value']:
+                    self.conn.execute("""
+                        UPDATE observations
+                        SET value = ?, is_revised = true, fetched_at = now()
+                        WHERE series_id = ? AND date = ?
+                    """, [rec['value'], series_id, rec['date']])
+                    updated_count += 1
 
         return new_count, updated_count
 

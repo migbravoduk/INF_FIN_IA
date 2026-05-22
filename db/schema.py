@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS series (
     description     VARCHAR,
     first_available DATE,
     last_updated    TIMESTAMP,
-    created_at      TIMESTAMP DEFAULT current_timestamp
+    created_at      TIMESTAMP DEFAULT now()
 );
 
 -- ============================================================

@@ -14,11 +14,9 @@ Uso:
 
 import logging
 import sys
+import io
 from datetime import datetime
 from pathlib import Path
-
-import sys
-import io
 
 # Forzar UTF-8 en la consola de Windows (evita UnicodeEncodeError con emojis)
 if sys.stdout.encoding and sys.stdout.encoding.lower() not in ("utf-8", "utf8"):
@@ -302,12 +300,12 @@ def status():
         else:
             console.print("[dim]Sin historial de fetches aún. Ejecuta: python main.py fetch --all[/]")
 
-    # Credenciales
+    # Estado de fuentes de datos
     console.print()
-    bcentral_ok = "✅" if settings.has_bcentral_credentials else "❌"
-    cmf_ok = "✅" if settings.has_cmf_credentials else "⚠️  (Fase 2)"
-    console.print(f"  {bcentral_ok} Banco Central API")
-    console.print(f"  {cmf_ok} CMF API")
+    bcentral_ok = "[green]OK[/]" if settings.has_bcentral_credentials else "[red]Sin configurar[/]"
+    console.print(f"  Banco Central (BDE API): {bcentral_ok}")
+    console.print(f"  CMF (portal web scraping): [green]OK[/] [dim](sin credenciales requeridas)[/]")
+    console.print(f"  SII (scraping publico):    [green]OK[/] [dim](sin credenciales requeridas)[/]")
 
 
 # ----------------------------------------------------------
@@ -410,14 +408,4 @@ def run_scheduler():
 # ============================================================
 
 if __name__ == "__main__":
-    # Si el usuario ejecuta sin comandos (ej. doble clic en ejecutable)
-    if len(sys.argv) == 1:
-        try:
-            from interactive import run_menu
-            run_menu()
-        except KeyboardInterrupt:
-            console.print("\n[yellow]Saliendo...[/]")
-            sys.exit(0)
-    else:
-        cli()
-
+    cli()

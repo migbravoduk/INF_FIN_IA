@@ -107,7 +107,7 @@ class BCentralCollector:
         except httpx.HTTPStatusError as e:
             logger.error(f"HTTP error fetching {series_id}: {e.response.status_code}")
             raise
-        except object as e:
+        except Exception as e:
             logger.error(f"Error inesperado fetching {series_id}: {e}")
             raise
 
@@ -187,41 +187,53 @@ class BCentralCollector:
         except ValueError:
             return None
 
-    def search_series(self, term: str) -> list[dict]:
+    def search_series(self, term: str, catalog_path: str = "config/series_catalog.yaml") -> list[dict]:
         """
-        Busca series disponibles en la BDE por término.
+        Busca series disponibles filtrando el catálogo YAML local por nombre/ID.
+
+        Nota: La BDE API (SearchSeries) requiere frequencyCode, no un término de texto
+        libre, y devuelve listas vacías. Por eso la búsqueda se hace localmente
+        contra el catálogo YAML.
 
         Args:
-            term: Texto a buscar (ej. 'IPC', 'PIB', 'dolar')
+            term: Texto a buscar (case-insensitive)
+            catalog_path: Ruta al catálogo YAML de series
 
         Returns:
-            Lista de dicts con información de las series encontradas
+            Lista de dicts con id, name, category, frequency, description
         """
-        if not settings.has_bcentral_credentials:
-            raise ValueError("Credenciales del Banco Central no configuradas.")
+        import yaml
 
-        params = self._build_params(function="SearchSeries", term=term)
+        try:
+            with open(catalog_path, encoding="utf-8") as f:
+                catalog = yaml.safe_load(f)
+        except FileNotFoundError:
+            logger.error(f"Catálogo no encontrado: {catalog_path}")
+            return []
 
-        with httpx.Client(timeout=20.0) as client:
-            response = client.get(BASE_URL, params=params)
-            response.raise_for_status()
-            data = response.json()
-
+        term_lower = term.lower()
         results = []
-        series_infos = data.get("SeriesInfos") or []
-        
-        # BDE SieteRestWS sometimes returns a list directly or a dict with SeriesInfo when multiple
-        if isinstance(series_infos, dict):
-            series_list = series_infos.get("SeriesInfo", [])
-        else:
-            series_list = series_infos
 
-        for item in series_list:
-            if not isinstance(item, dict):
+        for source_key, series_list in catalog.items():
+            if not isinstance(series_list, list):
                 continue
-            results.append({
-                "id": item.get("seriesId"),
-                "name": item.get("frequencyCode"),
-                "description": item.get("englishTitle") or item.get("spanishTitle"),
-            })
+            for s in series_list:
+                if not isinstance(s, dict):
+                    continue
+                searchable = " ".join([
+                    s.get("id", ""),
+                    s.get("name", ""),
+                    s.get("category", ""),
+                    s.get("description", ""),
+                ]).lower()
+                if term_lower in searchable:
+                    results.append({
+                        "id": s.get("id"),
+                        "name": s.get("name"),
+                        "category": s.get("category"),
+                        "frequency": s.get("frequency"),
+                        "description": s.get("description"),
+                        "source": source_key,
+                    })
+
         return results

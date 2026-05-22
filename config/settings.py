@@ -15,11 +15,14 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    # Banco Central
+    # Banco Central de Chile — BDE API
+    # Registro en: https://si3.bcentral.cl/estadisticas/Principal1/Web_Services/index.htm
+    # IMPORTANTE: después de registrarse, iniciar sesión en la página de API para activar
     BCENTRAL_USER: str = ""
     BCENTRAL_PASS: str = ""
 
-    # CMF
+    # CMF — sin API pública, acceso por scraping del portal web cmfchile.cl
+    # Esta variable queda como placeholder para futuras fases
     CMF_API_KEY: str = ""
 
     # Base de datos
@@ -41,8 +44,9 @@ class Settings(BaseSettings):
         return bool(self.BCENTRAL_USER and self.BCENTRAL_PASS)
 
     @property
-    def has_cmf_credentials(self) -> bool:
-        return bool(self.CMF_API_KEY)
+    def cmf_scraping_enabled(self) -> bool:
+        """CMF se accede por scraping — siempre disponible, no requiere clave."""
+        return True
 
 
 settings = Settings()

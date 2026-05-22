@@ -1,91 +1,151 @@
 # 🇨🇱 Repositorio de Información Financiera — Chile
 
-Sistema de ingestión, almacenamiento y consulta de datos financieros y macroeconómicos de Chile. Se actualiza automáticamente según la frecuencia de cada fuente.
+> **Visión del proyecto**: Sistema que acumula datos financieros y macroeconómicos de Chile de forma continua, aplica procesamiento analítico (proyecciones de estados financieros con fundamento macro, detección de anomalías, comparación sectorial) y entrega la información procesada a través de herramientas de storytelling (dashboards, reportes narrativos, API consumible por otros sistemas).
+
+---
+
+## Arquitectura general
+
+```
+FUENTES (BCCh, CMF web, SII, Bolsa)
+        ↓ ingestión automática (scheduler)
+BASE DE DATOS (DuckDB local)
+        ↓ procesamiento + modelos
+CAPA ANALÍTICA (proyecciones, ratios, series derivadas)
+        ↓ entrega
+STORYTELLING (dashboard web, API REST, reportes Jules)
+```
+
+---
 
 ## Estado actual
 
 | Fase | Estado | Descripción |
 |------|--------|-------------|
 | **1 — Macro BCCh** | ✅ Activa | PIB, IPC, TPM, empleo, tipo de cambio |
-| **2 — CMF Indicadores** | 🔜 Próxima | UF, UTM, IVP + scraping web CMF |
-| **3 — EEFF Empresas** | ⏳ Planificada | XBRL + PDF empresas listadas |
-| **4 — Calendarios** | ⏳ Planificada | Fechas de publicaciones |
-| **5 — API + Dashboard** | ⏳ Planificada | FastAPI + visualización web |
-| **6 — IA** | ⏳ Planificada | Análisis, reportes automáticos |
+| **2 — Series adicionales BCCh + SII** | 🔜 Próxima | UF, UTM, IVP, IMACEC + respaldo SII |
+| **3 — CMF: Empresas y Mercados** | ⏳ Planificada | XBRL + PDF empresas listadas, fondos mutuos, seguros |
+| **4 — Calendarios y Alertas** | ⏳ Planificada | Fechas de publicaciones, alertas automáticas |
+| **5 — Análisis y Proyecciones** | ⏳ Planificada | Proyecciones macrofundadas, ratios, anomalías |
+| **6 — API + Dashboard** | ⏳ Planificada | FastAPI + visualización web interactiva |
+| **7 — Storytelling / Jules** | ⏳ Planificada | Reportes narrativos automáticos con LLM |
 
 ---
 
-## Instalación
+## Requisitos para retomar el proyecto
 
-### Requisitos
-- Python 3.11+
-- pip
+### Entorno Python
 
-### 1. Clonar y configurar entorno
+| Requisito | Versión | Notas |
+|---|---|---|
+| Python | 3.11+ | Instalado en `C:\Users\mbrav\anaconda3\` |
+| Anaconda | Cualquiera | Se usa el Python del entorno base de Anaconda |
+| pip | — | Disponible en el entorno Anaconda |
+
+> **Importante**: En este equipo, Python está en Anaconda. Usar siempre `C:\Users\mbrav\anaconda3\python.exe` en vez de `python` o `py` (los alias del sistema apuntan al Microsoft Store stub).
+
+### Dependencias
 
 ```powershell
-cd c:\Users\mbrav\Desktop\INF_FIN_IA
-python -m venv .venv
-.venv\Scripts\activate
-pip install -r requirements.txt
+C:\Users\mbrav\anaconda3\python.exe -m pip install -r requirements.txt
 ```
 
-### 2. Configurar credenciales
+### Credenciales y accesos
+
+| Servicio | Variable en `.env` | Cómo obtenerla | Estado |
+|---|---|---|---|
+| **Banco Central Chile — BDE API** | `BCENTRAL_USER` / `BCENTRAL_PASS` | Registro gratuito en [si3.bcentral.cl/estadisticas/Principal1/Web_Services](https://si3.bcentral.cl/estadisticas/Principal1/Web_Services/index.htm) → luego iniciar sesión en la misma página para **activar** las credenciales (paso obligatorio) | ✅ Configurada |
+| **CMF Chile** | — | Sin credenciales — acceso por scraping del portal web [cmfchile.cl](https://www.cmfchile.cl) | Sin API pública |
+| **SII Chile** | — | Sin credenciales — scraping HTML público [sii.cl](https://www.sii.cl/valores_y_fechas/uf/) | Sin API pública |
+| **Bolsa de Santiago** | — | Sin credenciales — scraping (Fase futura) | Pendiente |
+
+> **Nota sobre la activación del BCCh**: El registro en si3.bcentral.cl crea la cuenta, pero las credenciales para la API REST BDE requieren un **segundo paso manual**: iniciar sesión en [si3.bcentral.cl/Siete/es/Siete/API](https://si3.bcentral.cl/Siete/es/Siete/API) y hacer clic en "Activar credenciales". Sin este paso, la API devuelve `Invalid username or password` aunque las credenciales sean correctas.
+
+### Archivo `.env`
 
 ```powershell
+# Copiar la plantilla y editar
 copy .env.example .env
 ```
 
-Edita `.env` y completa:
+Contenido esperado del `.env`:
 
-| Variable | Fuente | Url de registro |
-|---|---|---|
-| `BCENTRAL_USER` | Banco Central Chile | [si3.bcentral.cl](https://si3.bcentral.cl/estadisticas/Principal1/Web_Services/index.htm) |
-| `BCENTRAL_PASS` | Banco Central Chile | (misma url) |
-| `CMF_API_KEY` | CMF Chile | [api.cmfchile.cl](https://api.cmfchile.cl) |
+```env
+BCENTRAL_USER=tu_email@ejemplo.com
+BCENTRAL_PASS=tu_contraseña_bde
+CMF_API_KEY=
+DB_PATH=data/finanzas_chile.duckdb
+DAILY_FETCH_TIME=08:00
+TIMEZONE=America/Santiago
+LOG_LEVEL=INFO
+LOG_FILE=logs/app.log
+```
 
-> **Nota**: Ambas son gratuitas y solo requieren registro con email.
+### Verificar que todo está en orden
+
+```powershell
+C:\Users\mbrav\anaconda3\python.exe main.py status
+```
+
+Salida esperada:
+```
+✅ Banco Central API
+⚠️  (Fase 2) CMF API
+```
+
+---
+
+## Instalación desde cero
+
+```powershell
+cd c:\Users\mbrav\Desktop\INF_FIN_IA
+
+# Instalar dependencias en Anaconda
+C:\Users\mbrav\anaconda3\python.exe -m pip install -r requirements.txt
+
+# Copiar y editar credenciales
+copy .env.example .env
+# (editar .env con tus datos)
+
+# Verificar estado
+C:\Users\mbrav\anaconda3\python.exe main.py status
+
+# Backfill inicial (descarga histórico de todas las series)
+C:\Users\mbrav\anaconda3\python.exe main.py fetch --all
+```
 
 ---
 
 ## Uso de la CLI
 
 ```powershell
-# Activar entorno virtual primero
-.venv\Scripts\activate
-
 # Ver estado del sistema y credenciales
-python main.py status
+C:\Users\mbrav\anaconda3\python.exe main.py status
 
-# Backfill inicial — descarga todas las series (recomendado la primera vez)
-python main.py fetch --all
+# Backfill inicial — descarga todas las series del catálogo
+C:\Users\mbrav\anaconda3\python.exe main.py fetch --all
 
-# Descargar una serie por nombre
-python main.py fetch --series IPC
-python main.py fetch --series "tipo de cambio"
-python main.py fetch --series cobre
+# Descargar una serie por nombre (búsqueda en catálogo local)
+C:\Users\mbrav\anaconda3\python.exe main.py fetch --series IPC
+C:\Users\mbrav\anaconda3\python.exe main.py fetch --series "tipo de cambio"
+C:\Users\mbrav\anaconda3\python.exe main.py fetch --series cobre
 
-# Descargar por código exacto de la BDE
-python main.py fetch --id F073.IPC.IND.N.DIC.Z.Z.2023100
+# Descargar por código exacto BDE (verificar código en si3.bcentral.cl primero)
+C:\Users\mbrav\anaconda3\python.exe main.py fetch --id F032.PIB.FLU.R.CLP.EP18.Z.Z.0.T
 
 # Descargar con rango de fechas
-python main.py fetch --series IPC --from-date 2015-01-01 --to-date 2025-12-31
+C:\Users\mbrav\anaconda3\python.exe main.py fetch --series PIB --from-date 2010-01-01 --to-date 2025-12-31
 
 # Consultar datos almacenados
-python main.py query --series IPC
-python main.py query --series IPC --from-date 2020-01-01
-python main.py query --series IPC --format csv
-python main.py query --series IPC --format json
+C:\Users\mbrav\anaconda3\python.exe main.py query --series PIB
+C:\Users\mbrav\anaconda3\python.exe main.py query --series PIB --format csv
+C:\Users\mbrav\anaconda3\python.exe main.py query --series PIB --format json
 
-# Listar series en la base de datos
-python main.py list
+# Listar series registradas en la base de datos
+C:\Users\mbrav\anaconda3\python.exe main.py list
 
-# Buscar series disponibles en la BDE del BCCh
-python main.py search --term "cobre"
-python main.py search --term "imacec"
-
-# Iniciar scheduler automático (bloqueante)
-python main.py run-scheduler
+# Iniciar scheduler automático (bloqueante — corre indefinidamente)
+C:\Users\mbrav\anaconda3\python.exe main.py run-scheduler
 ```
 
 ---
@@ -95,88 +155,116 @@ python main.py run-scheduler
 ```
 INF_FIN_IA/
 ├── collectors/
-│   └── bcentral.py          # Cliente BDE API del Banco Central
+│   ├── bcentral.py          # ✅ Cliente BDE API del Banco Central (Fase 1)
+│   └── sii.py               # 🔜 Scraping SII para UF/UTM/IVP (Fase 2)
 ├── processors/
-│   └── normalizer.py        # Normalización y limpieza de datos
+│   ├── normalizer.py        # ✅ Normalización y limpieza de datos
+│   ├── standardizer.py      # 🔜 Mapeo XBRL → esquema estándar (Fase 3)
+│   ├── xbrl_parser.py       # 🔜 Parseo XBRL con arelle (Fase 3)
+│   └── pdf_extractor.py     # 🔜 Extracción de tablas de PDFs (Fase 3)
 ├── db/
-│   ├── database.py          # Capa de acceso DuckDB
-│   └── schema.py            # Definición de tablas
+│   ├── database.py          # ✅ Capa de acceso DuckDB
+│   └── schema.py            # ✅ Definición de tablas (series, observations, fetch_log)
 ├── scheduler/
-│   └── jobs.py              # Jobs APScheduler (daily/monthly/quarterly/annual)
+│   └── jobs.py              # ✅ APScheduler: daily/monthly/quarterly/annual
 ├── config/
-│   ├── settings.py          # Configuración centralizada (pydantic-settings)
-│   └── series_catalog.yaml  # Catálogo de series a ingestar
-├── data/                    # Base de datos DuckDB (generado automáticamente)
+│   ├── settings.py          # ✅ Configuración centralizada (pydantic-settings)
+│   └── series_catalog.yaml  # ✅ Catálogo de series a ingestar
+├── api/                     # ⏳ FastAPI REST (Fase 6)
+├── dashboard/               # ⏳ Frontend web (Fase 6)
+├── data/
+│   └── finanzas_chile.duckdb  # Base de datos DuckDB (generado automáticamente)
 ├── logs/                    # Logs de ejecución (generado automáticamente)
-├── main.py                  # CLI entry point
-├── .env.example             # Plantilla de variables de entorno
-├── requirements.txt
+├── main.py                  # ✅ CLI entry point
+├── .env                     # Credenciales (NO subir a git)
+├── .env.example             # Plantilla de variables
+├── requirements.txt         # ✅ Dependencias Python
 └── README.md
 ```
 
 ---
 
-## Series configuradas (Fase 1)
+## Series configuradas (Fase 1 — BCCh BDE API)
 
-| Categoría | Serie | Frecuencia |
-|---|---|---|
-| Actividad | PIB Real (encadenado 2018) | Trimestral |
-| Actividad | PIB Real — var. % anual | Trimestral |
-| Precios | IPC (base dic. 2023) | Mensual |
-| Precios | Variación mensual IPC | Mensual |
-| Precios | Inflación 12 meses | Mensual |
-| Política Monetaria | TPM nominal | Mensual |
-| Laboral | Tasa de desempleo | Mensual |
-| Tipo de Cambio | CLP/USD diario | Diario |
-| Tipo de Cambio | CLP/USD mensual | Mensual |
-| Sector Externo | Cuenta corriente BoP | Trimestral |
-| Fiscal | Balance fiscal GC | Anual |
-| Materias Primas | Precio del cobre | Mensual |
+| Categoría | Serie | Código BDE | Frecuencia |
+|---|---|---|---|
+| Actividad | PIB Real (encadenado 2018) | `F032.PIB.FLU.R.CLP.EP18.Z.Z.0.T` | Trimestral |
+| Actividad | PIB Real — var. % anual | `F032.PIB.FLU.R.CLP.EP18.Z.Z.0.T.P` | Trimestral |
+| Precios | IPC (base dic. 2023) | `F073.IPC.IND.N.DIC.Z.Z.2023100` | Mensual |
+| Precios | Variación mensual IPC | `F073.IPC.VAR.N.DIC.Z.Z.M` | Mensual |
+| Precios | Inflación 12 meses | `F073.IPC.VAR.N.DIC.Z.Z.A` | Mensual |
+| Política Monetaria | TPM nominal | `F072.TAS.IND.TEC.M.MES.D` | Mensual |
+| Laboral | Tasa de desempleo | `F019.EMP.DES.M.N.MES` | Mensual |
+| Tipo de Cambio | CLP/USD diario | `F016.DEM.DEM_1.USD.DIA.Z.Z` | Diario |
+| Tipo de Cambio | CLP/USD mensual | `F016.DEM.DEM_1.USD.MES.Z.Z` | Mensual |
+| Sector Externo | Cuenta corriente BoP | `F055.BOP.BOP10.BPM6.Z.Z.ABR.A.CLP.N` | Trimestral |
+| Fiscal | Balance fiscal GC | `F048.FIS.FIS.FIS.N.DIF.A.CLP` | Anual |
+| Materias Primas | Precio del cobre | `F051.PRE.PRE07.PRE07.USD.MES` | Mensual |
 
-Para agregar más series, edita `config/series_catalog.yaml`.
+> **Nota sobre códigos BDE**: Algunos códigos pueden devolver error si el BCCh los actualizó (cambian cuando renuevan años base). Para verificar el código exacto actual de una serie, buscarlo en [si3.bcentral.cl](https://si3.bcentral.cl) → Buscador. Solo el código del PIB Real (`F032.PIB.FLU.R.CLP.EP18.Z.Z.0.T`) ha sido validado en producción.
+
+Para agregar más series, editar `config/series_catalog.yaml`.
 
 ---
 
 ## Scheduler automático
 
-El scheduler ejecuta fetches según la frecuencia de cada serie:
-
 | Job | Trigger | Series |
 |---|---|---|
-| `daily_fetch` | Lun–Vie a las 08:00 | Tipo de cambio diario |
+| `daily_fetch` | Lun–Vie a las 08:00 (Santiago) | Tipo de cambio diario |
 | `monthly_fetch` | Día 6 de cada mes, 09:00 | IPC, TPM, desempleo, etc. |
 | `quarterly_fetch` | Día 10 (ene/abr/jul/oct), 09:30 | PIB, balanza de pagos |
 | `annual_fetch` | 15 de febrero, 10:00 | Balance fiscal |
 
-Para correrlo como servicio en Windows, puedes usar el Programador de Tareas o `nssm`.
+Para correrlo como servicio persistente en Windows:
+- Usar el **Programador de Tareas** de Windows (Task Scheduler)
+- O instalar `nssm` (Non-Sucking Service Manager) para gestionar el proceso
 
 ---
 
 ## Base de datos
 
-Se usa **DuckDB** (`data/finanzas_chile.duckdb`), ideal para análisis OLAP local.
-
-Puedes consultarla directamente:
+Se usa **DuckDB** (`data/finanzas_chile.duckdb`), ideal para análisis OLAP local sin servidor.
 
 ```python
 import duckdb
 conn = duckdb.connect("data/finanzas_chile.duckdb")
 
-# Últimos 12 meses de IPC
+# Ver todas las series disponibles
+df = conn.execute("SELECT id, name, frequency FROM series").fetchdf()
+
+# Últimos datos del PIB
 df = conn.execute("""
-    SELECT date, value 
-    FROM observations o
-    JOIN series s ON o.series_id = s.id
-    WHERE s.name LIKE '%IPC%' AND o.date >= date '2024-01-01'
-    ORDER BY date
+    SELECT date, value
+    FROM observations
+    WHERE series_id = 'F032.PIB.FLU.R.CLP.EP18.Z.Z.0.T'
+    ORDER BY date DESC LIMIT 10
 """).fetchdf()
 print(df)
 ```
 
 ---
 
-## Roadmap
+## Roadmap de procesamiento analítico
 
-Ver el [plan de implementación completo](../../../.gemini/antigravity/brain/ef9a714e-9bae-4b9d-a70b-168ff49a8ea6/implementation_plan.md).
+Una vez que la base de datos tenga cobertura histórica, se incorporarán:
 
-**Próxima fase (2)**: Indicadores CMF — UF, UTM, IVP, y datos del sector real vía scraping del portal CMF.
+| Capacidad | Descripción | Dependencias |
+|---|---|---|
+| **Proyecciones macro** | Modelos de proyección de variables macro (VAR, ARIMA, Kalman) usando los datos del BCCh | Fase 1–2 completas |
+| **Proyecciones de EEFF** | Proyecciones de estados financieros de empresas ancladas al escenario macro | Fase 3 completa |
+| **Ratios y comparación sectorial** | Cálculo automático de ROE, ROA, EV/EBITDA por empresa y sector | Fase 3 completa |
+| **Detección de anomalías** | Alertas cuando una empresa o indicador se desvía de su comportamiento histórico | Fase 3 + datos históricos |
+| **Informes narrativos (Jules)** | Integración con el agente Jules para generación automática de reportes Word/PPT | Fase 6 |
+
+---
+
+## Roadmap de storytelling
+
+| Herramienta | Descripción | Estado |
+|---|---|---|
+| **CLI** | Consulta de datos por terminal | ✅ Operativa |
+| **API REST** (FastAPI) | Endpoints para consumir los datos desde cualquier app | ⏳ Fase 6 |
+| **Dashboard web** | Visualizaciones interactivas (Chart.js / Plotly) | ⏳ Fase 6 |
+| **Reportes automáticos** | Documentos Word/PPT generados por Jules a partir de la BD | ⏳ Fase 7 |
+| **Alertas** | Notificaciones cuando se acercan publicaciones o hay datos nuevos | ⏳ Fase 4 |
