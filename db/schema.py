@@ -91,6 +91,32 @@ CREATE TABLE IF NOT EXISTS cmf_financial_statements (
 
 CREATE INDEX IF NOT EXISTS idx_cmf_rut_period ON cmf_financial_statements(rut, period);
 CREATE INDEX IF NOT EXISTS idx_cmf_company ON cmf_financial_statements(company_name);
+
+-- ============================================================
+-- Estados Financieros Mensuales de Bancos (Fase 4)
+-- ============================================================
+CREATE SEQUENCE IF NOT EXISTS bank_seq START 1;
+
+CREATE TABLE IF NOT EXISTS cmf_bank_statements (
+    id                  BIGINT PRIMARY KEY DEFAULT nextval('bank_seq'),
+    year                INTEGER NOT NULL,
+    month               INTEGER NOT NULL,
+    period              INTEGER NOT NULL,              -- Formato YYYYMM (ej. 202512)
+    bank_code           VARCHAR NOT NULL,              -- Ficha / Código SBIF (ej. '001')
+    bank_name           VARCHAR NOT NULL,              -- Nombre del Banco
+    report_type         VARCHAR NOT NULL,              -- 'balance' o 'resultado'
+    account_code        VARCHAR NOT NULL,              -- Código de cuenta (ej. '100000000')
+    account_name        VARCHAR NOT NULL,              -- Nombre/Glosa de la cuenta
+    val_clp_no_reaj     DOUBLE,                        -- Moneda Chilena No Reajustable
+    val_clp_reaj_ipc    DOUBLE,                        -- Moneda Reajustable por IPC
+    val_clp_reaj_tc     DOUBLE,                        -- Moneda Reajustable por Tipo de Cambio (Dólar)
+    val_extranjera      DOUBLE,                        -- Moneda Extranjera
+    val_total           DOUBLE NOT NULL,               -- Moneda Total Consolidada
+    fetched_at          TIMESTAMP DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_bank_code_period ON cmf_bank_statements(bank_code, period);
+CREATE INDEX IF NOT EXISTS idx_bank_account_code ON cmf_bank_statements(account_code);
 """
 
 SEED_SOURCES_SQL = """

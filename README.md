@@ -25,10 +25,11 @@ STORYTELLING (dashboard web, API REST, reportes Jules)
 | **1 — Macro BCCh** | ✅ Activa | PIB, IPC, TPM, empleo, tipo de cambio |
 | **2 — Series adicionales BCCh + SII** | ✅ Activa | UF, UTM, IVP, IMACEC desde la API de la BDE |
 | **3 — CMF: Empresas y Mercados** | ✅ Activa | Ingesta de archivos trimestrales planos .txt de estados financieros corporativos |
-| **4 — Calendarios y Alertas** | ⏳ Planificada | Fechas de publicaciones, alertas automáticas |
-| **5 — Análisis y Proyecciones** | ⏳ Planificada | Proyecciones macrofundadas, ratios, anomalías |
-| **6 — API + Dashboard** | ⏳ Planificada | FastAPI + visualización web interactiva |
-| **7 — Storytelling / Jules** | ⏳ Planificada | Reportes narrativos automáticos con LLM |
+| **4 — CMF: Bancos e Inst. Financieras** | ✅ Activa | Ingesta mensual de balances y resultados con desglose por moneda desde la API REST SBIFv3 |
+| **5 — Calendarios y Alertas** | ⏳ Planificada | Fechas de publicaciones, alertas automáticas |
+| **6 — Análisis y Proyecciones** | ⏳ Planificada | Proyecciones macrofundadas, ratios, anomalías |
+| **7 — API + Dashboard** | ⏳ Planificada | FastAPI + visualización web interactiva |
+| **8 — Storytelling / Jules** | ⏳ Planificada | Reportes narrativos automáticos con LLM |
 
 ---
 
@@ -155,6 +156,25 @@ C:\Users\mbrav\anaconda3\python.exe main.py query-cmf --rut 60503000 --period 20
 C:\Users\mbrav\anaconda3\python.exe main.py query-cmf --company "CORREOS" --period 202512 --limit 5 --format json
 
 # ============================================================
+# Ingesta y Consulta Bancaria (Fase 4 — CMF Bancos)
+# ============================================================
+
+# Descargar e ingestar reportes mensuales bancarios para un banco específico (ej. Banco de Chile 001, Dic 2025)
+C:\Users\mbrav\anaconda3\python.exe main.py fetch-banks --year 2025 --month 12 --bank 001
+
+# Descargar automáticamente todos los bancos de la plaza para un mes específico (Nov 2025)
+C:\Users\mbrav\anaconda3\python.exe main.py fetch-banks --year 2025 --month 11
+
+# Realizar un backfill histórico completo de todos los bancos principales desde 2024 de forma automatizada
+C:\Users\mbrav\anaconda3\python.exe main.py fetch-banks --history
+
+# Consultar activos u otras cuentas bancarias (ej. Total Activos 100000000 de Banco de Chile)
+C:\Users\mbrav\anaconda3\python.exe main.py query-banks --bank 001 --account 100000000
+
+# Exportar en formato JSON de alta precisión (limitado a 2 registros)
+C:\Users\mbrav\anaconda3\python.exe main.py query-banks --bank 001 --account 100000000 --format json --limit 2
+
+# ============================================================
 # Listar y Scheduler
 # ============================================================
 
@@ -174,6 +194,7 @@ INF_FIN_IA/
 ├── collectors/
 │   ├── bcentral.py          # ✅ Cliente BDE API del Banco Central (Fases 1 y 2)
 │   ├── cmf.py               # ✅ Ingestionador plano de Estados Financieros CMF (Fase 3)
+│   ├── cmf_banks.py         # ✅ Cliente API REST de Estados Financieros Bancos CMF (Fase 4)
 │   └── sii.py               # 🔜 Scraping SII alternativo (Fase 2)
 ├── processors/
 │   ├── normalizer.py        # ✅ Normalización y limpieza de datos macro
@@ -192,6 +213,7 @@ INF_FIN_IA/
 ├── dashboard/               # ⏳ Frontend web (Fase 6)
 ├── data/
 │   ├── cmf_raw/             # Caché local de archivos planos trimestrales (.txt) de la CMF
+│   ├── bank_raw/            # Caché local de respuestas JSON de la API CMF Bancos (Fase 4)
 │   └── finanzas_chile.duckdb  # Base de datos DuckDB (generado automáticamente)
 ├── logs/                    # Logs de ejecución (generado automáticamente)
 ├── main.py                  # ✅ CLI entry point
@@ -277,6 +299,30 @@ df = conn.execute("""
     FROM cmf_financial_statements
     WHERE rut = '60503000' AND period = 202512
     LIMIT 10
+""").fetchdf()
+print(df)
+```
+
+### Consulta de Estados Financieros de Bancos (Desglose de Moneda)
+
+```python
+import duckdb
+conn = duckdb.connect("data/finanzas_chile.duckdb")
+
+# Consultar la cuenta de Total Activos (100000000) mostrando la distribución de monedas en Banco de Chile
+df = conn.execute("""
+    SELECT 
+        period, 
+        bank_name, 
+        account_name, 
+        val_clp_no_reaj AS clp_no_reajustable,
+        val_clp_reaj_ipc AS reajustable_uf,
+        val_clp_reaj_tc AS reajustable_usd,
+        val_extranjera AS moneda_extranjera,
+        val_total AS total_consolidado
+    FROM cmf_bank_statements
+    WHERE bank_code = '001' AND account_code = '100000000'
+    ORDER BY period DESC
 """).fetchdf()
 print(df)
 ```

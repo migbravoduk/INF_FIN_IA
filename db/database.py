@@ -272,6 +272,104 @@ class Database:
         return self.conn.execute(query, params).fetchdf()
 
     # ----------------------------------------------------------
+    # Bancos CMF (Fase 4)
+    # ----------------------------------------------------------
+
+    def insert_bank_records(self, year: int, month: int, bank_code: str, report_type: str, records: list[dict]) -> int:
+        """
+        Inserta estados financieros de bancos usando "Delete-then-Insert" atómico.
+        Garantiza que la operación completa sea transaccional.
+        Retorna la cantidad de registros insertados.
+        """
+        if not records:
+            return 0
+
+        # Estandarizar código de banco a 3 dígitos (ej. '1' -> '001')
+        clean_bank_code = str(bank_code).strip().zfill(3)
+
+        tuples_data = [
+            (
+                int(rec['year']),
+                int(rec['month']),
+                int(rec['period']),
+                clean_bank_code,
+                str(rec['bank_name']).strip(),
+                str(rec['report_type']).strip(),
+                str(rec['account_code']).strip(),
+                str(rec['account_name']).strip(),
+                float(rec['val_clp_no_reaj']) if rec.get('val_clp_no_reaj') is not None else None,
+                float(rec['val_clp_reaj_ipc']) if rec.get('val_clp_reaj_ipc') is not None else None,
+                float(rec['val_clp_reaj_tc']) if rec.get('val_clp_reaj_tc') is not None else None,
+                float(rec['val_extranjera']) if rec.get('val_extranjera') is not None else None,
+                float(rec['val_total'])
+            )
+            for rec in records
+        ]
+
+        self.conn.execute("BEGIN TRANSACTION")
+        try:
+            # 1. Eliminar datos existentes del banco, período y tipo de reporte específicos
+            self.conn.execute("""
+                DELETE FROM cmf_bank_statements 
+                WHERE year = ? AND month = ? AND bank_code = ? AND report_type = ?
+            """, [year, month, clean_bank_code, report_type])
+
+            # 2. Bulk insert masivo
+            self.conn.executemany("""
+                INSERT INTO cmf_bank_statements 
+                    (year, month, period, bank_code, bank_name, report_type, 
+                     account_code, account_name, val_clp_no_reaj, val_clp_reaj_ipc, 
+                     val_clp_reaj_tc, val_extranjera, val_total)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, tuples_data)
+
+            self.conn.execute("COMMIT")
+            logger.info(f"Ingestados con éxito {len(records)} registros bancarios ({report_type}) para el banco {clean_bank_code} en {year}-{month:02d}.")
+            return len(records)
+        except Exception as e:
+            self.conn.execute("ROLLBACK")
+            logger.error(f"Error al ingestar registros bancarios para el banco {clean_bank_code} en {year}-{month:02d}. Transacción revertida.", exc_info=True)
+            raise e
+
+    def query_bank_statements(
+        self,
+        bank_code: Optional[str] = None,
+        period: Optional[int] = None,
+        account_code: Optional[str] = None,
+        report_type: Optional[str] = None,
+        limit: int = 50
+    ):
+        """Recupera estados financieros mensuales de bancos con filtros flexibles como DataFrame."""
+        query = """
+            SELECT year, month, period, bank_code, bank_name, report_type, 
+                   account_code, account_name, val_clp_no_reaj, val_clp_reaj_ipc, 
+                   val_clp_reaj_tc, val_extranjera, val_total 
+            FROM cmf_bank_statements 
+            WHERE 1=1
+        """
+        params = []
+
+        if period:
+            query += " AND period = ?"
+            params.append(period)
+        if bank_code:
+            # Estandarizar a 3 dígitos (ej: '1' -> '001')
+            clean_code = str(bank_code).strip().zfill(3)
+            query += " AND bank_code = ?"
+            params.append(clean_code)
+        if account_code:
+            query += " AND account_code = ?"
+            params.append(str(account_code).strip())
+        if report_type:
+            query += " AND report_type = ?"
+            params.append(str(report_type).strip())
+
+        query += " ORDER BY period ASC, bank_name ASC, account_code ASC LIMIT ?"
+        params.append(limit)
+
+        return self.conn.execute(query, params).fetchdf()
+
+    # ----------------------------------------------------------
     # Utilidades
     # ----------------------------------------------------------
 

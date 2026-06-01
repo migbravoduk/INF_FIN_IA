@@ -43,6 +43,7 @@ from config.settings import settings
 from db.database import Database
 from collectors.bcentral import BCentralCollector
 from collectors.cmf import CMFCollector
+from collectors.cmf_banks import CMFBankCollector
 from processors.normalizer import normalize_observations
 from scheduler.jobs import run_all_series, run_fetch_by_frequency, create_scheduler
 
@@ -507,6 +508,169 @@ def query_cmf(rut, company, period, limit, output_format):
 
     console.print(table)
     console.print(f"\n[dim]Filtros aplicados: RUT={rut or 'Todos'} | Empresa={company or 'Todas'} | Período={period or 'Todos'}[/]")
+
+
+# ----------------------------------------------------------
+# fetch-banks
+# ----------------------------------------------------------
+
+@cli.command(name="fetch-banks")
+@click.option("--year", "-y", type=int, default=None, help="Año de consulta (ej. 2025)")
+@click.option("--month", "-m", type=int, default=None, help="Mes de consulta (1 a 12)")
+@click.option("--bank", "-b", default=None, help="Código SBIF de un banco específico (ej. '001')")
+@click.option("--history", is_flag=True, help="Realiza una carga histórica mensual completa (2024-2026) para los bancos principales")
+@click.option("--force", "-f", is_flag=True, help="Fuerza la descarga desde la API ignorando la caché local")
+def fetch_banks(year, month, bank, history, force):
+    """Descarga e ingesta estados financieros mensuales de bancos de la CMF."""
+
+    if not history and (not year or not month):
+        console.print("[bold red]Error: Debes especificar año (--year) y mes (--month) o activar la carga histórica (--history).[/]")
+        sys.exit(1)
+
+    collector = CMFBankCollector()
+
+    # Definir bancos a descargar
+    if bank:
+        bank_codes = [str(bank).strip().zfill(3)]
+    else:
+        # Si no se especifica banco, descargar todos los bancos del catálogo principal
+        bank_codes = list(collector.BANKS_CATALOG.keys())
+
+    # Definir períodos a descargar
+    if history:
+        # Backfill histórico mensual: 2024 (todos los meses) + 2025 (todos los meses) + 2026 (meses 1 a 3)
+        periods = []
+        for y in (2024, 2025):
+            for m in range(1, 13):
+                periods.append((y, m))
+        for m in range(1, 4):
+            periods.append((2026, m))
+        info_msg = "Carga histórica mensual (2024-2026) para bancos"
+    else:
+        periods = [(year, month)]
+        info_msg = f"Período específico: {year}-{month:02d}"
+
+    console.print(Panel(
+        f"[bold green]🚀 Iniciando ingesta de Estados Financieros de Bancos (API CMF)[/]\n\n"
+        f"  • Modo: [cyan]{info_msg}[/]\n"
+        f"  • Cantidad de bancos catalogados: [yellow]{len(bank_codes)}[/]\n"
+        f"  • Forzar descarga: [yellow]{force}[/]",
+        title="📥 Ingestador Bancario CMF",
+        border_style="green",
+    ))
+
+    try:
+        total_inserted = 0
+        with Database() as db:
+            for y, m in periods:
+                for b_code in bank_codes:
+                    b_name = collector.BANKS_CATALOG.get(b_code, f"BANCO {b_code}")
+                    console.print(f"\n[bold cyan]⏳ Procesando {b_name} ({b_code}) para {y}-{m:02d}...[/]")
+
+                    # 1. Descargar e Ingestar Balance (report_type='balance')
+                    records_bal = collector.fetch_bank_report(y, m, b_code, report_type="balance", force_download=force)
+                    if records_bal:
+                        inserted_bal = db.insert_bank_records(y, m, b_code, "balance", records_bal)
+                        console.print(f"    [green]✓ Balance: {inserted_bal:,} registros insertados.[/]")
+                        total_inserted += inserted_bal
+                    else:
+                        console.print(f"    [yellow]⚠ Balance: Sin datos devueltos por la API.[/]")
+
+                    # 2. Descargar e Ingestar Estado de Resultados (report_type='resultado')
+                    records_res = collector.fetch_bank_report(y, m, b_code, report_type="resultado", force_download=force)
+                    if records_res:
+                        inserted_res = db.insert_bank_records(y, m, b_code, "resultado", records_res)
+                        console.print(f"    [green]✓ Resultados: {inserted_res:,} registros insertados.[/]")
+                        total_inserted += inserted_res
+                    else:
+                        console.print(f"    [yellow]⚠ Resultados: Sin datos devueltos por la API.[/]")
+
+        console.print(f"\n[bold green]✅ Ingesta bancaria finalizada con éxito![/]")
+        console.print(f"  • Total registros procesados e insertados en DuckDB: [bold]{total_inserted:,}[/]")
+
+    except Exception as e:
+        console.print(f"\n[bold red]❌ Error durante la ingesta bancaria:[/] {e}")
+        sys.exit(1)
+
+
+# ----------------------------------------------------------
+# query-banks
+# ----------------------------------------------------------
+
+@cli.command(name="query-banks")
+@click.option("--bank", "-b", default=None, help="Código SBIF o Razón Social del Banco")
+@click.option("--period", "-p", default=None, type=int, help="Período YYYYMM (ej. 202512)")
+@click.option("--account", "-a", default=None, help="Código de cuenta contable (ej. 100000000 para Total Activos)")
+@click.option("--type", "report_type", default=None, type=click.Choice(["balance", "resultado"]), help="Tipo de reporte (balance o resultado)")
+@click.option("--limit", "-n", default=50, help="Límite de filas a mostrar (default: 50)")
+@click.option("--format", "output_format", default="table",
+              type=click.Choice(["table", "csv", "json"]), help="Formato de salida")
+def query_banks(bank, period, account, report_type, limit, output_format):
+    """Consulta estados financieros mensuales de bancos desde DuckDB."""
+
+    with Database() as db:
+        df = db.query_bank_statements(
+            bank_code=bank, period=period, account_code=account, report_type=report_type, limit=limit
+        )
+
+    if df.empty:
+        console.print("[yellow]No se encontraron registros bancarios con los filtros especificados.[/]")
+        console.print("[dim]Prueba descargando los datos con: python main.py fetch-banks --year 2025 --month 12[/]")
+        return
+
+    if output_format == "csv":
+        console.print(df.to_csv(index=False))
+        return
+
+    if output_format == "json":
+        console.print(df.to_json(orient="records", force_ascii=False, indent=2))
+        return
+
+    # Tabla Rich para consola
+    table = Table(
+        title=f"🏦 Balances y Resultados Bancarios CMF (Muestra de {len(df)} filas)",
+        box=box.ROUNDED,
+        border_style="green",
+        show_header=True,
+        header_style="bold green",
+    )
+
+    table.add_column("Período", style="dim", justify="center")
+    table.add_column("Banco", max_width=25)
+    table.add_column("Código", justify="center", style="dim")
+    table.add_column("Cuenta", justify="center")
+    table.add_column("Glosa / Concepto", max_width=35)
+    table.add_column("CLP No Reaj.", justify="right", style="cyan")
+    table.add_column("Reaj. IPC (UF)", justify="right", style="cyan")
+    table.add_column("Reaj. TC (USD)", justify="right", style="cyan")
+    table.add_column("M. Extranjera", justify="right", style="cyan")
+    table.add_column("Monto Total", justify="right", style="bold yellow")
+
+    for _, row in df.iterrows():
+        # Estandarizar montos de desgloses de moneda
+        def fmt_val(v):
+            if v is None or v == 0.0:
+                return "—"
+            return f"{v:,.0f}"
+
+        # Reajuste por TC solo aplica a balances
+        reaj_tc = fmt_val(row["val_clp_reaj_tc"]) if row["report_type"] == "balance" else "N/A"
+
+        table.add_row(
+            str(row["period"]),
+            str(row["bank_name"]),
+            str(row["bank_code"]),
+            str(row["account_code"]),
+            str(row["account_name"]),
+            fmt_val(row["val_clp_no_reaj"]),
+            fmt_val(row["val_clp_reaj_ipc"]),
+            reaj_tc,
+            fmt_val(row["val_extranjera"]),
+            f"{row['val_total']:,.0f}"
+        )
+
+    console.print(table)
+    console.print(f"\n[dim]Filtros aplicados: Banco={bank or 'Todos'} | Período={period or 'Todos'} | Cuenta={account or 'Todas'} | Tipo={report_type or 'Todos'}[/]")
 
 
 # ----------------------------------------------------------
