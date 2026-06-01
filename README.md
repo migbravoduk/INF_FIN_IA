@@ -23,8 +23,8 @@ STORYTELLING (dashboard web, API REST, reportes Jules)
 | Fase | Estado | Descripción |
 |------|--------|-------------|
 | **1 — Macro BCCh** | ✅ Activa | PIB, IPC, TPM, empleo, tipo de cambio |
-| **2 — Series adicionales BCCh + SII** | 🔜 Próxima | UF, UTM, IVP, IMACEC + respaldo SII |
-| **3 — CMF: Empresas y Mercados** | ⏳ Planificada | XBRL + PDF empresas listadas, fondos mutuos, seguros |
+| **2 — Series adicionales BCCh + SII** | ✅ Activa | UF, UTM, IVP, IMACEC desde la API de la BDE |
+| **3 — CMF: Empresas y Mercados** | ✅ Activa | Ingesta de archivos trimestrales planos .txt de estados financieros corporativos |
 | **4 — Calendarios y Alertas** | ⏳ Planificada | Fechas de publicaciones, alertas automáticas |
 | **5 — Análisis y Proyecciones** | ⏳ Planificada | Proyecciones macrofundadas, ratios, anomalías |
 | **6 — API + Dashboard** | ⏳ Planificada | FastAPI + visualización web interactiva |
@@ -141,7 +141,24 @@ C:\Users\mbrav\anaconda3\python.exe main.py query --series PIB
 C:\Users\mbrav\anaconda3\python.exe main.py query --series PIB --format csv
 C:\Users\mbrav\anaconda3\python.exe main.py query --series PIB --format json
 
-# Listar series registradas en la base de datos
+# ============================================================
+# Ingesta y Consulta Corporativa (Fase 3 — CMF de Chile)
+# ============================================================
+
+# Descargar e ingestar estados financieros trimestrales corporativos (ej. 202512)
+C:\Users\mbrav\anaconda3\python.exe main.py fetch-cmf --period 202512
+
+# Consultar estados financieros corporativos de forma interactiva (ej. Correos de Chile)
+C:\Users\mbrav\anaconda3\python.exe main.py query-cmf --rut 60503000 --period 202512
+
+# Consultar estados financieros filtrando por nombre de empresa en formato JSON
+C:\Users\mbrav\anaconda3\python.exe main.py query-cmf --company "CORREOS" --period 202512 --limit 5 --format json
+
+# ============================================================
+# Listar y Scheduler
+# ============================================================
+
+# Listar series macroeconómicas registradas en la base de datos local
 C:\Users\mbrav\anaconda3\python.exe main.py list
 
 # Iniciar scheduler automático (bloqueante — corre indefinidamente)
@@ -155,16 +172,17 @@ C:\Users\mbrav\anaconda3\python.exe main.py run-scheduler
 ```
 INF_FIN_IA/
 ├── collectors/
-│   ├── bcentral.py          # ✅ Cliente BDE API del Banco Central (Fase 1)
-│   └── sii.py               # 🔜 Scraping SII para UF/UTM/IVP (Fase 2)
+│   ├── bcentral.py          # ✅ Cliente BDE API del Banco Central (Fases 1 y 2)
+│   ├── cmf.py               # ✅ Ingestionador plano de Estados Financieros CMF (Fase 3)
+│   └── sii.py               # 🔜 Scraping SII alternativo (Fase 2)
 ├── processors/
-│   ├── normalizer.py        # ✅ Normalización y limpieza de datos
+│   ├── normalizer.py        # ✅ Normalización y limpieza de datos macro
 │   ├── standardizer.py      # 🔜 Mapeo XBRL → esquema estándar (Fase 3)
 │   ├── xbrl_parser.py       # 🔜 Parseo XBRL con arelle (Fase 3)
 │   └── pdf_extractor.py     # 🔜 Extracción de tablas de PDFs (Fase 3)
 ├── db/
 │   ├── database.py          # ✅ Capa de acceso DuckDB
-│   └── schema.py            # ✅ Definición de tablas (series, observations, fetch_log)
+│   └── schema.py            # ✅ Definición de tablas (series, observations, cmf, fetch_log)
 ├── scheduler/
 │   └── jobs.py              # ✅ APScheduler: daily/monthly/quarterly/annual
 ├── config/
@@ -173,6 +191,7 @@ INF_FIN_IA/
 ├── api/                     # ⏳ FastAPI REST (Fase 6)
 ├── dashboard/               # ⏳ Frontend web (Fase 6)
 ├── data/
+│   ├── cmf_raw/             # Caché local de archivos planos trimestrales (.txt) de la CMF
 │   └── finanzas_chile.duckdb  # Base de datos DuckDB (generado automáticamente)
 ├── logs/                    # Logs de ejecución (generado automáticamente)
 ├── main.py                  # ✅ CLI entry point
@@ -227,6 +246,8 @@ Para correrlo como servicio persistente en Windows:
 
 Se usa **DuckDB** (`data/finanzas_chile.duckdb`), ideal para análisis OLAP local sin servidor.
 
+### Consulta de Series Macroeconómicas
+
 ```python
 import duckdb
 conn = duckdb.connect("data/finanzas_chile.duckdb")
@@ -240,6 +261,22 @@ df = conn.execute("""
     FROM observations
     WHERE series_id = 'F032.PIB.FLU.R.CLP.EP18.Z.Z.0.T'
     ORDER BY date DESC LIMIT 10
+""").fetchdf()
+print(df)
+```
+
+### Consulta de Estados Financieros CMF (Empresas)
+
+```python
+import duckdb
+conn = duckdb.connect("data/finanzas_chile.duckdb")
+
+# Consultar cuentas del balance de una empresa específica (ej. 2025-12)
+df = conn.execute("""
+    SELECT period, company_name, account_name, value, statement_group
+    FROM cmf_financial_statements
+    WHERE rut = '60503000' AND period = 202512
+    LIMIT 10
 """).fetchdf()
 print(df)
 ```
