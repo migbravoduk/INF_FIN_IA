@@ -184,24 +184,25 @@ INF_FIN_IA/
 
 ---
 
-## Series configuradas (Fase 1 — BCCh BDE API)
+## Series configuradas (Fase 1 y Fase 2 — BCCh BDE API)
 
 | Categoría | Serie | Código BDE | Frecuencia |
 |---|---|---|---|
-| Actividad | PIB Real (encadenado 2018) | `F032.PIB.FLU.R.CLP.EP18.Z.Z.0.T` | Trimestral |
-| Actividad | PIB Real — var. % anual | `F032.PIB.FLU.R.CLP.EP18.Z.Z.0.T.P` | Trimestral |
-| Precios | IPC (base dic. 2023) | `F073.IPC.IND.N.DIC.Z.Z.2023100` | Mensual |
-| Precios | Variación mensual IPC | `F073.IPC.VAR.N.DIC.Z.Z.M` | Mensual |
-| Precios | Inflación 12 meses | `F073.IPC.VAR.N.DIC.Z.Z.A` | Mensual |
-| Política Monetaria | TPM nominal | `F072.TAS.IND.TEC.M.MES.D` | Mensual |
-| Laboral | Tasa de desempleo | `F019.EMP.DES.M.N.MES` | Mensual |
-| Tipo de Cambio | CLP/USD diario | `F016.DEM.DEM_1.USD.DIA.Z.Z` | Diario |
-| Tipo de Cambio | CLP/USD mensual | `F016.DEM.DEM_1.USD.MES.Z.Z` | Mensual |
-| Sector Externo | Cuenta corriente BoP | `F055.BOP.BOP10.BPM6.Z.Z.ABR.A.CLP.N` | Trimestral |
-| Fiscal | Balance fiscal GC | `F048.FIS.FIS.FIS.N.DIF.A.CLP` | Anual |
-| Materias Primas | Precio del cobre | `F051.PRE.PRE07.PRE07.USD.MES` | Mensual |
-
-> **Nota sobre códigos BDE**: Algunos códigos pueden devolver error si el BCCh los actualizó (cambian cuando renuevan años base). Para verificar el código exacto actual de una serie, buscarlo en [si3.bcentral.cl](https://si3.bcentral.cl) → Buscador. Solo el código del PIB Real (`F032.PIB.FLU.R.CLP.EP18.Z.Z.0.T`) ha sido validado en producción.
+| **Actividad** | PIB Real (encadenado 2018) | `F032.PIB.FLU.R.CLP.EP18.Z.Z.0.T` | Trimestral |
+| **Precios** | IPC General (base dic. 2023) | `G073.IPC.IND.2023.M` | Mensual |
+| **Precios** | Variación mensual IPC | `G073.IPC.VAR.2023.M` | Mensual |
+| **Precios** | Inflación 12 meses (anual) | `G073.IPC.V12.2023.M` | Mensual |
+| **Política Monetaria** | TPM nominal | `F022.TPM.TIN.D001.NO.Z.D` | Diario |
+| **Laboral** | Tasa de desempleo | `F049.DES.TAS.INE.10.M` | Mensual |
+| **Tipo de Cambio** | CLP/USD observado diario | `F073.TCO.PRE.Z.D` | Diario |
+| **Tipo de Cambio** | CLP/USD promedio mensual | `F073.TCO.PRE.HIST.M` | Mensual |
+| **Sector Externo** | Cuenta corriente BoP | `F068.A.FLU.Z.0.S.N.Z.Z.Z.Z.6.0.T` | Trimestral |
+| **Fiscal** | Deuda Gobierno Central (% PIB) | `F051.D7.PPB.C.Z.Z.T` | Trimestral |
+| **Materias Primas** | Precio del cobre (BML) | `F019.PPB.PRE.40.M` | Mensual |
+| **Fase 2: UF** | Unidad de Fomento | `F073.UFF.PRE.Z.D` | Diario |
+| **Fase 2: IVP** | Índice de Valor Promedio | `F073.IVP.PRE.Z.D` | Diario |
+| **Fase 2: UTM** | Unidad Tributaria Mensual | `F073.UTR.PRE.Z.M` | Mensual |
+| **Fase 2: IMACEC** | IMACEC mensual (Base 2018) | `F032.ICF.IND.Z.Z.EP18.Z.Z.0.M` | Mensual |
 
 Para agregar más series, editar `config/series_catalog.yaml`.
 

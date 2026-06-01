@@ -43,15 +43,15 @@ class Database:
     def upsert_series(self, series_meta: dict) -> None:
         """Inserta o actualiza metadatos de una serie."""
         self.conn.execute("""
-            INSERT INTO series (id, source_id, name, category, frequency, unit, description)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO series (id, source_id, name, category, frequency, unit, description, last_updated)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT (id) DO UPDATE SET
                 name = excluded.name,
                 category = excluded.category,
                 frequency = excluded.frequency,
                 unit = excluded.unit,
                 description = excluded.description,
-                last_updated = now()
+                last_updated = excluded.last_updated
         """, [
             series_meta['id'],
             series_meta['source_id'],
@@ -60,6 +60,7 @@ class Database:
             series_meta.get('frequency'),
             series_meta.get('unit'),
             series_meta.get('description'),
+            datetime.now(),
         ])
 
     def get_all_series(self, source_id: Optional[str] = None):

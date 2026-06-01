@@ -18,6 +18,7 @@ Uso:
 import logging
 from datetime import date, timedelta
 from typing import Optional
+import json
 
 import httpx
 
@@ -94,16 +95,19 @@ class BCentralCollector:
             with httpx.Client(timeout=30.0) as client:
                 response = client.get(BASE_URL, params=params)
                 response.raise_for_status()
-                data = response.json()
+                # BDE API returns Latin-1/ISO-8859-1 for Spanish characters.
+                # Decode manually to prevent UTF-8 decode errors in httpx/json.
+                data = json.loads(response.content.decode("latin-1"))
                 
                 # Si arroja un internal error (-50) provocado usualmente por rangos de fechas
                 # incompatibles (ej. serie nueva pero pidiendo 5 años atrás), reintentamos sin fechas
-                if data.get("Codigo") == -50 and (from_date or to_date):
+                codigo = str(data.get("Codigo", "")).strip()
+                if codigo == "-50" and (from_date or to_date):
                     logger.warning(f"[{series_id}] Error -50 (fechas inválidas). Reintentando todo el historial...")
                     fallback_params = self._build_params(function="GetSeries", timeseries=series_id)
                     fb_response = client.get(BASE_URL, params=fallback_params)
                     fb_response.raise_for_status()
-                    data = fb_response.json()
+                    data = json.loads(fb_response.content.decode("latin-1"))
         except httpx.HTTPStatusError as e:
             logger.error(f"HTTP error fetching {series_id}: {e.response.status_code}")
             raise

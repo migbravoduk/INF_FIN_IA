@@ -4,118 +4,117 @@
 # ============================================================
 
 bcentral:
-  # --- Actividad Económica ---
+  # --- Actividad Económica (Trimestral) ---
   - id: F032.PIB.FLU.R.CLP.EP18.Z.Z.0.T
     name: PIB Real (encadenado 2018)
     category: actividad
     frequency: quarterly
     unit: millones_CLP_2018
-    description: Producto Interno Bruto real, acumulado trimestral
+    description: Producto Interno Burto real, acumulado trimestral
 
-  - id: F032.PIB.FLU.R.CLP.EP18.Z.Z.0.T.P
-    name: PIB Real trimestral (var. % anual)
-    category: actividad
-    frequency: quarterly
-    unit: porcentaje
-    description: Variación porcentual anual del PIB real
-
-  # --- Precios ---
-  - id: F073.IPC.IND.N.DIC.Z.Z.2023100
-    name: IPC (base diciembre 2023=100)
+  # --- Precios (Mensual) ---
+  - id: G073.IPC.IND.2023.M
+    name: IPC General (Base 2023=100)
     category: precios
     frequency: monthly
     unit: indice
-    description: Índice de Precios al Consumidor, base diciembre 2023
+    description: Índice de Precios al Consumidor General, base diciembre 2023
 
-  - id: F073.IPC.VAR.N.DIC.Z.Z.M
+  - id: G073.IPC.VAR.2023.M
     name: IPC Variación mensual
     category: precios
     frequency: monthly
     unit: porcentaje
-    description: Variación mensual del IPC
+    description: Variación mensual del IPC base 2023
 
-  - id: F073.IPC.VAR.N.DIC.Z.Z.A
-    name: IPC Variación anual (inflación)
+  - id: G073.IPC.V12.2023.M
+    name: IPC Variación anual (inflación 12M)
     category: precios
     frequency: monthly
     unit: porcentaje
-    description: Variación anual del IPC (inflación 12 meses)
+    description: Variación anual (12 meses) del IPC base 2023
 
-  # --- Política Monetaria ---
-  - id: F072.TAS.IND.TEC.M.MES.D
+  # --- Política Monetaria (Diaria) ---
+  - id: F022.TPM.TIN.D001.NO.Z.D
     name: Tasa de Política Monetaria (TPM)
     category: politica_monetaria
-    frequency: monthly
+    frequency: daily
     unit: porcentaje_anual
-    description: Tasa de política monetaria nominal, promedio mensual
+    description: Tasa de política monetaria nominal diaria
 
-  # --- Mercado Laboral ---
-  - id: F019.EMP.DES.M.N.MES
+  # --- Mercado Laboral (Mensual) ---
+  - id: F049.DES.TAS.INE.10.M
     name: Tasa de Desempleo
     category: laboral
     frequency: monthly
     unit: porcentaje
-    description: Tasa de desocupación nacional (INE, serie mensual)
+    description: Tasa de desocupación nacional mensual INE
 
-  # --- Tipo de Cambio ---
-  - id: F016.DEM.DEM_1.USD.MES.Z.Z
-    name: Tipo de Cambio CLP/USD (promedio mensual)
-    category: tipo_de_cambio
-    frequency: monthly
-    unit: CLP_por_USD
-    description: Tipo de cambio peso-dólar, promedio del período
-
-  - id: F016.DEM.DEM_1.USD.DIA.Z.Z
+  # --- Tipo de Cambio (Diario y Mensual) ---
+  - id: F073.TCO.PRE.Z.D
     name: Tipo de Cambio CLP/USD (diario)
     category: tipo_de_cambio
     frequency: daily
     unit: CLP_por_USD
-    description: Tipo de cambio observado diario
+    description: Tipo de cambio nominal observado diario
 
-  # --- Balanza de Pagos ---
-  - id: F055.BOP.BOP10.BPM6.Z.Z.ABR.A.CLP.N
+  - id: F073.TCO.PRE.HIST.M
+    name: Tipo de Cambio CLP/USD (promedio mensual)
+    category: tipo_de_cambio
+    frequency: monthly
+    unit: CLP_por_USD
+    description: Promedio mensual histórico del tipo de cambio observado
+
+  # --- Sector Externo (Trimestral) ---
+  - id: F068.A.FLU.Z.0.S.N.Z.Z.Z.Z.6.0.T
     name: Balanza de Pagos - Cuenta Corriente
     category: sector_externo
     frequency: quarterly
     unit: millones_USD
-    description: Saldo de cuenta corriente de la balanza de pagos
+    description: Saldo de cuenta corriente de la balanza de pagos (millones de dólares)
 
-  # --- Sector Fiscal ---
-  - id: F048.FIS.FIS.FIS.N.DIF.A.CLP
-    name: Balance Fiscal del Gobierno Central
+  - id: F051.D7.PPB.C.Z.Z.T
+    name: Deuda GC (% PIB)
     category: fiscal
-    frequency: annual
-    unit: millones_CLP
-    description: Balance fiscal efectivo del Gobierno Central
+    frequency: quarterly
+    unit: porcentaje
+    description: Deuda bruta del Gobierno Central como porcentaje del PIB trimestral
 
-  # --- Precios de Materias Primas ---
-  - id: F051.PRE.PRE07.PRE07.USD.MES
-    name: Precio del Cobre (¢US/lb)
+  # --- Precios de Materias Primas (Mensual) ---
+  - id: F019.PPB.PRE.40.M
+    name: Precio del Cobre (BML)
     category: materias_primas
     frequency: monthly
     unit: centavos_USD_por_libra
-    description: Precio de bolsa del cobre, promedio mensual
+    description: Precio del cobre refinado BML mensual (dólares/libra)
 
+  # ============================================================
+  # Fase 2 — Series adicionales del Banco Central (UF, UTM, IVP, IMACEC)
+  # ============================================================
+  - id: F073.UFF.PRE.Z.D
+    name: Unidad de Fomento (UF)
+    category: precios_uf
+    frequency: daily
+    unit: CLP
+    description: Valor de la Unidad de Fomento diaria
 
-# ============================================================
-# Fase 2 — Series adicionales del Banco Central
-# UF, UTM, IVP se obtienen del BCCh (misma BDE API) o del SII vía scraping
-# ============================================================
-# bcentral_fase2:
-#   - UF diaria          (BCCh BDE API)
-#   - UTM mensual        (BCCh BDE API o scraping SII)
-#   - IVP mensual        (BCCh BDE API)
-#   - IMACEC mensual     (BCCh BDE API — proxy mensual del PIB)
-#   - Reservas Internacionales (BCCh BDE API)
+  - id: F073.IVP.PRE.Z.D
+    name: Índice de Valor Promedio (IVP)
+    category: precios_ivp
+    frequency: daily
+    unit: CLP
+    description: Valor del Índice de Valor Promedio diario
 
-# ============================================================
-# Fase 3 — CMF: Estados Financieros de Empresas
-# Acceso vía portal web CMF (www.cmfchile.cl) — SIN API pública
-# Formatos: XBRL (estándar FECU) y PDF (memorias, notas)
-# ============================================================
-# cmf_eeff:
-#   - Listado de empresas fiscalizadas (scraping)
-#   - Estados financieros XBRL trimestrales/anuales
-#   - Estadísticas de fondos mutuos (portal CMF)
-#   - Estadísticas de seguros (portal CMF)
-#   - Estadísticas de mercado de valores (portal CMF)
+  - id: F073.UTR.PRE.Z.M
+    name: Unidad Tributaria Mensual (UTM)
+    category: precios_utm
+    frequency: monthly
+    unit: CLP
+    description: Valor de la Unidad Tributaria Mensual
+
+  - id: F032.ICF.IND.Z.Z.EP18.Z.Z.0.M
+    name: IMACEC mensual (Base 2018)
+    category: actividad_mensual
+    frequency: monthly
+    unit: indice
+    description: Imacec a costo de factores, serie empalmada (índice 2018=100)
