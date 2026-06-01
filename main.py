@@ -42,6 +42,7 @@ logging.basicConfig(
 from config.settings import settings
 from db.database import Database
 from collectors.bcentral import BCentralCollector
+from collectors.cmf import CMFCollector
 from processors.normalizer import normalize_observations
 from scheduler.jobs import run_all_series, run_fetch_by_frequency, create_scheduler
 
@@ -374,6 +375,114 @@ def list_series(source):
         )
 
     console.print(t)
+
+
+# ----------------------------------------------------------
+# fetch-cmf
+# ----------------------------------------------------------
+
+@cli.command(name="fetch-cmf")
+@click.option("--period", "-p", required=True, type=int, help="Período en formato YYYYMM (ej. 202512)")
+@click.option("--force", "-f", is_flag=True, help="Fuerza la descarga del archivo web ignorando caché")
+def fetch_cmf(period, force):
+    """Descarga e ingesta estados financieros trimestrales de la CMF."""
+
+    console.print(Panel(
+        f"[bold green]🚀 Iniciando ingesta de Estados Financieros CMF[/]\n\n"
+        f"  • Período: [cyan]{period}[/]\n"
+        f"  • Forzar descarga: [yellow]{force}[/]",
+        title="📥 Ingestador CMF",
+        border_style="green",
+    ))
+
+    try:
+        collector = CMFCollector()
+        records = collector.fetch_period(period, force_download=force)
+
+        if not records:
+            console.print("[yellow]No se parsearon registros del archivo plano CMF.[/]")
+            return
+
+        with Database() as db:
+            inserted = db.insert_cmf_records(period, records)
+
+        console.print(f"\n[bold green]✅ Ingesta finalizada con éxito![/]")
+        console.print(f"  • Total registros insertados: [bold]{inserted:,}[/]")
+
+    except Exception as e:
+        console.print(f"\n[bold red]❌ Error durante la ingesta CMF:[/] {e}")
+        sys.exit(1)
+
+
+# ----------------------------------------------------------
+# query-cmf
+# ----------------------------------------------------------
+
+@cli.command(name="query-cmf")
+@click.option("--rut", "-r", default=None, help="RUT de la empresa (ej. 60503000)")
+@click.option("--company", "-c", default=None, help="Nombre parcial de la empresa")
+@click.option("--period", "-p", default=None, type=int, help="Período YYYYMM (ej. 202512)")
+@click.option("--limit", "-n", default=50, help="Límite de filas (default: 50)")
+@click.option("--format", "output_format", default="table",
+              type=click.Choice(["table", "csv", "json"]), help="Formato de salida")
+def query_cmf(rut, company, period, limit, output_format):
+    """Consulta estados financieros corporativos de la CMF localmente."""
+
+    with Database() as db:
+        df = db.query_cmf_statements(rut=rut, company=company, period=period, limit=limit)
+
+    if df.empty:
+        console.print("[yellow]No se encontraron estados financieros con los filtros especificados.[/]")
+        console.print("[dim]Asegúrate de haber descargado los datos con: python main.py fetch-cmf --period <YYYYMM>[/]")
+        return
+
+    if output_format == "csv":
+        console.print(df.to_csv(index=False))
+        return
+
+    if output_format == "json":
+        # Asegurar UTF-8 en la salida del JSON
+        console.print(df.to_json(orient="records", force_ascii=False, indent=2))
+        return
+
+    # Formato de tabla estilizada Rich
+    table = Table(
+        title=f"💼 Estados Financieros CMF (Muestra de {len(df)} filas)",
+        box=box.ROUNDED,
+        border_style="green",
+        show_header=True,
+        header_style="bold green",
+    )
+
+    table.add_column("Período", style="dim", justify="center")
+    table.add_column("Empresa", max_width=35)
+    table.add_column("RUT", justify="center")
+    table.add_column("T.", justify="center", style="dim")
+    table.add_column("Mon.", justify="center", style="dim")
+    table.add_column("Grupo", style="cyan")
+    table.add_column("Cuenta/Concepto", max_width=45)
+    table.add_column("Monto", justify="right", style="bold yellow")
+
+    for _, row in df.iterrows():
+        # Formatear montos con miles según moneda
+        try:
+            val_formatted = f"{row['value']:,.0f}" if row['currency'] == 'CLP' else f"{row['value']:,.2f}"
+        except Exception:
+            val_formatted = str(row['value'])
+
+        table.add_row(
+            str(row["period"]),
+            str(row["company_name"]),
+            str(row["rut"]),
+            str(row["report_type"]),
+            str(row["currency"]),
+            str(row["statement_group"] or "—"),
+            str(row["account_name"]),
+            val_formatted
+        )
+
+    console.print(table)
+    console.print(f"\n[dim]Filtros aplicados: RUT={rut or 'Todos'} | Empresa={company or 'Todas'} | Período={period or 'Todos'}[/]")
 
 
 # ----------------------------------------------------------

@@ -178,6 +178,96 @@ class Database:
         ).fetchdf()
 
     # ----------------------------------------------------------
+    # Estados Financieros CMF (Fase 3)
+    # ----------------------------------------------------------
+
+    def insert_cmf_records(self, period: int, records: list[dict]) -> int:
+        """
+        Inserta estados financieros corporativos de la CMF usando "Delete-then-Insert".
+        Ejecuta la operación completa de forma transaccional y atómica.
+        Retorna la cantidad de registros insertados.
+        """
+        if not records:
+            return 0
+
+        # Convertir a tuplas limpias para ejecutemany
+        tuples_data = [
+            (
+                int(rec['period']),
+                str(rec['rut']).strip().replace(".", "").replace("-", ""),
+                str(rec['company_name']).strip(),
+                str(rec['report_type']).strip(),
+                str(rec['currency']).strip(),
+                str(rec['account_name']).strip(),
+                float(rec['value']),
+                rec.get('taxonomy_code'),
+                rec.get('statement_group')
+            )
+            for rec in records
+        ]
+
+        # Iniciar transacción explícita
+        self.conn.execute("BEGIN TRANSACTION")
+        try:
+            # 1. Eliminar datos existentes del período
+            self.conn.execute("DELETE FROM cmf_financial_statements WHERE period = ?", [period])
+
+            # 2. Bulk insert usando la eficiencia nativa de DuckDB executemany
+            self.conn.executemany("""
+                INSERT INTO cmf_financial_statements 
+                    (period, rut, company_name, report_type, currency, account_name, value, taxonomy_code, statement_group)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, tuples_data)
+
+            self.conn.execute("COMMIT")
+            logger.info(f"Ingestados con éxito {len(records)} registros CMF para el período {period}.")
+            return len(records)
+        except Exception as e:
+            self.conn.execute("ROLLBACK")
+            logger.error(f"Error al ingestar registros CMF para el período {period}. Transacción revertida.", exc_info=True)
+            raise e
+
+    def get_cmf_companies(self):
+        """Retorna un DataFrame con todas las empresas (RUT y Razón Social) registradas."""
+        return self.conn.execute("""
+            SELECT DISTINCT rut, company_name 
+            FROM cmf_financial_statements 
+            ORDER BY company_name ASC
+        """).fetchdf()
+
+    def query_cmf_statements(
+        self,
+        rut: Optional[str] = None,
+        company: Optional[str] = None,
+        period: Optional[int] = None,
+        limit: int = 50
+    ):
+        """Recupera estados financieros de CMF en base a filtros flexibles como DataFrame."""
+        query = """
+            SELECT period, rut, company_name, report_type, currency, account_name, value, statement_group 
+            FROM cmf_financial_statements 
+            WHERE 1=1
+        """
+        params = []
+
+        if period:
+            query += " AND period = ?"
+            params.append(period)
+        if rut:
+            # Limpiar RUT de entrada para coincidir con la base de datos
+            clean_rut = str(rut).strip().replace(".", "").replace("-", "")
+            query += " AND rut = ?"
+            params.append(clean_rut)
+        if company:
+            query += " AND LOWER(company_name) LIKE ?"
+            params.append(f"%{company.lower()}%")
+
+        query += " ORDER BY company_name ASC, statement_group ASC, account_name ASC LIMIT ?"
+        params.append(limit)
+
+        return self.conn.execute(query, params).fetchdf()
+
+    # ----------------------------------------------------------
     # Utilidades
     # ----------------------------------------------------------
 

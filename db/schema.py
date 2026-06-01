@@ -69,6 +69,28 @@ CREATE TABLE IF NOT EXISTS fetch_log (
 -- ============================================================
 CREATE SEQUENCE IF NOT EXISTS obs_seq START 1;
 CREATE SEQUENCE IF NOT EXISTS log_seq START 1;
+
+-- ============================================================
+-- Estados Financieros de la CMF (Fase 3)
+-- ============================================================
+CREATE SEQUENCE IF NOT EXISTS cmf_seq START 1;
+
+CREATE TABLE IF NOT EXISTS cmf_financial_statements (
+    id                BIGINT PRIMARY KEY DEFAULT nextval('cmf_seq'),
+    period            INTEGER NOT NULL,          -- Formato YYYYMM (ej. 202512)
+    rut               VARCHAR NOT NULL,          -- RUT limpio sin puntos ni guión
+    company_name      VARCHAR NOT NULL,          -- Razón social
+    report_type       VARCHAR NOT NULL,          -- 'I' (Individual) o 'C' (Consolidado)
+    currency          VARCHAR NOT NULL,          -- 'CLP', 'USD'
+    account_name      VARCHAR NOT NULL,          -- Glosa / Concepto de la cuenta
+    value             DOUBLE NOT NULL,           -- Monto
+    taxonomy_code     VARCHAR,                   -- Código taxonomía (ej. 'TAX CI')
+    statement_group   VARCHAR,                   -- Grupo (ej. 'ESF C/NC', 'ERFG')
+    fetched_at        TIMESTAMP DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_cmf_rut_period ON cmf_financial_statements(rut, period);
+CREATE INDEX IF NOT EXISTS idx_cmf_company ON cmf_financial_statements(company_name);
 """
 
 SEED_SOURCES_SQL = """
