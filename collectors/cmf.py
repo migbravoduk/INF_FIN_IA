@@ -27,15 +27,26 @@ class CMFCollector:
         Normaliza y parsea el contenido en una lista de registros listos para insertar en DuckDB.
         """
         period_str = str(period).strip()
-        if len(period_str) != 6 or not period_str.isdigit():
-            raise ValueError(f"Periodo inválido: '{period}'. Debe ser en formato YYYYMM (ej. 202512).")
+        if not period_str.isdigit() or len(period_str) not in (4, 6):
+            raise ValueError(
+                f"Periodo inválido: '{period}'. Debe ser YYYY (anual, ej. 2024) o YYYYMM (trimestral, ej. 202512)."
+            )
 
-        file_path = self.raw_dir / f"eifrs{period_str}_{period_str}.txt"
+        if len(period_str) == 4:
+            # Archivo anual histórico (contiene los 4 trimestres agrupados)
+            file_path = self.raw_dir / f"eifrs{period_str}_anual.txt"
+            url_params = f"inicio={period_str}03&termino={period_str}12"
+            logger_msg = f"Descargando archivo agrupado CMF para año {period_str}..."
+        else:
+            # Archivo trimestral individual
+            file_path = self.raw_dir / f"eifrs{period_str}_{period_str}.txt"
+            url_params = f"inicio={period_str}&termino={period_str}"
+            logger_msg = f"Descargando archivo trimestral CMF para período {period_str}..."
 
         # 1. Gestión de Descarga / Caché local
         if not file_path.exists() or force_download:
-            logger.info(f"Descargando archivo plano CMF para período {period_str}...")
-            url = f"{self.BASE_URL}?inicio={period_str}&termino={period_str}"
+            logger.info(logger_msg)
+            url = f"{self.BASE_URL}?{url_params}"
             headers = {
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
             }

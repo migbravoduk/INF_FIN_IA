@@ -206,11 +206,15 @@ class Database:
             for rec in records
         ]
 
+        # Obtener los períodos únicos presentes en el lote de registros
+        unique_periods = list(set(int(rec['period']) for rec in records))
+
         # Iniciar transacción explícita
         self.conn.execute("BEGIN TRANSACTION")
         try:
-            # 1. Eliminar datos existentes del período
-            self.conn.execute("DELETE FROM cmf_financial_statements WHERE period = ?", [period])
+            # 1. Eliminar datos existentes de forma atómica para cada período presente en el lote
+            for p in unique_periods:
+                self.conn.execute("DELETE FROM cmf_financial_statements WHERE period = ?", [p])
 
             # 2. Bulk insert usando la eficiencia nativa de DuckDB executemany
             self.conn.executemany("""
@@ -220,7 +224,7 @@ class Database:
             """, tuples_data)
 
             self.conn.execute("COMMIT")
-            logger.info(f"Ingestados con éxito {len(records)} registros CMF para el período {period}.")
+            logger.info(f"Ingestados con éxito {len(records)} registros CMF para los períodos {unique_periods}.")
             return len(records)
         except Exception as e:
             self.conn.execute("ROLLBACK")

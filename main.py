@@ -382,14 +382,32 @@ def list_series(source):
 # ----------------------------------------------------------
 
 @cli.command(name="fetch-cmf")
-@click.option("--period", "-p", required=True, type=int, help="Período en formato YYYYMM (ej. 202512)")
+@click.option("--period", "-p", required=False, type=int, default=None, help="Período YYYYMM (ej. 202512) o YYYY (ej. 2024)")
+@click.option("--history", is_flag=True, help="Descarga e ingesta todo el historial completo (2018 a 2026)")
 @click.option("--force", "-f", is_flag=True, help="Fuerza la descarga del archivo web ignorando caché")
-def fetch_cmf(period, force):
+def fetch_cmf(period, history, force):
     """Descarga e ingesta estados financieros trimestrales de la CMF."""
+
+    if not period and not history:
+        console.print("[bold red]Error: Debes especificar un período (--period) o activar la carga histórica (--history).[/]")
+        sys.exit(1)
+
+    if history:
+        # Períodos históricos organizados por la forma en que los publica la CMF:
+        # Años 2018-2024 se publican anualmente (un solo archivo contiene los 4 trimestres).
+        # A partir de 2025, se publican como trimestres individuales.
+        periods_to_fetch = [
+            2018, 2019, 2020, 2021, 2022, 2023, 2024,
+            202503, 202506, 202509, 202512, 202603
+        ]
+        info_msg = "Carga histórica completa (2018-2026)"
+    else:
+        periods_to_fetch = [period]
+        info_msg = f"Período específico: {period}"
 
     console.print(Panel(
         f"[bold green]🚀 Iniciando ingesta de Estados Financieros CMF[/]\n\n"
-        f"  • Período: [cyan]{period}[/]\n"
+        f"  • Modo: [cyan]{info_msg}[/]\n"
         f"  • Forzar descarga: [yellow]{force}[/]",
         title="📥 Ingestador CMF",
         border_style="green",
@@ -397,17 +415,23 @@ def fetch_cmf(period, force):
 
     try:
         collector = CMFCollector()
-        records = collector.fetch_period(period, force_download=force)
-
-        if not records:
-            console.print("[yellow]No se parsearon registros del archivo plano CMF.[/]")
-            return
+        total_inserted = 0
 
         with Database() as db:
-            inserted = db.insert_cmf_records(period, records)
+            for p in periods_to_fetch:
+                console.print(f"\n[bold cyan]⏳ Procesando período: {p}...[/]")
+                records = collector.fetch_period(p, force_download=force)
 
-        console.print(f"\n[bold green]✅ Ingesta finalizada con éxito![/]")
-        console.print(f"  • Total registros insertados: [bold]{inserted:,}[/]")
+                if not records:
+                    console.print(f"[yellow]⚠️  Omitiendo {p}: Sin registros parseados en el archivo.[/]")
+                    continue
+
+                inserted = db.insert_cmf_records(p, records)
+                console.print(f"[green]✓ Ingestados {inserted:,} registros para el período {p}.[/]")
+                total_inserted += inserted
+
+        console.print(f"\n[bold green]✅ Ingesta CMF finalizada con éxito![/]")
+        console.print(f"  • Total registros procesados e insertados: [bold]{total_inserted:,}[/]")
 
     except Exception as e:
         console.print(f"\n[bold red]❌ Error durante la ingesta CMF:[/] {e}")
