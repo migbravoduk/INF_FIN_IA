@@ -26,6 +26,7 @@ STORYTELLING (dashboard web, API REST, reportes Jules)
 | **2 — Series adicionales BCCh + SII** | ✅ Activa | UF, UTM, IVP, IMACEC desde la API de la BDE |
 | **3 — CMF: Empresas y Mercados** | ✅ Activa | Ingesta de archivos trimestrales planos .txt de estados financieros corporativos |
 | **4 — CMF: Bancos e Inst. Financieras** | ✅ Activa | Ingesta mensual de balances y resultados con desglose por moneda desde la API REST SBIFv3 |
+| **SP — Fondos de Pensiones** | ✅ Activa | Valores cuota diarios (desde 2002), carteras mensuales XML, cinta de precios diaria |
 | **5 — Calendarios y Alertas** | ⏳ Planificada | Fechas de publicaciones, alertas automáticas |
 | **6 — Análisis y Proyecciones** | ⏳ Planificada | Proyecciones macrofundadas, ratios, anomalías |
 | **7 — API + Dashboard** | ⏳ Planificada | FastAPI + visualización web interactiva |
@@ -175,6 +176,31 @@ C:\Users\mbrav\anaconda3\python.exe main.py query-banks --bank 001 --account 100
 C:\Users\mbrav\anaconda3\python.exe main.py query-banks --bank 001 --account 100000000 --format json --limit 2
 
 # ============================================================
+# Ingesta y Consulta de Pensiones (Superintendencia de Pensiones — SP)
+# ============================================================
+
+# Descargar e ingestar valores cuota de multifondos (ej. histórico completo desde 2002 para todos los fondos)
+C:\Users\mbrav\anaconda3\python.exe main.py fetch-sp-cuotas --year-start 2002
+
+# Descargar valores cuota para un fondo y rango específico (ej. Fondo A entre 2025 y 2026)
+C:\Users\mbrav\anaconda3\python.exe main.py fetch-sp-cuotas --year-start 2025 --year-end 2026 --fund A
+
+# Descargar la cartera de inversión mensual desagregada para un período específico (ej. Enero 2026)
+C:\Users\mbrav\anaconda3\python.exe main.py fetch-sp-cartera --period 202601
+
+# Descargar la cinta diaria de precios de instrumentos financieros para una fecha específica (ej. 2026-01-02)
+C:\Users\mbrav\anaconda3\python.exe main.py fetch-sp-precios --date 2026-01-02
+
+# Realizar un backfill completo de precios diarios (últimos 5 años diarios, y anteriores 5 años los miércoles)
+C:\Users\mbrav\anaconda3\python.exe main.py fetch-sp-precios --history
+
+# Consultar valores cuota y patrimonio en terminal
+C:\Users\mbrav\anaconda3\python.exe main.py query-sp-cuotas --afp CAPITAL --fund A --limit 5
+
+# Consultar precios diarios de instrumentos (ej. nemotécnico o RUT)
+C:\Users\mbrav\anaconda3\python.exe main.py query-sp-precios --instrument AESANDES --limit 5
+
+# ============================================================
 # Listar y Scheduler
 # ============================================================
 
@@ -195,6 +221,7 @@ INF_FIN_IA/
 │   ├── bcentral.py          # ✅ Cliente BDE API del Banco Central (Fases 1 y 2)
 │   ├── cmf.py               # ✅ Ingestionador plano de Estados Financieros CMF (Fase 3)
 │   ├── cmf_banks.py         # ✅ Cliente API REST de Estados Financieros Bancos CMF (Fase 4)
+│   ├── sp_pensions.py       # ✅ Scraping de valores cuota, carteras y precios SP
 │   └── sii.py               # 🔜 Scraping SII alternativo (Fase 2)
 ├── processors/
 │   ├── normalizer.py        # ✅ Normalización y limpieza de datos macro
@@ -257,6 +284,8 @@ Para agregar más series, editar `config/series_catalog.yaml`.
 | `monthly_fetch` | Día 6 de cada mes, 09:00 | IPC, TPM, desempleo, etc. |
 | `quarterly_fetch` | Día 10 (ene/abr/jul/oct), 09:30 | PIB, balanza de pagos |
 | `annual_fetch` | 15 de febrero, 10:00 | Balance fiscal |
+| `sp_daily_fetch` | Lun–Vie a las 18:30 (Santiago) | Cinta de precios e ingesta de valores cuota SP |
+| `sp_monthly_fetch` | Día 15 de cada mes, 20:00 | Cartera desagregada mensual del mes anterior SP |
 
 Para correrlo como servicio persistente en Windows:
 - Usar el **Programador de Tareas** de Windows (Task Scheduler)
@@ -323,6 +352,40 @@ df = conn.execute("""
     FROM cmf_bank_statements
     WHERE bank_code = '001' AND account_code = '100000000'
     ORDER BY period DESC
+""").fetchdf()
+print(df)
+```
+
+### Consulta de Fondos de Pensiones (SP)
+
+```python
+import duckdb
+conn = duckdb.connect("data/finanzas_chile.duckdb")
+
+# Valores cuota diarios de AFP Habitat para el Fondo A (últimos 10 registros)
+df = conn.execute("""
+    SELECT date, fund_type, quota_value, equity_value
+    FROM sp_quota_values
+    WHERE afp_name = 'HABITAT' AND fund_type = 'A'
+    ORDER BY date DESC LIMIT 10
+""").fetchdf()
+print(df)
+
+# Distribución de portafolio mensual (Glosa / Activos con mayor porcentaje en Ene 2026)
+df = conn.execute("""
+    SELECT period, fund_type, instrument_glosa, porcentaje
+    FROM sp_portfolio_holdings
+    WHERE afp_name = 'TOTAL' AND period = '2026-01'
+    ORDER BY porcentaje DESC LIMIT 10
+""").fetchdf()
+print(df)
+
+# Consulta de nemotécnicos en la cinta de precios diaria (ej. AESANDES)
+df = conn.execute("""
+    SELECT date, instrument_id, instrument_type, currency, price
+    FROM sp_instrument_prices
+    WHERE instrument_id = 'AESANDES'
+    ORDER BY date DESC LIMIT 5
 """).fetchdf()
 print(df)
 ```

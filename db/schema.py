@@ -117,6 +117,51 @@ CREATE TABLE IF NOT EXISTS cmf_bank_statements (
 
 CREATE INDEX IF NOT EXISTS idx_bank_code_period ON cmf_bank_statements(bank_code, period);
 CREATE INDEX IF NOT EXISTS idx_bank_account_code ON cmf_bank_statements(account_code);
+
+-- ============================================================
+-- ** Superintendencia de Pensiones (SP)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS sp_quota_values (
+    date            DATE NOT NULL,
+    afp_name        VARCHAR NOT NULL,
+    fund_type       VARCHAR NOT NULL,
+    quota_value     DOUBLE NOT NULL,
+    equity_value    DOUBLE NOT NULL,
+    fetched_at      TIMESTAMP DEFAULT now(),
+    PRIMARY KEY (date, afp_name, fund_type)
+);
+
+CREATE INDEX IF NOT EXISTS idx_sp_quota_date ON sp_quota_values(date);
+CREATE INDEX IF NOT EXISTS idx_sp_quota_afp_fund ON sp_quota_values(afp_name, fund_type);
+
+CREATE SEQUENCE IF NOT EXISTS sp_portfolio_seq START 1;
+
+CREATE TABLE IF NOT EXISTS sp_portfolio_holdings (
+    id              BIGINT PRIMARY KEY DEFAULT nextval('sp_portfolio_seq'),
+    period          VARCHAR NOT NULL,  -- Formato YYYY-MM
+    afp_name        VARCHAR NOT NULL,
+    fund_type       VARCHAR NOT NULL,
+    instrument_glosa VARCHAR NOT NULL,
+    monto_pesos     DOUBLE,
+    monto_dolares   DOUBLE,
+    porcentaje      DOUBLE,
+    fetched_at      TIMESTAMP DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_sp_portfolio_period ON sp_portfolio_holdings(period);
+
+CREATE TABLE IF NOT EXISTS sp_instrument_prices (
+    date            DATE NOT NULL,
+    instrument_id   VARCHAR NOT NULL, -- Nemotécnico o RUT
+    instrument_type VARCHAR,
+    currency        VARCHAR,
+    price           DOUBLE NOT NULL,
+    fetched_at      TIMESTAMP DEFAULT now(),
+    PRIMARY KEY (date, instrument_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_sp_prices_date ON sp_instrument_prices(date);
+CREATE INDEX IF NOT EXISTS idx_sp_prices_instrument ON sp_instrument_prices(instrument_id);
 """
 
 SEED_SOURCES_SQL = """
@@ -135,5 +180,8 @@ INSERT OR IGNORE INTO sources (id, name, base_url, notes) VALUES
      'Scraping UF/UTM — sin autenticacion'),
     ('bolsa_stgo', 'Bolsa de Santiago',
      'https://www.bolsadesantiago.com',
-     'Precios de acciones y datos de mercado');
+     'Precios de acciones y datos de mercado'),
+    ('sp', 'Superintendencia de Pensiones',
+     'https://www.spensiones.cl',
+     'Portal web — scraping de valores cuota, carteras y precios');
 """

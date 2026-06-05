@@ -370,6 +370,168 @@ class Database:
         return self.conn.execute(query, params).fetchdf()
 
     # ----------------------------------------------------------
+    # Superintendencia de Pensiones (SP)
+    # ----------------------------------------------------------
+
+    def insert_sp_quota_values(self, records: list[dict]) -> int:
+        """
+        Inserta valores cuota y patrimonio de la SP de forma transaccional.
+        Utiliza ON CONFLICT DO UPDATE para evitar duplicados.
+        """
+        if not records:
+            return 0
+
+        tuples_data = [
+            (
+                str(rec['date']),
+                str(rec['afp_name']).upper().strip(),
+                str(rec['fund_type']).upper().strip(),
+                float(rec['quota_value']),
+                float(rec['equity_value'])
+            )
+            for rec in records
+        ]
+
+        self.conn.execute("BEGIN TRANSACTION")
+        try:
+            self.conn.executemany("""
+                INSERT INTO sp_quota_values (date, afp_name, fund_type, quota_value, equity_value)
+                VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT (date, afp_name, fund_type) DO UPDATE SET
+                    quota_value = excluded.quota_value,
+                    equity_value = excluded.equity_value,
+                    fetched_at = now()
+            """, tuples_data)
+            self.conn.execute("COMMIT")
+            return len(records)
+        except Exception as e:
+            self.conn.execute("ROLLBACK")
+            logger.error("Error al insertar valores cuota de la SP en DuckDB", exc_info=True)
+            raise e
+
+    def insert_sp_portfolio_holdings(self, period: str, records: list[dict]) -> int:
+        """
+        Inserta la cartera mensual desagregada de la SP usando Delete-then-Insert.
+        """
+        if not records:
+            return 0
+
+        tuples_data = [
+            (
+                str(rec['period']),
+                str(rec['afp_name']).upper().strip(),
+                str(rec['fund_type']).upper().strip(),
+                str(rec['instrument_glosa']).strip(),
+                float(rec['monto_pesos']) if rec.get('monto_pesos') is not None else None,
+                float(rec['monto_dolares']) if rec.get('monto_dolares') is not None else None,
+                float(rec['porcentaje']) if rec.get('porcentaje') is not None else None
+            )
+            for rec in records
+        ]
+
+        self.conn.execute("BEGIN TRANSACTION")
+        try:
+            self.conn.execute("DELETE FROM sp_portfolio_holdings WHERE period = ?", [period])
+            self.conn.executemany("""
+                INSERT INTO sp_portfolio_holdings (period, afp_name, fund_type, instrument_glosa, monto_pesos, monto_dolares, porcentaje)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, tuples_data)
+            self.conn.execute("COMMIT")
+            return len(records)
+        except Exception as e:
+            self.conn.execute("ROLLBACK")
+            logger.error(f"Error al insertar cartera SP para el período {period} en DuckDB", exc_info=True)
+            raise e
+
+    def insert_sp_instrument_prices(self, records: list[dict]) -> int:
+        """
+        Inserta precios diarios de instrumentos financieros de la SP.
+        """
+        if not records:
+            return 0
+
+        tuples_data = [
+            (
+                str(rec['date']),
+                str(rec['instrument_id']).strip(),
+                str(rec.get('instrument_type', '')).strip(),
+                str(rec.get('currency', '')).strip(),
+                float(rec['price'])
+            )
+            for rec in records
+        ]
+
+        self.conn.execute("BEGIN TRANSACTION")
+        try:
+            self.conn.executemany("""
+                INSERT INTO sp_instrument_prices (date, instrument_id, instrument_type, currency, price)
+                VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT (date, instrument_id) DO UPDATE SET
+                    instrument_type = excluded.instrument_type,
+                    currency = excluded.currency,
+                    price = excluded.price,
+                    fetched_at = now()
+            """, tuples_data)
+            self.conn.execute("COMMIT")
+            return len(records)
+        except Exception as e:
+            self.conn.execute("ROLLBACK")
+            logger.error("Error al insertar precios de instrumentos SP en DuckDB", exc_info=True)
+            raise e
+
+    def query_sp_quota_values(
+        self,
+        afp: Optional[str] = None,
+        fund: Optional[str] = None,
+        from_date: Optional[str] = None,
+        to_date: Optional[str] = None,
+        limit: int = 50
+    ):
+        """Consulta valores cuota y patrimonio registrados con filtros flexibles."""
+        query = "SELECT date, afp_name, fund_type, quota_value, equity_value FROM sp_quota_values WHERE 1=1"
+        params = []
+
+        if afp:
+            query += " AND UPPER(afp_name) = ?"
+            params.append(afp.upper().strip())
+        if fund:
+            query += " AND UPPER(fund_type) = ?"
+            params.append(fund.upper().strip())
+        if from_date:
+            query += " AND date >= ?"
+            params.append(from_date)
+        if to_date:
+            query += " AND date <= ?"
+            params.append(to_date)
+
+        query += " ORDER BY date DESC, afp_name ASC, fund_type ASC LIMIT ?"
+        params.append(limit)
+
+        return self.conn.execute(query, params).fetchdf()
+
+    def query_sp_instrument_prices(
+        self,
+        instrument_id: Optional[str] = None,
+        date: Optional[str] = None,
+        limit: int = 50
+    ):
+        """Consulta la cinta de precios diaria de instrumentos con filtros flexibles."""
+        query = "SELECT date, instrument_id, instrument_type, currency, price FROM sp_instrument_prices WHERE 1=1"
+        params = []
+
+        if instrument_id:
+            query += " AND UPPER(instrument_id) LIKE ?"
+            params.append(f"%{instrument_id.upper().strip()}%")
+        if date:
+            query += " AND date = ?"
+            params.append(date)
+
+        query += " ORDER BY date DESC, instrument_id ASC LIMIT ?"
+        params.append(limit)
+
+        return self.conn.execute(query, params).fetchdf()
+
+    # ----------------------------------------------------------
     # Utilidades
     # ----------------------------------------------------------
 

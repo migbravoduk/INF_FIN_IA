@@ -44,6 +44,7 @@ from db.database import Database
 from collectors.bcentral import BCentralCollector
 from collectors.cmf import CMFCollector
 from collectors.cmf_banks import CMFBankCollector
+from collectors.sp_pensions import SPPensionCollector
 from processors.normalizer import normalize_observations
 from scheduler.jobs import run_all_series, run_fetch_by_frequency, create_scheduler
 
@@ -671,6 +672,275 @@ def query_banks(bank, period, account, report_type, limit, output_format):
 
     console.print(table)
     console.print(f"\n[dim]Filtros aplicados: Banco={bank or 'Todos'} | Período={period or 'Todos'} | Cuenta={account or 'Todas'} | Tipo={report_type or 'Todos'}[/]")
+
+
+# ----------------------------------------------------------
+# fetch-sp-cuotas
+# ----------------------------------------------------------
+
+@cli.command(name="fetch-sp-cuotas")
+@click.option("--year-start", "-s", type=int, default=2002, help="Año de inicio (default: 2002)")
+@click.option("--year-end", "-e", type=int, default=None, help="Año de término (default: año actual)")
+@click.option("--fund", "-f", type=click.Choice(["A", "B", "C", "D", "E"]), default=None, help="Tipo de fondo (A a E) o None para todos")
+def fetch_sp_cuotas(year_start, year_end, fund):
+    """Descarga e ingesta valores cuota de multifondos de la SP."""
+    if not year_end:
+        year_end = datetime.now().year
+
+    collector = SPPensionCollector()
+    funds = [fund] if fund else ["A", "B", "C", "D", "E"]
+
+    console.print(Panel(
+        f"[bold green]🚀 Iniciando ingesta de Valores Cuota SP[/]\n\n"
+        f"  • Rango de años: [cyan]{year_start} - {year_end}[/]\n"
+        f"  • Fondos a procesar: [yellow]{', '.join(funds)}[/]",
+        title="📥 Ingestador Cuotas SP",
+        border_style="green",
+    ))
+
+    try:
+        total_inserted = 0
+        with Database() as db:
+            fecconf = collector.fetch_fecconf()
+            for f_type in funds:
+                console.print(f"\n[bold cyan]⏳ Descargando fondo {f_type}...[/]")
+                records = collector.fetch_quota_values(year_start, year_end, fund_type=f_type, fecconf=fecconf)
+                
+                if not records:
+                    console.print(f"[yellow]⚠️ No se obtuvieron registros para el fondo {f_type}.[/]")
+                    continue
+
+                inserted = db.insert_sp_quota_values(records)
+                console.print(f"[green]✓ Ingestados {inserted:,} registros para el fondo {f_type}.[/]")
+                total_inserted += inserted
+
+        console.print(f"\n[bold green]✅ Ingesta de Valores Cuota finalizada con éxito![/]")
+        console.print(f"  • Total registros procesados: [bold]{total_inserted:,}[/]")
+
+    except Exception as e:
+        console.print(f"\n[bold red]❌ Error durante la ingesta de cuotas SP:[/] {e}")
+        sys.exit(1)
+
+
+# ----------------------------------------------------------
+# fetch-sp-cartera
+# ----------------------------------------------------------
+
+@cli.command(name="fetch-sp-cartera")
+@click.option("--period", "-p", required=True, type=int, help="Período YYYYMM (ej. 202601)")
+def fetch_sp_cartera(period):
+    """Descarga e ingesta la cartera mensual desagregada de la SP."""
+    collector = SPPensionCollector()
+
+    console.print(Panel(
+        f"[bold green]🚀 Iniciando ingesta de Cartera Desagregada SP[/]\n\n"
+        f"  • Período: [cyan]{period}[/]",
+        title="📥 Ingestador Carteras SP",
+        border_style="green",
+    ))
+
+    try:
+        records = collector.fetch_portfolio(period)
+        if not records:
+            console.print(f"[yellow]⚠️ No se obtuvieron registros de cartera para el período {period} (puede no estar disponible).[/]")
+            return
+
+        with Database() as db:
+            db_period = f"{str(period)[:4]}-{str(period)[4:]}"
+            inserted = db.insert_sp_portfolio_holdings(db_period, records)
+
+        console.print(f"\n[bold green]✅ Ingesta de Cartera finalizada con éxito![/]")
+        console.print(f"  • Total registros de activos ingresados: [bold]{inserted:,}[/]")
+
+    except Exception as e:
+        console.print(f"\n[bold red]❌ Error durante la ingesta de la cartera SP:[/] {e}")
+        sys.exit(1)
+
+
+# ----------------------------------------------------------
+# fetch-sp-precios
+# ----------------------------------------------------------
+
+@cli.command(name="fetch-sp-precios")
+@click.option("--date", "date_val", default=None, help="Fecha específica YYYY-MM-DD")
+@click.option("--history", is_flag=True, help="Ejecuta backfill completo: 5 años diarios y anteriores 5 años semanales")
+def fetch_sp_precios(date_val, history):
+    """Descarga e ingesta precios diarios de instrumentos financieros de la SP."""
+    if not date_val and not history:
+        console.print("[bold red]Error: Debes especificar una fecha (--date) o activar el backfill histórico (--history).[/]")
+        sys.exit(1)
+
+    collector = SPPensionCollector()
+    dates_to_fetch = []
+
+    if history:
+        import datetime as dt_mod
+        today = dt_mod.date.today()
+        
+        # Últimos 5 años diarios
+        five_years_ago = today - dt_mod.timedelta(days=5*365)
+        curr = five_years_ago
+        while curr <= today:
+            if curr.weekday() < 5:
+                dates_to_fetch.append(curr.strftime("%Y-%m-%d"))
+            curr += dt_mod.timedelta(days=1)
+            
+        # Anteriores 5 años (semanal - miércoles)
+        ten_years_ago = today - dt_mod.timedelta(days=10*365)
+        curr = ten_years_ago
+        while curr < five_years_ago:
+            if curr.weekday() == 2:
+                dates_to_fetch.append(curr.strftime("%Y-%m-%d"))
+            curr += dt_mod.timedelta(days=1)
+            
+        info_msg = f"Backfill histórico ({len(dates_to_fetch)} fechas planificadas)"
+    else:
+        dates_to_fetch = [date_val]
+        info_msg = f"Fecha única: {date_val}"
+
+    console.print(Panel(
+        f"[bold green]🚀 Iniciando ingesta de Cinta de Precios Diaria SP[/]\n\n"
+        f"  • Modo: [cyan]{info_msg}[/]",
+        title="📥 Ingestador Precios SP",
+        border_style="green",
+    ))
+
+    import time
+    try:
+        total_inserted = 0
+        with Database() as db:
+            for idx, d_str in enumerate(dates_to_fetch):
+                if history and idx > 0 and idx % 20 == 0:
+                    console.print(f"[dim]Procesados {idx}/{len(dates_to_fetch)} días...[/]")
+                
+                records = collector.fetch_daily_prices(d_str)
+                if records:
+                    inserted = db.insert_sp_instrument_prices(records)
+                    total_inserted += inserted
+                    if history:
+                        time.sleep(0.15)
+                else:
+                    if not history:
+                        console.print(f"[yellow]⚠️ No hay cinta de precios disponible para la fecha {d_str}.[/]")
+
+        console.print(f"\n[bold green]✅ Ingesta de precios finalizada con éxito![/]")
+        console.print(f"  • Total registros de instrumentos ingresados: [bold]{total_inserted:,}[/]")
+
+    except Exception as e:
+        console.print(f"\n[bold red]❌ Error durante la ingesta de precios SP:[/] {e}")
+        sys.exit(1)
+
+
+# ----------------------------------------------------------
+# query-sp-cuotas
+# ----------------------------------------------------------
+
+@cli.command(name="query-sp-cuotas")
+@click.option("--afp", default=None, help="Nombre de la AFP (ej. CAPITAL, HABITAT)")
+@click.option("--fund", "-f", type=click.Choice(["A", "B", "C", "D", "E"]), default=None, help="Tipo de fondo")
+@click.option("--from-date", default=None, help="Fecha inicio YYYY-MM-DD")
+@click.option("--to-date", default=None, help="Fecha fin YYYY-MM-DD")
+@click.option("--limit", "-n", default=20, help="Límite de filas (default: 20)")
+@click.option("--format", "output_format", default="table",
+              type=click.Choice(["table", "csv", "json"]), help="Formato de salida")
+def query_sp_cuotas(afp, fund, from_date, to_date, limit, output_format):
+    """Consulta valores cuota y patrimonio de la SP desde DuckDB."""
+    with Database() as db:
+        df = db.query_sp_quota_values(
+            afp=afp, fund=fund, from_date=from_date, to_date=to_date, limit=limit
+        )
+
+    if df.empty:
+        console.print("[yellow]No se encontraron registros de valores cuota con los filtros especificados.[/]")
+        return
+
+    if output_format == "csv":
+        console.print(df.to_csv(index=False))
+        return
+
+    if output_format == "json":
+        console.print(df.to_json(orient="records", force_ascii=False, indent=2))
+        return
+
+    table = Table(
+        title="📈 Valores Cuota y Patrimonio (Superintendencia de Pensiones)",
+        box=box.ROUNDED,
+        border_style="cyan",
+        show_header=True,
+        header_style="bold cyan",
+    )
+    table.add_column("Fecha", style="dim", justify="center")
+    table.add_column("AFP")
+    table.add_column("Fondo", justify="center", style="bold yellow")
+    table.add_column("Valor Cuota ($)", justify="right", style="green")
+    table.add_column("Patrimonio ($)", justify="right", style="cyan")
+
+    for _, row in df.iterrows():
+        table.add_row(
+            str(row["date"]),
+            str(row["afp_name"]),
+            str(row["fund_type"]),
+            f"{row['quota_value']:,.2f}",
+            f"{row['equity_value']:,.0f}"
+        )
+
+    console.print(table)
+    console.print(f"\n[dim]Mostrando últimos {len(df)} registros[/]")
+
+
+# ----------------------------------------------------------
+# query-sp-precios
+# ----------------------------------------------------------
+
+@cli.command(name="query-sp-precios")
+@click.option("--instrument", "-i", default=None, help="Nemotécnico o RUT del emisor (ej. AESANDES, ENELAM)")
+@click.option("--date", "-d", default=None, help="Fecha específica YYYY-MM-DD")
+@click.option("--limit", "-n", default=20, help="Límite de filas (default: 20)")
+@click.option("--format", "output_format", default="table",
+              type=click.Choice(["table", "csv", "json"]), help="Formato de salida")
+def query_sp_precios(instrument, date, limit, output_format):
+    """Consulta la cinta diaria de precios de instrumentos financieros de la SP."""
+    with Database() as db:
+        df = db.query_sp_instrument_prices(
+            instrument_id=instrument, date=date, limit=limit
+        )
+
+    if df.empty:
+        console.print("[yellow]No se encontraron registros de precios para los filtros especificados.[/]")
+        return
+
+    if output_format == "csv":
+        console.print(df.to_csv(index=False))
+        return
+
+    if output_format == "json":
+        console.print(df.to_json(orient="records", force_ascii=False, indent=2))
+        return
+
+    table = Table(
+        title="💵 Cinta de Precios Diaria de Instrumentos (SP)",
+        box=box.ROUNDED,
+        border_style="magenta",
+        show_header=True,
+        header_style="bold magenta",
+    )
+    table.add_column("Fecha", style="dim", justify="center")
+    table.add_column("Instrumento/Ticker", style="bold yellow")
+    table.add_column("Tipo", justify="center", style="cyan")
+    table.add_column("Moneda", justify="center")
+    table.add_column("Precio de Cierre", justify="right", style="green")
+
+    for _, row in df.iterrows():
+        table.add_row(
+            str(row["date"]),
+            str(row["instrument_id"]),
+            str(row["instrument_type"]),
+            str(row["currency"]),
+            f"{row['price']:,.4f}"
+        )
+
+    console.print(table)
+    console.print(f"\n[dim]Mostrando últimos {len(df)} registros[/]")
 
 
 # ----------------------------------------------------------

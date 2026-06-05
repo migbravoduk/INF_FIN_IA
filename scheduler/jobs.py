@@ -20,6 +20,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.events import EVENT_JOB_ERROR, EVENT_JOB_EXECUTED
 
 from collectors.bcentral import BCentralCollector
+from collectors.sp_pensions import SPPensionCollector
 from db.database import Database
 from processors.normalizer import normalize_observations
 from config.settings import settings
@@ -117,6 +118,73 @@ def run_all_series() -> None:
 
 
 # ============================================================
+# Tareas de la Superintendencia de Pensiones (SP)
+# ============================================================
+
+def run_sp_daily_fetch() -> None:
+    """Descarga diaria de la cinta de precios e ingesta de valores cuota de la SP."""
+    from datetime import date
+    import datetime as dt_mod
+
+    today_str = date.today().strftime("%Y-%m-%d")
+    logger.info(f"🔄 [Scheduler SP] Iniciando descargas diarias de la SP para {today_str}...")
+
+    collector = SPPensionCollector()
+    with Database() as db:
+        # 1. Descarga e ingesta de la cinta de precios diaria (pYYYYMMDD.zip)
+        try:
+            records_prices = collector.fetch_daily_prices(today_str)
+            if records_prices:
+                inserted = db.insert_sp_instrument_prices(records_prices)
+                logger.info(f"✅ [Scheduler SP] Cinta de precios {today_str}: {inserted} precios ingresados.")
+            else:
+                logger.info(f"⚠️ [Scheduler SP] Cinta de precios {today_str} no disponible o es día inhábil.")
+        except Exception as e:
+            logger.error(f"❌ [Scheduler SP] Error al descargar precios para {today_str}: {e}")
+
+        # 2. Ingesta de valores cuota (actualiza el año en curso)
+        try:
+            current_year = date.today().year
+            fecconf = collector.fetch_fecconf()
+            total_inserted = 0
+            for fund in ["A", "B", "C", "D", "E"]:
+                records_cuotas = collector.fetch_quota_values(current_year, current_year, fund_type=fund, fecconf=fecconf)
+                if records_cuotas:
+                    inserted = db.insert_sp_quota_values(records_cuotas)
+                    total_inserted += inserted
+            logger.info(f"✅ [Scheduler SP] Valores cuota: +{total_inserted} registros actualizados para el año {current_year}.")
+        except Exception as e:
+            logger.error(f"❌ [Scheduler SP] Error al descargar valores cuota para el año {current_year}: {e}")
+
+
+def run_sp_monthly_fetch() -> None:
+    """Descarga mensual de la cartera de inversión desagregada del mes anterior."""
+    from datetime import date
+    import datetime as dt_mod
+
+    # Calcular el período del mes anterior (YYYYMM)
+    today = date.today()
+    first_day_current_month = today.replace(day=1)
+    last_day_prev_month = first_day_current_month - dt_mod.timedelta(days=1)
+    prev_period = int(last_day_prev_month.strftime("%Y%m"))
+
+    logger.info(f"🔄 [Scheduler SP] Iniciando descarga mensual de cartera para período {prev_period}...")
+
+    collector = SPPensionCollector()
+    try:
+        records = collector.fetch_portfolio(prev_period)
+        if records:
+            with Database() as db:
+                db_period = f"{str(prev_period)[:4]}-{str(prev_period)[4:]}"
+                inserted = db.insert_sp_portfolio_holdings(db_period, records)
+                logger.info(f"✅ [Scheduler SP] Cartera mensual {db_period}: {inserted} activos ingresados.")
+        else:
+            logger.warning(f"⚠️ [Scheduler SP] Cartera mensual {prev_period} no disponible o vacía aún.")
+    except Exception as e:
+        logger.error(f"❌ [Scheduler SP] Error al descargar cartera mensual para {prev_period}: {e}")
+
+
+# ============================================================
 # Scheduler
 # ============================================================
 
@@ -202,5 +270,31 @@ def create_scheduler(blocking: bool = True) -> BlockingScheduler | BackgroundSch
         replace_existing=True,
     )
 
-    logger.info("Scheduler configurado con 4 jobs (daily/monthly/quarterly/annual)")
+    # Job diario SP — Lunes-Viernes a las 18:30
+    scheduler.add_job(
+        run_sp_daily_fetch,
+        trigger="cron",
+        day_of_week="mon-fri",
+        hour=18,
+        minute=30,
+        id="sp_daily_fetch",
+        name="Fetch diario SP (valores cuota y precios diarios)",
+        replace_existing=True,
+        misfire_grace_time=3600 * 2,
+    )
+
+    # Job mensual SP — Día 15 de cada mes a las 20:00
+    scheduler.add_job(
+        run_sp_monthly_fetch,
+        trigger="cron",
+        day=15,
+        hour=20,
+        minute=0,
+        id="sp_monthly_fetch",
+        name="Fetch mensual SP (cartera de inversiones)",
+        replace_existing=True,
+        misfire_grace_time=3600 * 12,
+    )
+
+    logger.info("Scheduler configurado con 6 jobs (4 BCCh + 2 SP)")
     return scheduler
