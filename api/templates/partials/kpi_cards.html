@@ -1,0 +1,35 @@
+{#
+  partials/kpi_cards.html — Fragmento HTMX con las tarjetas KPI multi-fuente.
+  Recibe `kpi` (dict con claves: macro, banca, afp, mercado).
+  Hoy alimentado con datos mock desde dashboard_kpi.py.
+#}
+<div class="kpi-grid">
+
+    <article class="kpi-card macro">
+        <h3>Macro · BCCh</h3>
+        <div class="kpi-row"><span>UF</span><b>{{ "{:,.2f}".format(kpi.macro.uf) }}</b></div>
+        <div class="kpi-row"><span>USD/CLP</span><b>{{ "{:,.2f}".format(kpi.macro.usd_clp) }}</b></div>
+        <div class="kpi-row"><span>IPC 12m</span><b>{{ "{:.1f}".format(kpi.macro.ipc_v12) }}%</b></div>
+    </article>
+
+    <article class="kpi-card banca">
+        <h3>Banca · CMF</h3>
+        <div class="kpi-big">{{ "{:,.0f}".format(kpi.banca.total_activos_sistema) }}</div>
+        <div class="kpi-sub">Activos del sistema · período {{ kpi.banca.period }}</div>
+    </article>
+
+    <article class="kpi-card afp">
+        <h3>AFP · Fondo A (valor cuota)</h3>
+        {% for row in kpi.afp %}
+        <div class="kpi-row"><span>{{ row.afp_name }}</span><b>{{ "{:,.2f}".format(row.quota_value) }}</b></div>
+        {% endfor %}
+    </article>
+
+    <article class="kpi-card mercado">
+        <h3>Mercado · SP</h3>
+        <div class="kpi-big">{{ kpi.mercado.n_instrumentos }}</div>
+        <div class="kpi-sub">Instrumentos en cinta · {{ kpi.mercado.date }}</div>
+    </article>
+
+</div>
+<p class="mock-note">⚠️ Datos de demostración (esqueleto). Conectar a <code>db.get_overview_kpis()</code>.</p>

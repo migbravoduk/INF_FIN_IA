@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Panel multi-fuente · INF_FIN_IA{% endblock %}
+
+{% block content %}
+<h1>Panel multi-fuente</h1>
+<p class="subtitle">Resumen de las 4 fuentes: BCCh · CMF Bancos · CMF Empresas · Superintendencia de Pensiones</p>
+
+<!--
+  Las tarjetas KPI se cargan vía HTMX al abrir la página.
+  El fragmento /api/kpi/overview/cards renderiza partials/kpi_cards.html.
+  Patrón extensible: para storytelling/proyecciones se añade otro bloque
+  con hx-get="/api/narrative/overview" sin tocar el resto.
+-->
+<section id="kpi-cards"
+         hx-get="/api/kpi/overview/cards"
+         hx-trigger="load"
+         hx-swap="innerHTML">
+    <p class="loading">Cargando indicadores…</p>
+</section>
+
+<!-- Placeholder de gráfico Plotly (ejemplo: sparkline UF / USD-CLP).
+     TODO: poblar con /api/series/{id}/observations y Plotly.newPlot(). -->
+<section class="chart-block">
+    <h2>Evolución reciente (placeholder)</h2>
+    <div id="chart-macro" class="chart"></div>
+    <script>
+        // Demo estática hasta conectar el endpoint real.
+        Plotly.newPlot("chart-macro", [{
+            x: ["2026-06-01", "2026-06-02", "2026-06-03", "2026-06-04"],
+            y: [39150.4, 39152.1, 39153.8, 39155.0],
+            type: "scatter", mode: "lines", name: "UF (demo)"
+        }], {margin: {t: 10, r: 10, b: 30, l: 50}, height: 280});
+    </script>
+</section>
+{% endblock %}

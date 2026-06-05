@@ -24,12 +24,23 @@ logger = logging.getLogger(__name__)
 class Database:
     """Gestiona la conexión y operaciones sobre el DuckDB local."""
 
-    def __init__(self, db_path: Optional[str] = None):
+    def __init__(self, db_path: Optional[str] = None, read_only: bool = False):
+        """
+        Args:
+            db_path: Ruta al archivo DuckDB (default: settings.DB_PATH).
+            read_only: Si True, abre la BD en modo solo-lectura. Necesario para que
+                       la API (proceso lector) coexista con el scheduler (único escritor),
+                       ya que DuckDB admite un solo proceso escritor. En modo lectura
+                       NO se inicializa el schema (no se puede crear/modificar).
+        """
         path = db_path or settings.DB_PATH
-        Path(path).parent.mkdir(parents=True, exist_ok=True)
-        self.conn = duckdb.connect(path)
-        self._init_schema()
-        logger.info(f"Base de datos abierta en: {path}")
+        self.read_only = read_only
+        if not read_only:
+            Path(path).parent.mkdir(parents=True, exist_ok=True)
+        self.conn = duckdb.connect(path, read_only=read_only)
+        if not read_only:
+            self._init_schema()
+        logger.info(f"Base de datos abierta en: {path} (read_only={read_only})")
 
     def _init_schema(self):
         """Crea tablas si no existen y carga fuentes base."""
@@ -530,6 +541,47 @@ class Database:
         params.append(limit)
 
         return self.conn.execute(query, params).fetchdf()
+
+    def query_sp_portfolio_holdings(
+        self,
+        period: Optional[str] = None,
+        afp: Optional[str] = None,
+        fund: Optional[str] = None,
+        limit: int = 50,
+    ):
+        """
+        [STUB — Fase Web] Consulta la cartera mensual desagregada de la SP.
+
+        Hoy la tabla sp_portfolio_holdings solo tiene métodos de inserción; la API
+        necesita leerla. Implementar igual que los otros query_* (filtros opcionales,
+        ORDER BY porcentaje DESC, LIMIT) devolviendo un DataFrame.
+
+        Columnas: period, afp_name, fund_type, instrument_glosa,
+                  monto_pesos, monto_dolares, porcentaje.
+        """
+        raise NotImplementedError("query_sp_portfolio_holdings: pendiente (esqueleto fase web)")
+
+    def get_overview_kpis(self) -> dict:
+        """
+        [STUB — Fase Web] Agrega los últimos valores de las 4 fuentes para el panel
+        multi-fuente del dashboard (endpoint /api/kpi/overview).
+
+        Debe devolver un dict, p.ej.:
+            {
+                "macro": {"uf": ..., "usd_clp": ..., "ipc_v12": ...},
+                "banca": {"total_activos_sistema": ..., "period": ...},
+                "afp":   [{"afp_name": ..., "quota_value": ...}, ...],  # Fondo A, último día
+                "mercado": {"n_instrumentos": ..., "date": ...},
+            }
+
+        Implementación sugerida (reusa tablas existentes):
+          - macro: get_latest_value() sobre los IDs de UF / USD-CLP observado / IPC V12.
+          - banca: SUM(val_total) de cmf_bank_statements WHERE account_code='100000000'
+                   en el último period disponible.
+          - afp:   query_sp_quota_values(fund='A') del último date disponible.
+          - mercado: COUNT(*) de sp_instrument_prices en el último date.
+        """
+        raise NotImplementedError("get_overview_kpis: pendiente (esqueleto fase web)")
 
     # ----------------------------------------------------------
     # Utilidades

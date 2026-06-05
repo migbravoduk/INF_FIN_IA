@@ -24,6 +24,8 @@ rich>=13.7.0
 # XBRL (Fase 3)
 # python-xbrl>=1.1.4
 
-# API (Fase 5)
-# fastapi>=0.111.0
-# uvicorn[standard]>=0.30.0
+# API + Dashboard (Fase 7) — stack server-rendered (sin Node)
+# HTMX y Plotly entran por CDN en api/templates/base.html (no son paquetes Python)
+fastapi>=0.111.0
+uvicorn[standard]>=0.30.0
+jinja2>=3.1.0
