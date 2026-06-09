@@ -10,6 +10,7 @@ Jobs:
   - quarterly_job : series con frequency='quarterly' → día 10 de ene/abr/jul/oct
 """
 
+import datetime as dt
 import logging
 from datetime import datetime
 from pathlib import Path
@@ -20,10 +21,13 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.events import EVENT_JOB_ERROR, EVENT_JOB_EXECUTED
 
 from collectors.bcentral import BCentralCollector
+from collectors.cmf import CMFCollector
+from collectors.cmf_banks import CMFBankCollector
 from collectors.sp_pensions import SPPensionCollector
 from db.database import Database
 from processors.normalizer import normalize_observations
 from config.settings import settings
+from scheduler.freshness import probe_all, FreshnessStatus, MAX_DAILY_BACKFILL
 
 logger = logging.getLogger(__name__)
 
@@ -185,6 +189,128 @@ def run_sp_monthly_fetch() -> None:
 
 
 # ============================================================
+# Catch-up dirigido por frescura ("ingesta al publicarse")
+# ============================================================
+
+# Mapea el `kind` de la sonda al source_id usado en fetch_log.
+_SOURCE_OF = {
+    "bcentral": "bcentral", "cmf_emp": "cmf", "cmf_bank": "cmf",
+    "sp_cuotas": "sp", "sp_precios": "sp", "sp_cartera": "sp",
+}
+
+
+def _business_days(start_excl: dt.date, end_incl: dt.date, cap: int) -> list[str]:
+    """Días hábiles en (start_excl, end_incl], como 'YYYY-MM-DD', topado en `cap`."""
+    days, d = [], start_excl + dt.timedelta(days=1)
+    while d <= end_incl and len(days) < cap:
+        if d.weekday() < 5:
+            days.append(d.isoformat())
+        d += dt.timedelta(days=1)
+    return days
+
+
+def _dispatch_catchup(db: Database, st: FreshnessStatus) -> tuple[str, int]:
+    """
+    Descarga e ingesta un objetivo `due`, reusando collectors + inserts idempotentes.
+    Registra en fetch_log. Devuelve (status, n_nuevos).
+    """
+    started = datetime.now()
+
+    if st.kind == "bcentral":
+        sid = st.params["series_id"]
+        raw = BCentralCollector().fetch_series(sid, from_date=st.params.get("from_date"))
+        clean = normalize_observations(raw, sid)
+        new, updated = db.upsert_observations(sid, clean)
+        db.log_fetch(sid, "bcentral", "ok", new, updated, started_at=started)
+        return "ok", new
+
+    if st.kind == "cmf_emp":
+        period = st.params["period"]
+        records = CMFCollector().fetch_period(period)
+        n = db.insert_cmf_records(period, records) if records else 0
+        db.log_fetch(f"cmf_emp:{period}", "cmf", "ok" if records else "no_data", n, started_at=started)
+        return ("ok" if records else "no_data"), n
+
+    if st.kind == "cmf_bank":
+        y, m, expected = st.params["year"], st.params["month"], st.params["expected_period"]
+        collector = CMFBankCollector()
+        total = 0
+        for code in collector.BANKS_CATALOG:
+            if (db.get_latest_bank_period(code) or 0) >= expected:
+                continue  # este banco ya está al día
+            for rtype in ("balance", "resultado"):
+                recs = collector.fetch_bank_report(y, m, code, report_type=rtype)
+                if recs:
+                    total += db.insert_bank_records(y, m, code, rtype, recs)
+        db.log_fetch(f"cmf_bank:{expected}", "cmf", "ok" if total else "no_data", total, started_at=started)
+        return ("ok" if total else "no_data"), total
+
+    if st.kind == "sp_cuotas":
+        year = st.params["year"]
+        collector = SPPensionCollector()
+        fecconf = collector.fetch_fecconf()
+        total = 0
+        for fund in ("A", "B", "C", "D", "E"):
+            recs = collector.fetch_quota_values(year, year, fund_type=fund, fecconf=fecconf)
+            if recs:
+                total += db.insert_sp_quota_values(recs)
+        db.log_fetch("sp_cuotas", "sp", "ok" if total else "no_data", total, started_at=started)
+        return ("ok" if total else "no_data"), total
+
+    if st.kind == "sp_precios":
+        collector = SPPensionCollector()
+        to_d = dt.date.fromisoformat(st.params["to_date"])
+        from_s = st.params.get("from_date")
+        days = (_business_days(dt.date.fromisoformat(from_s), to_d, MAX_DAILY_BACKFILL)
+                if from_s else [to_d.isoformat()])
+        total = 0
+        for d_str in days:
+            recs = collector.fetch_daily_prices(d_str)
+            if recs:
+                total += db.insert_sp_instrument_prices(recs)
+        db.log_fetch("sp_precios", "sp", "ok" if total else "no_data", total, started_at=started)
+        return ("ok" if total else "no_data"), total
+
+    if st.kind == "sp_cartera":
+        period, db_period = st.params["period"], st.params["db_period"]
+        recs = SPPensionCollector().fetch_portfolio(period)
+        n = db.insert_sp_portfolio_holdings(db_period, recs) if recs else 0
+        db.log_fetch(f"sp_cartera:{db_period}", "sp", "ok" if recs else "no_data", n, started_at=started)
+        return ("ok" if recs else "no_data"), n
+
+    return "skip", 0
+
+
+def run_catchup(dry_run: bool = False, today: dt.date = None) -> list[FreshnessStatus]:
+    """
+    Ingesta dirigida por frescura: descarga solo lo faltante y dentro de su ventana de
+    publicación. Idempotente. Devuelve la lista de FreshnessStatus (para mostrar/loguear).
+    """
+    logger.info(f"⏰ Catch-up por frescura iniciado {datetime.now():%Y-%m-%d %H:%M} (dry_run={dry_run})")
+    # En dry-run solo se sondea: abrir read_only evita el lock y permite diagnosticar
+    # aunque el scheduler tenga la BD abierta en otro proceso.
+    with Database(read_only=dry_run) as db:
+        statuses = probe_all(db, today=today)
+        due = [s for s in statuses if s.due]
+        logger.info(f"Frescura: {len(due)}/{len(statuses)} objetivos pendientes (due).")
+
+        if dry_run:
+            return statuses
+
+        for st in due:
+            try:
+                status, n = _dispatch_catchup(db, st)
+                logger.info(f"  {st.source}: {status} (+{n})")
+            except Exception as e:
+                logger.error(f"  {st.source}: error — {e}")
+                try:
+                    db.log_fetch(st.kind, _SOURCE_OF.get(st.kind, "?"), "error", error_msg=str(e))
+                except Exception:
+                    pass
+    return statuses
+
+
+# ============================================================
 # Scheduler
 # ============================================================
 
@@ -296,5 +422,20 @@ def create_scheduler(blocking: bool = True) -> BlockingScheduler | BackgroundSch
         misfire_grace_time=3600 * 12,
     )
 
-    logger.info("Scheduler configurado con 6 jobs (4 BCCh + 2 SP)")
+    # Job catch-up por frescura — cada hora en ventana hábil (08:00–20:00, L–V).
+    # Cada sonda se auto-restringe por su ventana de publicación: correr seguido es
+    # barato e idempotente. Actúa como red de seguridad de los jobs fijos de arriba.
+    scheduler.add_job(
+        run_catchup,
+        trigger="cron",
+        day_of_week="mon-fri",
+        hour="8-20",
+        minute=0,
+        id="catchup_fetch",
+        name="Catch-up por frescura (ingesta al publicarse)",
+        replace_existing=True,
+        misfire_grace_time=3600,
+    )
+
+    logger.info("Scheduler configurado con 7 jobs (4 BCCh + 2 SP + 1 catch-up)")
     return scheduler

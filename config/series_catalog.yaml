@@ -1,6 +1,12 @@
 # ============================================================
 # Catálogo de Series — Banco Central de Chile (BDE API)
 # Documentación: https://si3.bcentral.cl/estadisticas/Principal1/Web_Services/index.htm
+#
+# Campo opcional `publish_lag_days` (entero): días tras el cierre del período en que la
+# serie suele estar publicada. Lo usa el catch-up por frescura (scheduler/freshness.py)
+# para decidir cuándo empezar a buscar el dato nuevo. Si se omite, se usa el default por
+# frecuencia (daily=1, monthly=8, quarterly=85). Ejemplo: agregar `publish_lag_days: 30`
+# a la tasa de desempleo si el INE la publica más tarde de lo habitual.
 # ============================================================
 
 bcentral:

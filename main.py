@@ -46,7 +46,7 @@ from collectors.cmf import CMFCollector
 from collectors.cmf_banks import CMFBankCollector
 from collectors.sp_pensions import SPPensionCollector
 from processors.normalizer import normalize_observations
-from scheduler.jobs import run_all_series, run_fetch_by_frequency, create_scheduler
+from scheduler.jobs import run_all_series, run_fetch_by_frequency, create_scheduler, run_catchup
 
 console = Console()
 
@@ -941,6 +941,45 @@ def query_sp_precios(instrument, date, limit, output_format):
 
     console.print(table)
     console.print(f"\n[dim]Mostrando últimos {len(df)} registros[/]")
+
+
+# ----------------------------------------------------------
+# catchup
+# ----------------------------------------------------------
+
+@cli.command(name="catchup")
+@click.option("--dry-run", is_flag=True, help="Solo muestra el estado de frescura; no descarga nada.")
+def catchup(dry_run):
+    """Ingesta dirigida por frescura: descarga datos nuevos en cuanto se publican."""
+
+    console.print(Panel(
+        "[bold green]🩺 Catch-up por frescura[/]\n\n"
+        + ("[yellow]Modo dry-run: solo diagnóstico, sin descargas.[/]" if dry_run
+           else "[cyan]Descargando lo que falte dentro de su ventana de publicación...[/]"),
+        title="📡 Ingesta al publicarse",
+        border_style="green",
+    ))
+
+    statuses = run_catchup(dry_run=dry_run)
+
+    t = Table(title="Estado de frescura por fuente", box=box.ROUNDED, border_style="blue")
+    t.add_column("Fuente")
+    t.add_column("Freq.", justify="center", style="dim")
+    t.add_column("Último que tengo", justify="center")
+    t.add_column("Esperado", justify="center")
+    t.add_column("Estado", justify="center")
+
+    for s in statuses:
+        estado = "[yellow]pendiente[/]" if s.due else "[green]al día[/]"
+        t.add_row(s.source, s.frequency, s.latest_have or "—", s.expected or "—", estado)
+
+    console.print(t)
+
+    pend = sum(1 for s in statuses if s.due)
+    if dry_run:
+        console.print(f"\n[dim]{pend} objetivo(s) pendiente(s). Ejecuta sin --dry-run para descargar.[/]")
+    else:
+        console.print(f"\n[green]✓ Catch-up finalizado.[/] [dim]{pend} objetivo(s) estaban pendientes y se procesaron.[/]")
 
 
 # ----------------------------------------------------------

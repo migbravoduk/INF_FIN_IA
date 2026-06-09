@@ -584,6 +584,41 @@ class Database:
         raise NotImplementedError("get_overview_kpis: pendiente (esqueleto fase web)")
 
     # ----------------------------------------------------------
+    # Frescura (catch-up dirigido por publicación)
+    # ----------------------------------------------------------
+
+    def get_latest_cmf_period(self) -> Optional[int]:
+        """Último período (YYYYMM) ingresado de estados financieros corporativos CMF."""
+        row = self.conn.execute("SELECT MAX(period) FROM cmf_financial_statements").fetchone()
+        return int(row[0]) if row and row[0] is not None else None
+
+    def get_latest_bank_period(self, bank_code: Optional[str] = None) -> Optional[int]:
+        """Último período (YYYYMM) de estados bancarios; global o por banco (zfill 3)."""
+        if bank_code:
+            code = str(bank_code).strip().zfill(3)
+            row = self.conn.execute(
+                "SELECT MAX(period) FROM cmf_bank_statements WHERE bank_code = ?", [code]
+            ).fetchone()
+        else:
+            row = self.conn.execute("SELECT MAX(period) FROM cmf_bank_statements").fetchone()
+        return int(row[0]) if row and row[0] is not None else None
+
+    def get_latest_sp_quota_date(self) -> Optional[str]:
+        """Última fecha (YYYY-MM-DD) de valores cuota SP."""
+        row = self.conn.execute("SELECT MAX(date) FROM sp_quota_values").fetchone()
+        return str(row[0]) if row and row[0] is not None else None
+
+    def get_latest_sp_portfolio_period(self) -> Optional[str]:
+        """Último período (YYYY-MM) de cartera desagregada SP."""
+        row = self.conn.execute("SELECT MAX(period) FROM sp_portfolio_holdings").fetchone()
+        return str(row[0]) if row and row[0] is not None else None
+
+    def get_latest_sp_price_date(self) -> Optional[str]:
+        """Última fecha (YYYY-MM-DD) de la cinta de precios SP."""
+        row = self.conn.execute("SELECT MAX(date) FROM sp_instrument_prices").fetchone()
+        return str(row[0]) if row and row[0] is not None else None
+
+    # ----------------------------------------------------------
     # Utilidades
     # ----------------------------------------------------------
 

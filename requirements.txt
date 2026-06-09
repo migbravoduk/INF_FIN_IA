@@ -4,6 +4,10 @@ python-dotenv>=1.0.0
 pydantic>=2.7.0
 pydantic-settings>=2.3.0
 
+# Scraping (collectors SP/CMF — usan BeautifulSoup + parser lxml)
+beautifulsoup4>=4.12.0
+lxml>=5.0.0
+
 # Database
 duckdb>=0.10.0
 
