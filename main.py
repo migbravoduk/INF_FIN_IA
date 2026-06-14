@@ -1007,6 +1007,37 @@ def web_preview(output):
 
 
 # ----------------------------------------------------------
+# serve
+# ----------------------------------------------------------
+
+@cli.command(name="serve")
+@click.option("--host", default="127.0.0.1", help="Host de escucha")
+@click.option("--port", "-p", default=8000, type=int, help="Puerto (default 8000)")
+@click.option("--with-scheduler", is_flag=True,
+              help="Arranca el scheduler embebido (proceso único; abre la BD en lectura/escritura).")
+def serve(host, port, with_scheduler):
+    """Levanta la API REST + dashboard web (opcionalmente con el scheduler embebido)."""
+    import uvicorn
+
+    if with_scheduler:
+        settings.RUN_SCHEDULER_IN_APP = True
+        console.print("[cyan]Modo proceso único:[/] scheduler embebido + API en R/W.")
+
+    console.print(Panel(
+        f"[bold green]🌐 Servidor web iniciado[/]\n\n"
+        f"  • Panel:   [cyan]http://{host}:{port}/[/]\n"
+        f"  • API docs:[cyan]http://{host}:{port}/docs[/]\n"
+        f"  • Scheduler embebido: [yellow]{'sí' if with_scheduler else 'no'}[/]\n\n"
+        "[dim]Ctrl+C para detener.[/]",
+        title="🚀 INF_FIN_IA Web",
+        border_style="green",
+    ))
+
+    from api.main import app
+    uvicorn.run(app, host=host, port=port)
+
+
+# ----------------------------------------------------------
 # run-scheduler
 # ----------------------------------------------------------
 

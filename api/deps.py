@@ -29,6 +29,7 @@ from fastapi import HTTPException
 from fastapi.templating import Jinja2Templates
 
 from db.database import Database
+from config.settings import settings
 
 # Plantillas Jinja2 (compartidas por los routers de vistas)
 TEMPLATES_DIR = Path(__file__).parent / "templates"
@@ -52,8 +53,10 @@ def get_db():
         def handler(db: Database = Depends(get_db)):
             ...
     """
+    # En modo embebido (scheduler dentro de la app) se abre R/W para compartir el mismo
+    # proceso con el escritor; si no, lectura para coexistir/diagnosticar sin riesgo.
     try:
-        db = Database(read_only=True)
+        db = Database(read_only=not settings.RUN_SCHEDULER_IN_APP)
     except Exception as e:
         # Típicamente: la BD aún no existe (no se ha corrido ningún fetch).
         raise HTTPException(
