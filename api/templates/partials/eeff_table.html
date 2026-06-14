@@ -32,7 +32,7 @@
 
 {% for grp in groups %}
 <div class="eeff-group">
-    <h4>{{ grp.group }}</h4>
+    <h4>{{ grp.group }} <span class="code-tag">{{ grp.code }}</span></h4>
     <table class="eeff-table">
         <tbody>
         {% for row in grp.rows %}
