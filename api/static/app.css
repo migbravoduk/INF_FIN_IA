@@ -84,6 +84,51 @@ h1 { margin: 0 0 0.2rem; }
 .chart-block h2 { font-size: 1rem; color: var(--muted); }
 .chart { background: var(--panel); border-radius: 12px; padding: 0.5rem; }
 
+/* Estados financieros (EEFF) */
+.eeff-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin: 1rem 0 1.5rem;
+}
+.eeff-form label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    font-size: 0.8rem;
+    color: var(--muted);
+}
+.eeff-form select {
+    background: var(--panel);
+    color: var(--ink);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.5rem 0.7rem;
+    font-size: 0.9rem;
+    min-width: 240px;
+}
+.eeff-head { margin-bottom: 1rem; }
+.eeff-head h3 { margin: 0; }
+.eeff-meta { color: var(--muted); font-size: 0.8rem; }
+.eeff-group {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 0.6rem 1rem 0.9rem;
+    margin-bottom: 1rem;
+}
+.eeff-group h4 {
+    margin: 0.3rem 0 0.6rem;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--accent);
+}
+.eeff-table { width: 100%; border-collapse: collapse; }
+.eeff-table td { padding: 0.3rem 0; border-bottom: 1px dashed var(--border); font-size: 0.88rem; }
+.eeff-table td.acct { color: var(--ink); }
+.eeff-table td.num { text-align: right; font-variant-numeric: tabular-nums; color: var(--ok); white-space: nowrap; padding-left: 1rem; }
+
 .loading { color: var(--muted); }
 .mock-note { color: var(--warn); font-size: 0.8rem; }
 .mock-note code { color: var(--ink); }

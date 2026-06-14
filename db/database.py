@@ -245,10 +245,17 @@ class Database:
     def get_cmf_companies(self):
         """Retorna un DataFrame con todas las empresas (RUT y Razón Social) registradas."""
         return self.conn.execute("""
-            SELECT DISTINCT rut, company_name 
-            FROM cmf_financial_statements 
+            SELECT DISTINCT rut, company_name
+            FROM cmf_financial_statements
             ORDER BY company_name ASC
         """).fetchdf()
+
+    def get_cmf_periods(self) -> list[int]:
+        """Lista de períodos (YYYYMM) disponibles en EEFF corporativos, más reciente primero."""
+        rows = self.conn.execute("""
+            SELECT DISTINCT period FROM cmf_financial_statements ORDER BY period DESC
+        """).fetchall()
+        return [int(r[0]) for r in rows]
 
     def query_cmf_statements(
         self,
@@ -604,14 +611,19 @@ class Database:
             banca = {"period": int(row[0]),
                      "total_activos_sistema": float(row[1]) if row[1] is not None else None}
 
-        # AFP: valor cuota Fondo A por AFP en el último día disponible (excluye agregado TOTAL)
+        # AFP: último valor cuota de Fondo A POR AFP (cada una en su última fecha disponible,
+        # para que aparezcan todas aunque publiquen escalonado). Excluye el agregado TOTAL.
         afp = self.conn.execute("""
-            SELECT afp_name, quota_value
-            FROM sp_quota_values
-            WHERE fund_type = 'A'
-              AND date = (SELECT MAX(date) FROM sp_quota_values WHERE fund_type = 'A')
-              AND afp_name <> 'TOTAL'
-            ORDER BY quota_value DESC
+            SELECT q.afp_name, q.quota_value, q.date
+            FROM sp_quota_values q
+            JOIN (
+                SELECT afp_name, MAX(date) AS md
+                FROM sp_quota_values
+                WHERE fund_type = 'A' AND afp_name <> 'TOTAL'
+                GROUP BY afp_name
+            ) m ON q.afp_name = m.afp_name AND q.date = m.md
+            WHERE q.fund_type = 'A'
+            ORDER BY q.quota_value DESC
         """).fetchdf().to_dict(orient="records")
 
         # Mercado: nº de instrumentos en la última cinta de precios
