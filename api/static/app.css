@@ -94,6 +94,15 @@ h1 { margin: 0 0 0.2rem; }
 /* Signo en variaciones / rentabilidades */
 .pos { color: var(--ok); }
 .neg { color: #f87171; }
+.lead { color: var(--muted); font-size: 0.72rem; font-style: normal; }
+
+/* Selector para graficar partidas en /eeff */
+.eeff-graf { margin: 0.8rem 0; }
+.eeff-graf label { display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.8rem; color: var(--muted); }
+.eeff-graf select {
+    background: var(--panel); color: var(--ink); border: 1px solid var(--border);
+    border-radius: 8px; padding: 0.5rem 0.7rem; font-size: 0.9rem; max-width: 420px;
+}
 
 /* Bloque banca (top 5 activos / resultado) */
 .banca-block {

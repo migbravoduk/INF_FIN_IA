@@ -69,7 +69,7 @@ def eeff_table(
 
     df = db.query_cmf_statements(rut=rut, period=period_int, limit=2000)
 
-    meta, groups = None, []
+    meta, groups, graph_accounts = None, [], []
     if not df.empty:
         first = df.iloc[0]
         meta = {
@@ -80,9 +80,29 @@ def eeff_table(
             "currency": str(first["currency"]),
         }
         groups = build_statement_groups(df)
+        graph_accounts = db.get_company_graphable_accounts(rut)
 
     return templates.TemplateResponse(request, "partials/eeff_table.html", {
-        "meta": meta, "groups": groups,
+        "meta": meta, "groups": groups, "graph_accounts": graph_accounts,
+    })
+
+
+@router.get("/eeff/serie")
+def eeff_serie(
+    request: Request,
+    rut: str = Query(...),
+    account: str = Query(...),
+    db: Database = Depends(get_db),
+):
+    """Fragmento HTMX: evolución por período de una partida de una empresa (gráfico)."""
+    if not account.strip():
+        return templates.TemplateResponse(request, "partials/eeff_serie.html",
+                                          {"series": [], "account": None})
+    df = db.get_company_account_series(rut, account)
+    series = [{"period": str(int(r["period"])), "value": r["value"]}
+              for _, r in df.iterrows()]
+    return templates.TemplateResponse(request, "partials/eeff_serie.html", {
+        "series": series, "account": account,
     })
 
 

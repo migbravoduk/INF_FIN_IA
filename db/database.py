@@ -651,8 +651,11 @@ class Database:
 
     def get_fund_returns_12m(self) -> dict:
         """
-        Rentabilidad nominal a 12 meses por multifondo (A–E), AGREGADA del sistema
-        (ponderada por patrimonio entre las AFP). return = cuota_hoy / cuota_~12m_atrás - 1.
+        Rentabilidad nominal a 12 meses por multifondo (A–E).
+        Por cada fondo devuelve {agg, leader_afp, leader_ret}:
+          - agg: rentabilidad agregada del sistema (ponderada por patrimonio).
+          - leader_afp / leader_ret: la AFP nº1 del fondo y su rentabilidad.
+        return individual = cuota_hoy / cuota_~12m_atrás - 1.
         """
         import datetime as _dt
         import pandas as _pd
@@ -668,6 +671,7 @@ class Database:
             """, [f, f]).fetchdf()
 
             num = den = 0.0
+            per_afp = []  # (afp_name, ret_pct)
             for _, r in rows.iterrows():
                 d = _pd.Timestamp(r["date"]).date()
                 target = d - _dt.timedelta(days=365)
@@ -679,10 +683,51 @@ class Database:
                 if old and old[0] and r["quota_value"]:
                     ret = r["quota_value"] / old[0] - 1.0
                     w = float(r["equity_value"] or 0.0)
+                    per_afp.append((str(r["afp_name"]), ret * 100.0))
                     num += ret * w
                     den += w
-            out[f] = (num / den * 100.0) if den else None
+
+            leader = max(per_afp, key=lambda x: x[1]) if per_afp else (None, None)
+            out[f] = {
+                "agg": (num / den * 100.0) if den else None,
+                "leader_afp": leader[0],
+                "leader_ret": leader[1],
+            }
         return out
+
+    # ----------------------------------------------------------
+    # Series de partidas por empresa (para graficar en /eeff)
+    # ----------------------------------------------------------
+
+    def get_company_graphable_accounts(self, rut: str) -> list[str]:
+        """
+        Cuentas de una empresa que se pueden graficar: presentes en ≥2 períodos y con un
+        único valor por período (evita las cuentas repetidas/ambiguas del XBRL plano).
+        """
+        clean = str(rut).strip().replace(".", "").replace("-", "")
+        rows = self.conn.execute("""
+            SELECT account_name
+            FROM (
+                SELECT account_name, period, COUNT(DISTINCT value) dv
+                FROM cmf_financial_statements WHERE rut = ?
+                GROUP BY account_name, period
+            )
+            GROUP BY account_name
+            HAVING COUNT(DISTINCT period) >= 2 AND MAX(dv) = 1
+            ORDER BY account_name
+        """, [clean]).fetchall()
+        return [str(r[0]) for r in rows]
+
+    def get_company_account_series(self, rut: str, account_name: str):
+        """Evolución de una partida por período (un valor por período), como DataFrame."""
+        clean = str(rut).strip().replace(".", "").replace("-", "")
+        return self.conn.execute("""
+            SELECT period, MAX(value) AS value
+            FROM cmf_financial_statements
+            WHERE rut = ? AND account_name = ?
+            GROUP BY period
+            ORDER BY period ASC
+        """, [clean, account_name]).fetchdf()
 
     def get_overview_kpis(self) -> dict:
         """Indicadores multi-fuente para el panel. Tolerante a tablas vacías."""

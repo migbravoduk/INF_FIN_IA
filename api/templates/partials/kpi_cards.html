@@ -18,9 +18,13 @@
     <article class="kpi-card afp">
         <h3>AFP · rentabilidad 12m por fondo</h3>
         {% for f in ["A","B","C","D","E"] %}
-        <div class="kpi-row"><span>Fondo {{ f }}</span>{{ signo(kpi.afp_returns[f]) }}</div>
+        {% set fr = kpi.afp_returns[f] %}
+        <div class="kpi-row">
+            <span>Fondo {{ f }}{% if fr.leader_afp %} <em class="lead">#1 {{ fr.leader_afp }} {{ "{:+.1f}".format(fr.leader_ret) }}%</em>{% endif %}</span>
+            {{ signo(fr.agg) }}
+        </div>
         {% endfor %}
-        <div class="kpi-sub">agregada del sistema (ponderada por patrimonio)</div>
+        <div class="kpi-sub">agregada del sistema (ponderada) · #1 = AFP líder del fondo</div>
     </article>
 
     <article class="kpi-card mercado">
