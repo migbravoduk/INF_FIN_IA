@@ -983,6 +983,30 @@ def catchup(dry_run):
 
 
 # ----------------------------------------------------------
+# web-preview
+# ----------------------------------------------------------
+
+@cli.command(name="web-preview")
+@click.option("--output", "-o", default="preview/overview.html", help="Ruta de salida del HTML")
+def web_preview(output):
+    """Genera un HTML local autocontenido del panel para examinar las vistas sin servidor."""
+    from api.preview import render_static
+    try:
+        path = render_static(output)
+    except Exception as e:
+        console.print(f"[bold red]❌ No se pudo generar la vista:[/] {e}")
+        console.print("[dim]¿Está la BD abierta por otro proceso (escritor)? El preview usa read_only.[/]")
+        sys.exit(1)
+
+    console.print(Panel(
+        f"[bold green]✓ Vista generada[/]\n\n[cyan]{path}[/]\n\n"
+        "[dim]Ábrela con doble clic. Requiere internet (Plotly/HTMX por CDN).[/]",
+        title="🖼️  Preview del dashboard",
+        border_style="green",
+    ))
+
+
+# ----------------------------------------------------------
 # run-scheduler
 # ----------------------------------------------------------
 

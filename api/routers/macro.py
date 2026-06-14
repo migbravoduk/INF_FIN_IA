@@ -1,19 +1,13 @@
 """
 api/routers/macro.py — Series macroeconómicas (BCCh).
-
 Reusa: Database.get_all_series(), Database.get_series().
-Patrón de implementación (cuando se codifique):
-    df = db.get_series(series_id, from_date, to_date)
-    return df.to_dict(orient="records")
-
-ESQUELETO: devuelve datos mock para que el dashboard y /docs funcionen sin lógica real.
 """
 
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 
-from api.deps import get_db
+from api.deps import get_db, records
 from db.database import Database
 
 router = APIRouter()
@@ -24,9 +18,8 @@ def list_series(
     source: Optional[str] = Query(None, description="Filtrar por fuente (bcentral, cmf, ...)"),
     db: Database = Depends(get_db),
 ):
-    """Lista las series registradas. TODO: return db.get_all_series(source).to_dict(orient='records')."""
-    # MOCK
-    return [{"id": "F073.UFF.PRE.Z.D", "name": "Unidad de Fomento", "frequency": "daily"}]
+    """Lista las series registradas en la BD."""
+    return records(db.get_all_series(source_id=source))
 
 
 @router.get("/series/{series_id}/observations")
@@ -36,15 +29,8 @@ def series_observations(
     to_date: Optional[str] = Query(None, alias="to", description="YYYY-MM-DD"),
     db: Database = Depends(get_db),
 ):
-    """
-    Observaciones (serie de tiempo) de una serie.
-    TODO: return db.get_series(series_id, from_date, to_date).to_dict(orient='records').
-    """
-    # MOCK
-    return {
-        "series_id": series_id,
-        "observations": [
-            {"date": "2026-06-01", "value": 39150.42},
-            {"date": "2026-06-02", "value": 39152.10},
-        ],
-    }
+    """Observaciones (serie de tiempo) de una serie."""
+    df = db.get_series(series_id, from_date=from_date, to_date=to_date)
+    if df.empty:
+        raise HTTPException(status_code=404, detail=f"Sin datos para la serie '{series_id}'")
+    return {"series_id": series_id, "observations": records(df)}

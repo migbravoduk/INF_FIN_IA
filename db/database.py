@@ -549,39 +549,82 @@ class Database:
         fund: Optional[str] = None,
         limit: int = 50,
     ):
+        """Consulta la cartera mensual desagregada de la SP con filtros flexibles."""
+        query = """
+            SELECT period, afp_name, fund_type, instrument_glosa,
+                   monto_pesos, monto_dolares, porcentaje
+            FROM sp_portfolio_holdings WHERE 1=1
         """
-        [STUB — Fase Web] Consulta la cartera mensual desagregada de la SP.
+        params = []
+        if period:
+            query += " AND period = ?"
+            params.append(period)
+        if afp:
+            query += " AND UPPER(afp_name) = ?"
+            params.append(afp.upper().strip())
+        if fund:
+            query += " AND UPPER(fund_type) = ?"
+            params.append(fund.upper().strip())
 
-        Hoy la tabla sp_portfolio_holdings solo tiene métodos de inserción; la API
-        necesita leerla. Implementar igual que los otros query_* (filtros opcionales,
-        ORDER BY porcentaje DESC, LIMIT) devolviendo un DataFrame.
+        query += " ORDER BY porcentaje DESC NULLS LAST LIMIT ?"
+        params.append(limit)
+        return self.conn.execute(query, params).fetchdf()
 
-        Columnas: period, afp_name, fund_type, instrument_glosa,
-                  monto_pesos, monto_dolares, porcentaje.
-        """
-        raise NotImplementedError("query_sp_portfolio_holdings: pendiente (esqueleto fase web)")
+    # IDs de catálogo BCCh usados por el panel multi-fuente.
+    KPI_SERIES = {
+        "uf": "F073.UFF.PRE.Z.D",
+        "usd_clp": "F073.TCO.PRE.Z.D",
+        "ipc_v12": "G073.IPC.V12.2023.M",
+        "tpm": "F022.TPM.TIN.D001.NO.Z.D",
+    }
 
     def get_overview_kpis(self) -> dict:
         """
-        [STUB — Fase Web] Agrega los últimos valores de las 4 fuentes para el panel
-        multi-fuente del dashboard (endpoint /api/kpi/overview).
-
-        Debe devolver un dict, p.ej.:
-            {
-                "macro": {"uf": ..., "usd_clp": ..., "ipc_v12": ...},
-                "banca": {"total_activos_sistema": ..., "period": ...},
-                "afp":   [{"afp_name": ..., "quota_value": ...}, ...],  # Fondo A, último día
-                "mercado": {"n_instrumentos": ..., "date": ...},
-            }
-
-        Implementación sugerida (reusa tablas existentes):
-          - macro: get_latest_value() sobre los IDs de UF / USD-CLP observado / IPC V12.
-          - banca: SUM(val_total) de cmf_bank_statements WHERE account_code='100000000'
-                   en el último period disponible.
-          - afp:   query_sp_quota_values(fund='A') del último date disponible.
-          - mercado: COUNT(*) de sp_instrument_prices en el último date.
+        Agrega los últimos valores de las 4 fuentes para el panel multi-fuente.
+        Tolerante a tablas vacías (devuelve None / listas vacías).
         """
-        raise NotImplementedError("get_overview_kpis: pendiente (esqueleto fase web)")
+        # Macro (BCCh)
+        macro = {}
+        for key, sid in self.KPI_SERIES.items():
+            v = self.get_latest_value(sid)
+            macro[key] = v["value"] if v else None
+
+        # Banca: total de activos del sistema (cuenta 100000000) en el último período
+        banca = {"total_activos_sistema": None, "period": None}
+        row = self.conn.execute("""
+            SELECT period, SUM(val_total)
+            FROM cmf_bank_statements
+            WHERE account_code = '100000000'
+              AND period = (
+                  SELECT MAX(period) FROM cmf_bank_statements WHERE account_code = '100000000'
+              )
+            GROUP BY period
+        """).fetchone()
+        if row and row[0] is not None:
+            banca = {"period": int(row[0]),
+                     "total_activos_sistema": float(row[1]) if row[1] is not None else None}
+
+        # AFP: valor cuota Fondo A por AFP en el último día disponible (excluye agregado TOTAL)
+        afp = self.conn.execute("""
+            SELECT afp_name, quota_value
+            FROM sp_quota_values
+            WHERE fund_type = 'A'
+              AND date = (SELECT MAX(date) FROM sp_quota_values WHERE fund_type = 'A')
+              AND afp_name <> 'TOTAL'
+            ORDER BY quota_value DESC
+        """).fetchdf().to_dict(orient="records")
+
+        # Mercado: nº de instrumentos en la última cinta de precios
+        mercado = {"n_instrumentos": 0, "date": None}
+        mrow = self.conn.execute("SELECT MAX(date) FROM sp_instrument_prices").fetchone()
+        if mrow and mrow[0] is not None:
+            last_d = str(mrow[0])
+            cnt = self.conn.execute(
+                "SELECT COUNT(*) FROM sp_instrument_prices WHERE date = ?", [last_d]
+            ).fetchone()[0]
+            mercado = {"n_instrumentos": int(cnt), "date": last_d}
+
+        return {"macro": macro, "banca": banca, "afp": afp, "mercado": mercado}
 
     # ----------------------------------------------------------
     # Frescura (catch-up dirigido por publicación)

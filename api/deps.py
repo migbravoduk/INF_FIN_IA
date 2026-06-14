@@ -22,6 +22,7 @@ Hoy get_db() usa read_only=True (opción B/validación); devuelve 503 si la BD e
 bloqueada por otro proceso.
 """
 
+import json
 from pathlib import Path
 
 from fastapi import HTTPException
@@ -32,6 +33,14 @@ from db.database import Database
 # Plantillas Jinja2 (compartidas por los routers de vistas)
 TEMPLATES_DIR = Path(__file__).parent / "templates"
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
+
+
+def records(df) -> list[dict]:
+    """
+    Convierte un DataFrame a lista de dicts JSON-safe (fechas en ISO, NaN→null).
+    Pasa por to_json para evitar problemas de serialización de Timestamps/NaN.
+    """
+    return json.loads(df.to_json(orient="records", date_format="iso"))
 
 
 def get_db():

@@ -1,15 +1,13 @@
 """
 api/routers/banks.py — Estados financieros mensuales de bancos (CMF Bancos).
-
 Reusa: Database.query_bank_statements().
-ESQUELETO: stub con datos mock.
 """
 
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
 
-from api.deps import get_db
+from api.deps import get_db, records
 from db.database import Database
 
 router = APIRouter()
@@ -24,14 +22,8 @@ def bank_statements(
     limit: int = Query(50, le=1000),
     db: Database = Depends(get_db),
 ):
-    """
-    Balances/resultados bancarios con desglose por moneda.
-    TODO: db.query_bank_statements(bank, period, account, report_type, limit).to_dict(orient='records').
-    """
-    # MOCK
-    return [{
-        "period": 202512, "bank_code": "001", "bank_name": "BANCO DE CHILE",
-        "account_code": "100000000", "account_name": "TOTAL ACTIVOS",
-        "val_clp_no_reaj": 1000.0, "val_clp_reaj_ipc": 200.0,
-        "val_clp_reaj_tc": 50.0, "val_extranjera": 80.0, "val_total": 1330.0,
-    }]
+    """Balances/resultados bancarios con desglose por moneda."""
+    return records(db.query_bank_statements(
+        bank_code=bank, period=period, account_code=account,
+        report_type=report_type, limit=limit,
+    ))

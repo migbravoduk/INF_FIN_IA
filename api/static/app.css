@@ -68,6 +68,18 @@ h1 { margin: 0 0 0.2rem; }
 .kpi-big { font-size: 1.6rem; font-weight: 700; color: var(--ok); }
 .kpi-sub { color: var(--muted); font-size: 0.8rem; margin-top: 0.3rem; }
 
+.toolbar { margin: 0.5rem 0 1rem; }
+.btn {
+    background: var(--panel);
+    color: var(--accent);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.45rem 0.9rem;
+    cursor: pointer;
+    font-size: 0.85rem;
+}
+.btn:hover { border-color: var(--accent); }
+
 .chart-block { margin-top: 2rem; }
 .chart-block h2 { font-size: 1rem; color: var(--muted); }
 .chart { background: var(--panel); border-radius: 12px; padding: 0.5rem; }
