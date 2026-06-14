@@ -1,0 +1,42 @@
+{#
+  partials/kpi_cards.html — Tarjetas KPI multi-fuente.
+  Recibe `kpi` = get_overview_kpis(): claves macro, banca, afp, mercado.
+  Formateo null-safe (muestra "—" si falta el dato).
+#}
+<div class="kpi-grid">
+
+    <article class="kpi-card macro">
+        <h3>Macro · BCCh</h3>
+        <div class="kpi-row"><span>UF</span><b>{{ "{:,.2f}".format(kpi.macro.uf) if kpi.macro.uf is not none else "—" }}</b></div>
+        <div class="kpi-row"><span>USD/CLP</span><b>{{ "{:,.2f}".format(kpi.macro.usd_clp) if kpi.macro.usd_clp is not none else "—" }}</b></div>
+        <div class="kpi-row"><span>IPC 12m</span><b>{{ "{:.2f}".format(kpi.macro.ipc_v12) ~ "%" if kpi.macro.ipc_v12 is not none else "—" }}</b></div>
+        <div class="kpi-row"><span>TPM</span><b>{{ "{:.2f}".format(kpi.macro.tpm) ~ "%" if kpi.macro.tpm is not none else "—" }}</b></div>
+    </article>
+
+    <article class="kpi-card banca">
+        <h3>Banca · CMF</h3>
+        {% if kpi.banca.total_activos_sistema is not none %}
+        <div class="kpi-big">{{ "{:,.1f}".format(kpi.banca.total_activos_sistema / 1e12) }}</div>
+        <div class="kpi-sub">billones CLP · activos del sistema · período {{ kpi.banca.period }}</div>
+        {% else %}
+        <div class="kpi-big">—</div>
+        <div class="kpi-sub">sin datos bancarios</div>
+        {% endif %}
+    </article>
+
+    <article class="kpi-card afp">
+        <h3>AFP · Fondo A (valor cuota)</h3>
+        {% for row in kpi.afp %}
+        <div class="kpi-row"><span>{{ row.afp_name }}</span><b>{{ "{:,.2f}".format(row.quota_value) }}</b></div>
+        {% else %}
+        <div class="kpi-sub">sin datos de cuotas</div>
+        {% endfor %}
+    </article>
+
+    <article class="kpi-card mercado">
+        <h3>Mercado · SP</h3>
+        <div class="kpi-big">{{ kpi.mercado.n_instrumentos }}</div>
+        <div class="kpi-sub">instrumentos en cinta · {{ kpi.mercado.date or "—" }}</div>
+    </article>
+
+</div>

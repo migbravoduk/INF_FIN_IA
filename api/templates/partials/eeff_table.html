@@ -1,0 +1,32 @@
+{#
+  partials/eeff_table.html — Estados financieros de una empresa/período.
+  Recibe `meta` (cabecera) y `groups` (lista de {group, rows[{account_name, value}]}).
+#}
+{% if meta %}
+<div class="eeff-head">
+    <h3>{{ meta.company_name }}</h3>
+    <span class="eeff-meta">
+        RUT {{ meta.rut }} · período {{ meta.period }} ·
+        {{ "Individual" if meta.report_type == "I" else "Consolidado" if meta.report_type == "C" else meta.report_type }} ·
+        {{ meta.currency }}
+    </span>
+</div>
+
+{% for grp in groups %}
+<div class="eeff-group">
+    <h4>{{ grp.group }}</h4>
+    <table class="eeff-table">
+        <tbody>
+        {% for row in grp.rows %}
+            <tr>
+                <td class="acct">{{ row.account_name }}</td>
+                <td class="num">{{ "{:,.0f}".format(row.value) if row.value is not none else "—" }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endfor %}
+{% else %}
+<p class="loading">No hay estados financieros para esa combinación.</p>
+{% endif %}

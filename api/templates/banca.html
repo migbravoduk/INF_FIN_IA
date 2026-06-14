@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}Bancos · INF_FIN_IA{% endblock %}
+
+{% block content %}
+<h1>Estados financieros de bancos</h1>
+<p class="subtitle">CMF · Bancos e Instituciones Financieras — desglose por tipo de moneda (SBIF)</p>
+
+<form class="eeff-form"
+      hx-get="/banca/table"
+      hx-target="#banca-results"
+      hx-trigger="load, change from:select"
+      hx-swap="innerHTML">
+
+    <label>Banco
+        <select name="bank">
+            {% for b in banks %}
+            <option value="{{ b.bank_code }}">{{ b.bank_name }}</option>
+            {% endfor %}
+        </select>
+    </label>
+
+    <label>Período
+        <select name="period">
+            {% for p in periods %}
+            <option value="{{ p }}">{{ p }}</option>
+            {% endfor %}
+        </select>
+    </label>
+
+    <label>Reporte
+        <select name="type">
+            <option value="balance">Balance</option>
+            <option value="resultado">Estado de resultados</option>
+        </select>
+    </label>
+</form>
+
+<section id="banca-results">
+    <p class="loading">Cargando estados bancarios…</p>
+</section>
+{% endblock %}

@@ -24,12 +24,23 @@ logger = logging.getLogger(__name__)
 class Database:
     """Gestiona la conexión y operaciones sobre el DuckDB local."""
 
-    def __init__(self, db_path: Optional[str] = None):
+    def __init__(self, db_path: Optional[str] = None, read_only: bool = False):
+        """
+        Args:
+            db_path: Ruta al archivo DuckDB (default: settings.DB_PATH).
+            read_only: Si True, abre la BD en modo solo-lectura. Necesario para que
+                       la API (proceso lector) coexista con el scheduler (único escritor),
+                       ya que DuckDB admite un solo proceso escritor. En modo lectura
+                       NO se inicializa el schema (no se puede crear/modificar).
+        """
         path = db_path or settings.DB_PATH
-        Path(path).parent.mkdir(parents=True, exist_ok=True)
-        self.conn = duckdb.connect(path)
-        self._init_schema()
-        logger.info(f"Base de datos abierta en: {path}")
+        self.read_only = read_only
+        if not read_only:
+            Path(path).parent.mkdir(parents=True, exist_ok=True)
+        self.conn = duckdb.connect(path, read_only=read_only)
+        if not read_only:
+            self._init_schema()
+        logger.info(f"Base de datos abierta en: {path} (read_only={read_only})")
 
     def _init_schema(self):
         """Crea tablas si no existen y carga fuentes base."""
@@ -234,10 +245,41 @@ class Database:
     def get_cmf_companies(self):
         """Retorna un DataFrame con todas las empresas (RUT y Razón Social) registradas."""
         return self.conn.execute("""
-            SELECT DISTINCT rut, company_name 
-            FROM cmf_financial_statements 
+            SELECT DISTINCT rut, company_name
+            FROM cmf_financial_statements
             ORDER BY company_name ASC
         """).fetchdf()
+
+    def get_cmf_periods(self) -> list[int]:
+        """Lista de períodos (YYYYMM) disponibles en EEFF corporativos, más reciente primero."""
+        rows = self.conn.execute("""
+            SELECT DISTINCT period FROM cmf_financial_statements ORDER BY period DESC
+        """).fetchall()
+        return [int(r[0]) for r in rows]
+
+    def get_bank_list(self):
+        """Bancos con datos (código + nombre), ordenados por nombre."""
+        return self.conn.execute("""
+            SELECT bank_code, MAX(bank_name) AS bank_name
+            FROM cmf_bank_statements
+            GROUP BY bank_code
+            ORDER BY bank_name ASC
+        """).fetchdf()
+
+    def get_bank_periods(self) -> list[int]:
+        """Períodos (YYYYMM) disponibles en estados bancarios, más reciente primero."""
+        rows = self.conn.execute("""
+            SELECT DISTINCT period FROM cmf_bank_statements ORDER BY period DESC
+        """).fetchall()
+        return [int(r[0]) for r in rows]
+
+    def get_afp_list(self) -> list[str]:
+        """Nombres de AFP con valores cuota (excluye el agregado TOTAL)."""
+        rows = self.conn.execute("""
+            SELECT DISTINCT afp_name FROM sp_quota_values
+            WHERE afp_name <> 'TOTAL' ORDER BY afp_name ASC
+        """).fetchall()
+        return [str(r[0]) for r in rows]
 
     def query_cmf_statements(
         self,
@@ -530,6 +572,130 @@ class Database:
         params.append(limit)
 
         return self.conn.execute(query, params).fetchdf()
+
+    def query_sp_portfolio_holdings(
+        self,
+        period: Optional[str] = None,
+        afp: Optional[str] = None,
+        fund: Optional[str] = None,
+        limit: int = 50,
+    ):
+        """Consulta la cartera mensual desagregada de la SP con filtros flexibles."""
+        query = """
+            SELECT period, afp_name, fund_type, instrument_glosa,
+                   monto_pesos, monto_dolares, porcentaje
+            FROM sp_portfolio_holdings WHERE 1=1
+        """
+        params = []
+        if period:
+            query += " AND period = ?"
+            params.append(period)
+        if afp:
+            query += " AND UPPER(afp_name) = ?"
+            params.append(afp.upper().strip())
+        if fund:
+            query += " AND UPPER(fund_type) = ?"
+            params.append(fund.upper().strip())
+
+        query += " ORDER BY porcentaje DESC NULLS LAST LIMIT ?"
+        params.append(limit)
+        return self.conn.execute(query, params).fetchdf()
+
+    # IDs de catálogo BCCh usados por el panel multi-fuente.
+    KPI_SERIES = {
+        "uf": "F073.UFF.PRE.Z.D",
+        "usd_clp": "F073.TCO.PRE.Z.D",
+        "ipc_v12": "G073.IPC.V12.2023.M",
+        "tpm": "F022.TPM.TIN.D001.NO.Z.D",
+    }
+
+    def get_overview_kpis(self) -> dict:
+        """
+        Agrega los últimos valores de las 4 fuentes para el panel multi-fuente.
+        Tolerante a tablas vacías (devuelve None / listas vacías).
+        """
+        # Macro (BCCh)
+        macro = {}
+        for key, sid in self.KPI_SERIES.items():
+            v = self.get_latest_value(sid)
+            macro[key] = v["value"] if v else None
+
+        # Banca: total de activos del sistema (cuenta 100000000) en el último período
+        banca = {"total_activos_sistema": None, "period": None}
+        row = self.conn.execute("""
+            SELECT period, SUM(val_total)
+            FROM cmf_bank_statements
+            WHERE account_code = '100000000'
+              AND period = (
+                  SELECT MAX(period) FROM cmf_bank_statements WHERE account_code = '100000000'
+              )
+            GROUP BY period
+        """).fetchone()
+        if row and row[0] is not None:
+            banca = {"period": int(row[0]),
+                     "total_activos_sistema": float(row[1]) if row[1] is not None else None}
+
+        # AFP: último valor cuota de Fondo A POR AFP (cada una en su última fecha disponible,
+        # para que aparezcan todas aunque publiquen escalonado). Excluye el agregado TOTAL.
+        afp = self.conn.execute("""
+            SELECT q.afp_name, q.quota_value, q.date
+            FROM sp_quota_values q
+            JOIN (
+                SELECT afp_name, MAX(date) AS md
+                FROM sp_quota_values
+                WHERE fund_type = 'A' AND afp_name <> 'TOTAL'
+                GROUP BY afp_name
+            ) m ON q.afp_name = m.afp_name AND q.date = m.md
+            WHERE q.fund_type = 'A'
+            ORDER BY q.quota_value DESC
+        """).fetchdf().to_dict(orient="records")
+
+        # Mercado: nº de instrumentos en la última cinta de precios
+        mercado = {"n_instrumentos": 0, "date": None}
+        mrow = self.conn.execute("SELECT MAX(date) FROM sp_instrument_prices").fetchone()
+        if mrow and mrow[0] is not None:
+            last_d = str(mrow[0])
+            cnt = self.conn.execute(
+                "SELECT COUNT(*) FROM sp_instrument_prices WHERE date = ?", [last_d]
+            ).fetchone()[0]
+            mercado = {"n_instrumentos": int(cnt), "date": last_d}
+
+        return {"macro": macro, "banca": banca, "afp": afp, "mercado": mercado}
+
+    # ----------------------------------------------------------
+    # Frescura (catch-up dirigido por publicación)
+    # ----------------------------------------------------------
+
+    def get_latest_cmf_period(self) -> Optional[int]:
+        """Último período (YYYYMM) ingresado de estados financieros corporativos CMF."""
+        row = self.conn.execute("SELECT MAX(period) FROM cmf_financial_statements").fetchone()
+        return int(row[0]) if row and row[0] is not None else None
+
+    def get_latest_bank_period(self, bank_code: Optional[str] = None) -> Optional[int]:
+        """Último período (YYYYMM) de estados bancarios; global o por banco (zfill 3)."""
+        if bank_code:
+            code = str(bank_code).strip().zfill(3)
+            row = self.conn.execute(
+                "SELECT MAX(period) FROM cmf_bank_statements WHERE bank_code = ?", [code]
+            ).fetchone()
+        else:
+            row = self.conn.execute("SELECT MAX(period) FROM cmf_bank_statements").fetchone()
+        return int(row[0]) if row and row[0] is not None else None
+
+    def get_latest_sp_quota_date(self) -> Optional[str]:
+        """Última fecha (YYYY-MM-DD) de valores cuota SP."""
+        row = self.conn.execute("SELECT MAX(date) FROM sp_quota_values").fetchone()
+        return str(row[0]) if row and row[0] is not None else None
+
+    def get_latest_sp_portfolio_period(self) -> Optional[str]:
+        """Último período (YYYY-MM) de cartera desagregada SP."""
+        row = self.conn.execute("SELECT MAX(period) FROM sp_portfolio_holdings").fetchone()
+        return str(row[0]) if row and row[0] is not None else None
+
+    def get_latest_sp_price_date(self) -> Optional[str]:
+        """Última fecha (YYYY-MM-DD) de la cinta de precios SP."""
+        row = self.conn.execute("SELECT MAX(date) FROM sp_instrument_prices").fetchone()
+        return str(row[0]) if row and row[0] is not None else None
 
     # ----------------------------------------------------------
     # Utilidades

@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}Panel multi-fuente · INF_FIN_IA{% endblock %}
+
+{% block content %}
+<h1>Panel multi-fuente</h1>
+<p class="subtitle">BCCh · CMF Bancos · CMF Empresas · Superintendencia de Pensiones</p>
+
+<!--
+  Las tarjetas se renderizan server-side (datos reales) en la carga inicial.
+  El botón refresca el fragmento vía HTMX sin recargar la página.
+  Un futuro panel de storytelling se añade como otro fragmento hx-get sin tocar esto.
+-->
+<div class="toolbar">
+    <button class="btn" hx-get="/api/kpi/overview/cards" hx-target="#kpi-cards" hx-swap="innerHTML">
+        ↻ Refrescar indicadores
+    </button>
+</div>
+
+<section id="kpi-cards">
+    {% include "partials/kpi_cards.html" %}
+</section>
+
+<section class="chart-block">
+    <h2>Unidad de Fomento — últimos 90 días</h2>
+    <div id="chart-uf" class="chart"></div>
+</section>
+
+<script>
+    // Serie UF real inyectada desde el backend (JSON-safe).
+    var ufSeries = {{ uf_series | tojson }};
+    if (ufSeries && ufSeries.length) {
+        Plotly.newPlot("chart-uf", [{
+            x: ufSeries.map(function (r) { return r.date; }),
+            y: ufSeries.map(function (r) { return r.value; }),
+            type: "scatter", mode: "lines", name: "UF",
+            line: { color: "#38bdf8" }
+        }], {
+            margin: { t: 10, r: 10, b: 30, l: 60 }, height: 300,
+            paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)",
+            font: { color: "#94a3b8" }
+        }, { displayModeBar: false, responsive: true });
+    } else {
+        document.getElementById("chart-uf").innerHTML =
+            "<p class='loading'>Sin datos de UF en el rango.</p>";
+    }
+</script>
+{% endblock %}

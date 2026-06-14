@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}Estados Financieros · INF_FIN_IA{% endblock %}
+
+{% block content %}
+<h1>Estados financieros corporativos</h1>
+<p class="subtitle">CMF · Empresas y Mercados — balance, resultados y flujo de caja por emisor</p>
+
+<form class="eeff-form"
+      hx-get="/eeff/table"
+      hx-target="#eeff-results"
+      hx-trigger="load, change from:select"
+      hx-swap="innerHTML">
+
+    <label>Empresa
+        <select name="rut">
+            {% for c in companies %}
+            <option value="{{ c.rut }}">{{ c.company_name }}</option>
+            {% endfor %}
+        </select>
+    </label>
+
+    <label>Período
+        <select name="period">
+            {% for p in periods %}
+            <option value="{{ p }}">{{ p }}</option>
+            {% endfor %}
+        </select>
+    </label>
+</form>
+
+<section id="eeff-results">
+    <p class="loading">Cargando estados financieros…</p>
+</section>
+{% endblock %}
