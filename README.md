@@ -27,9 +27,9 @@ STORYTELLING (dashboard web, API REST, reportes Jules)
 | **3 — CMF: Empresas y Mercados** | ✅ Activa | Ingesta de archivos trimestrales planos .txt de estados financieros corporativos |
 | **4 — CMF: Bancos e Inst. Financieras** | ✅ Activa | Ingesta mensual de balances y resultados con desglose por moneda desde la API REST SBIFv3 |
 | **SP — Fondos de Pensiones** | ✅ Activa | Valores cuota diarios (desde 2002), carteras mensuales XML, cinta de precios diaria |
-| **5 — Calendarios y Alertas** | ⏳ Planificada | Fechas de publicaciones, alertas automáticas |
+| **5 — Calendarios y Alertas** | 🟡 Parcial | Catch-up por frescura: ingesta automática "al publicarse" (`main.py catchup`) |
 | **6 — Análisis y Proyecciones** | ⏳ Planificada | Proyecciones macrofundadas, ratios, anomalías |
-| **7 — API + Dashboard** | ⏳ Planificada | FastAPI + visualización web interactiva |
+| **7 — API + Dashboard** | 🟡 En desarrollo | FastAPI + dashboard (panel multi-fuente, EEFF, banca, AFP) — ver "Capa Web" |
 | **8 — Storytelling / Jules** | ⏳ Planificada | Reportes narrativos automáticos con LLM |
 
 ---
@@ -40,16 +40,16 @@ STORYTELLING (dashboard web, API REST, reportes Jules)
 
 | Requisito | Versión | Notas |
 |---|---|---|
-| Python | 3.11+ | Instalado en `C:\Users\mbrav\anaconda3\` |
-| Anaconda | Cualquiera | Se usa el Python del entorno base de Anaconda |
-| pip | — | Disponible en el entorno Anaconda |
+| Python | 3.11+ | Entorno virtual local del proyecto en `.venv\` |
+| venv | — | `python -m venv .venv` y activar/usar su intérprete |
+| pip | — | Disponible dentro del `.venv` |
 
-> **Importante**: En este equipo, Python está en Anaconda. Usar siempre `C:\Users\mbrav\anaconda3\python.exe` en vez de `python` o `py` (los alias del sistema apuntan al Microsoft Store stub).
+> **Importante**: En este equipo `python`/`py` apuntan al stub de Microsoft Store. Usar siempre el intérprete del entorno virtual del proyecto: `.\.venv\Scripts\python.exe`.
 
 ### Dependencias
 
 ```powershell
-C:\Users\mbrav\anaconda3\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
 ### Credenciales y accesos
@@ -86,7 +86,7 @@ LOG_FILE=logs/app.log
 ### Verificar que todo está en orden
 
 ```powershell
-C:\Users\mbrav\anaconda3\python.exe main.py status
+.\.venv\Scripts\python.exe main.py status
 ```
 
 Salida esperada:
@@ -100,20 +100,21 @@ Salida esperada:
 ## Instalación desde cero
 
 ```powershell
-cd c:\Users\mbrav\Desktop\INF_FIN_IA
+cd C:\Users\mbrav\Desktop\PROYECTOS_IA\INF_FIN_IA
 
-# Instalar dependencias en Anaconda
-C:\Users\mbrav\anaconda3\python.exe -m pip install -r requirements.txt
+# Crear el entorno virtual (si no existe) e instalar dependencias
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
 
 # Copiar y editar credenciales
 copy .env.example .env
 # (editar .env con tus datos)
 
 # Verificar estado
-C:\Users\mbrav\anaconda3\python.exe main.py status
+.\.venv\Scripts\python.exe main.py status
 
 # Backfill inicial (descarga histórico de todas las series)
-C:\Users\mbrav\anaconda3\python.exe main.py fetch --all
+.\.venv\Scripts\python.exe main.py fetch --all
 ```
 
 ---
@@ -122,94 +123,140 @@ C:\Users\mbrav\anaconda3\python.exe main.py fetch --all
 
 ```powershell
 # Ver estado del sistema y credenciales
-C:\Users\mbrav\anaconda3\python.exe main.py status
+.\.venv\Scripts\python.exe main.py status
 
 # Backfill inicial — descarga todas las series del catálogo
-C:\Users\mbrav\anaconda3\python.exe main.py fetch --all
+.\.venv\Scripts\python.exe main.py fetch --all
 
 # Descargar una serie por nombre (búsqueda en catálogo local)
-C:\Users\mbrav\anaconda3\python.exe main.py fetch --series IPC
-C:\Users\mbrav\anaconda3\python.exe main.py fetch --series "tipo de cambio"
-C:\Users\mbrav\anaconda3\python.exe main.py fetch --series cobre
+.\.venv\Scripts\python.exe main.py fetch --series IPC
+.\.venv\Scripts\python.exe main.py fetch --series "tipo de cambio"
+.\.venv\Scripts\python.exe main.py fetch --series cobre
 
 # Descargar por código exacto BDE (verificar código en si3.bcentral.cl primero)
-C:\Users\mbrav\anaconda3\python.exe main.py fetch --id F032.PIB.FLU.R.CLP.EP18.Z.Z.0.T
+.\.venv\Scripts\python.exe main.py fetch --id F032.PIB.FLU.R.CLP.EP18.Z.Z.0.T
 
 # Descargar con rango de fechas
-C:\Users\mbrav\anaconda3\python.exe main.py fetch --series PIB --from-date 2010-01-01 --to-date 2025-12-31
+.\.venv\Scripts\python.exe main.py fetch --series PIB --from-date 2010-01-01 --to-date 2025-12-31
 
 # Consultar datos almacenados
-C:\Users\mbrav\anaconda3\python.exe main.py query --series PIB
-C:\Users\mbrav\anaconda3\python.exe main.py query --series PIB --format csv
-C:\Users\mbrav\anaconda3\python.exe main.py query --series PIB --format json
+.\.venv\Scripts\python.exe main.py query --series PIB
+.\.venv\Scripts\python.exe main.py query --series PIB --format csv
+.\.venv\Scripts\python.exe main.py query --series PIB --format json
 
 # ============================================================
 # Ingesta y Consulta Corporativa (Fase 3 — CMF de Chile)
 # ============================================================
 
 # Descargar e ingestar estados financieros trimestrales corporativos (ej. 202512)
-C:\Users\mbrav\anaconda3\python.exe main.py fetch-cmf --period 202512
+.\.venv\Scripts\python.exe main.py fetch-cmf --period 202512
 
 # Consultar estados financieros corporativos de forma interactiva (ej. Correos de Chile)
-C:\Users\mbrav\anaconda3\python.exe main.py query-cmf --rut 60503000 --period 202512
+.\.venv\Scripts\python.exe main.py query-cmf --rut 60503000 --period 202512
 
 # Consultar estados financieros filtrando por nombre de empresa en formato JSON
-C:\Users\mbrav\anaconda3\python.exe main.py query-cmf --company "CORREOS" --period 202512 --limit 5 --format json
+.\.venv\Scripts\python.exe main.py query-cmf --company "CORREOS" --period 202512 --limit 5 --format json
 
 # ============================================================
 # Ingesta y Consulta Bancaria (Fase 4 — CMF Bancos)
 # ============================================================
 
 # Descargar e ingestar reportes mensuales bancarios para un banco específico (ej. Banco de Chile 001, Dic 2025)
-C:\Users\mbrav\anaconda3\python.exe main.py fetch-banks --year 2025 --month 12 --bank 001
+.\.venv\Scripts\python.exe main.py fetch-banks --year 2025 --month 12 --bank 001
 
 # Descargar automáticamente todos los bancos de la plaza para un mes específico (Nov 2025)
-C:\Users\mbrav\anaconda3\python.exe main.py fetch-banks --year 2025 --month 11
+.\.venv\Scripts\python.exe main.py fetch-banks --year 2025 --month 11
 
 # Realizar un backfill histórico completo de todos los bancos principales desde 2024 de forma automatizada
-C:\Users\mbrav\anaconda3\python.exe main.py fetch-banks --history
+.\.venv\Scripts\python.exe main.py fetch-banks --history
 
 # Consultar activos u otras cuentas bancarias (ej. Total Activos 100000000 de Banco de Chile)
-C:\Users\mbrav\anaconda3\python.exe main.py query-banks --bank 001 --account 100000000
+.\.venv\Scripts\python.exe main.py query-banks --bank 001 --account 100000000
 
 # Exportar en formato JSON de alta precisión (limitado a 2 registros)
-C:\Users\mbrav\anaconda3\python.exe main.py query-banks --bank 001 --account 100000000 --format json --limit 2
+.\.venv\Scripts\python.exe main.py query-banks --bank 001 --account 100000000 --format json --limit 2
 
 # ============================================================
 # Ingesta y Consulta de Pensiones (Superintendencia de Pensiones — SP)
 # ============================================================
 
 # Descargar e ingestar valores cuota de multifondos (ej. histórico completo desde 2002 para todos los fondos)
-C:\Users\mbrav\anaconda3\python.exe main.py fetch-sp-cuotas --year-start 2002
+.\.venv\Scripts\python.exe main.py fetch-sp-cuotas --year-start 2002
 
 # Descargar valores cuota para un fondo y rango específico (ej. Fondo A entre 2025 y 2026)
-C:\Users\mbrav\anaconda3\python.exe main.py fetch-sp-cuotas --year-start 2025 --year-end 2026 --fund A
+.\.venv\Scripts\python.exe main.py fetch-sp-cuotas --year-start 2025 --year-end 2026 --fund A
 
 # Descargar la cartera de inversión mensual desagregada para un período específico (ej. Enero 2026)
-C:\Users\mbrav\anaconda3\python.exe main.py fetch-sp-cartera --period 202601
+.\.venv\Scripts\python.exe main.py fetch-sp-cartera --period 202601
 
 # Descargar la cinta diaria de precios de instrumentos financieros para una fecha específica (ej. 2026-01-02)
-C:\Users\mbrav\anaconda3\python.exe main.py fetch-sp-precios --date 2026-01-02
+.\.venv\Scripts\python.exe main.py fetch-sp-precios --date 2026-01-02
 
 # Realizar un backfill completo de precios diarios (últimos 5 años diarios, y anteriores 5 años los miércoles)
-C:\Users\mbrav\anaconda3\python.exe main.py fetch-sp-precios --history
+.\.venv\Scripts\python.exe main.py fetch-sp-precios --history
 
 # Consultar valores cuota y patrimonio en terminal
-C:\Users\mbrav\anaconda3\python.exe main.py query-sp-cuotas --afp CAPITAL --fund A --limit 5
+.\.venv\Scripts\python.exe main.py query-sp-cuotas --afp CAPITAL --fund A --limit 5
 
 # Consultar precios diarios de instrumentos (ej. nemotécnico o RUT)
-C:\Users\mbrav\anaconda3\python.exe main.py query-sp-precios --instrument AESANDES --limit 5
+.\.venv\Scripts\python.exe main.py query-sp-precios --instrument AESANDES --limit 5
 
 # ============================================================
 # Listar y Scheduler
 # ============================================================
 
 # Listar series macroeconómicas registradas en la base de datos local
-C:\Users\mbrav\anaconda3\python.exe main.py list
+.\.venv\Scripts\python.exe main.py list
 
 # Iniciar scheduler automático (bloqueante — corre indefinidamente)
-C:\Users\mbrav\anaconda3\python.exe main.py run-scheduler
+.\.venv\Scripts\python.exe main.py run-scheduler
 ```
+
+---
+
+## Capa Web (Fase 7) — API REST + Dashboard
+
+Stack: **FastAPI + Jinja2 + HTMX + Plotly** (server-rendered, sin Node). La API reusa la
+capa DuckDB existente y se sirve en un solo proceso.
+
+```powershell
+# Levantar la web (panel + API navegable en /docs)
+.\.venv\Scripts\python.exe main.py serve
+
+# Levantar en proceso único CON el scheduler embebido (BD en lectura/escritura)
+.\.venv\Scripts\python.exe main.py serve --with-scheduler
+
+# Generar un HTML local autocontenido del panel (sin servidor) para examinarlo
+.\.venv\Scripts\python.exe main.py web-preview
+```
+
+Vistas disponibles:
+
+| Ruta | Descripción |
+|---|---|
+| `/` | Panel multi-fuente (KPIs de BCCh, banca, AFP, mercado + gráfico UF) |
+| `/eeff` | Estados financieros corporativos (CMF) por empresa/período |
+| `/banca` | Estados bancarios con desglose por moneda, por banco/período |
+| `/afp` | Valor cuota por AFP y multifondo (gráfico de 2 años) |
+| `/docs` | Swagger de la API REST (`/api/...`) |
+
+> **Concurrencia DuckDB**: solo un proceso puede escribir a la vez. Por eso, para correr la
+> web y el scheduler simultáneamente, usar `serve --with-scheduler` (proceso único) en vez de
+> levantar `run-scheduler` aparte.
+
+### Ingesta automática "al publicarse" (catch-up por frescura)
+
+```powershell
+# Ver qué fuentes tienen datos pendientes sin descargar nada
+.\.venv\Scripts\python.exe main.py catchup --dry-run
+
+# Descargar lo que falte dentro de su ventana de publicación (idempotente)
+.\.venv\Scripts\python.exe main.py catchup
+```
+
+El catch-up compara, por fuente, el último período en la BD contra el siguiente esperado
+(según frecuencia + rezago de publicación) y descarga solo lo que corresponda. Corre también
+como job horario dentro del scheduler.
 
 ---
 
@@ -232,12 +279,16 @@ INF_FIN_IA/
 │   ├── database.py          # ✅ Capa de acceso DuckDB
 │   └── schema.py            # ✅ Definición de tablas (series, observations, cmf, fetch_log)
 ├── scheduler/
-│   └── jobs.py              # ✅ APScheduler: daily/monthly/quarterly/annual
+│   ├── jobs.py              # ✅ APScheduler: daily/monthly/quarterly/annual + catch-up
+│   └── freshness.py         # ✅ Sondas de frescura (ingesta "al publicarse")
 ├── config/
 │   ├── settings.py          # ✅ Configuración centralizada (pydantic-settings)
 │   └── series_catalog.yaml  # ✅ Catálogo de series a ingestar
-├── api/                     # ⏳ FastAPI REST (Fase 6)
-├── dashboard/               # ⏳ Frontend web (Fase 6)
+├── api/                     # ✅ FastAPI: routers /api/*, vistas HTML, templates Jinja2, static
+│   ├── main.py              #    app + lifespan (scheduler embebido opcional)
+│   ├── routers/             #    macro, cmf, banks, sp, dashboard_kpi, views
+│   ├── templates/           #    base, overview, eeff, banca, afp + partials
+│   └── preview.py           #    export estático del panel (main.py web-preview)
 ├── data/
 │   ├── cmf_raw/             # Caché local de archivos planos trimestrales (.txt) de la CMF
 │   ├── bank_raw/            # Caché local de respuestas JSON de la API CMF Bancos (Fase 4)
@@ -411,7 +462,7 @@ Una vez que la base de datos tenga cobertura histórica, se incorporarán:
 | Herramienta | Descripción | Estado |
 |---|---|---|
 | **CLI** | Consulta de datos por terminal | ✅ Operativa |
-| **API REST** (FastAPI) | Endpoints para consumir los datos desde cualquier app | ⏳ Fase 6 |
-| **Dashboard web** | Visualizaciones interactivas (Chart.js / Plotly) | ⏳ Fase 6 |
+| **API REST** (FastAPI) | Endpoints `/api/*` para consumir los datos (`main.py serve` → `/docs`) | 🟡 En desarrollo |
+| **Dashboard web** | Panel multi-fuente + EEFF + banca + AFP (Jinja2/HTMX/Plotly) | 🟡 En desarrollo |
 | **Reportes automáticos** | Documentos Word/PPT generados por Jules a partir de la BD | ⏳ Fase 7 |
 | **Alertas** | Notificaciones cuando se acercan publicaciones o hay datos nuevos | ⏳ Fase 4 |
