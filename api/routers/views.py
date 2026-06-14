@@ -274,6 +274,31 @@ def afp_chart(
 
     multi, title, latest, note = [], "", None, None
 
+    # Participación de mercado (% del patrimonio del fondo, por AFP en el tiempo).
+    if metric == "share":
+        if afp == "TODAS" and fund not in ("TODOS", None, ""):
+            import pandas as _pd
+            edf = db.get_fund_equity_rows(fund, since)
+            if not edf.empty:
+                edf["date"] = edf["date"].astype(str)
+                piv = edf.pivot_table(index="date", columns="afp_name",
+                                      values="equity_value", aggfunc="sum")
+                shares = piv.div(piv.sum(axis=1), axis=0) * 100.0
+                multi = [{"name": col,
+                          "points": [{"date": idx, "value": (None if v != v else round(float(v), 2))}
+                                     for idx, v in shares[col].items()]}
+                         for col in shares.columns]
+                title = f"Participación de mercado · Fondo {fund} · % del patrimonio"
+            else:
+                note = "Sin datos de patrimonio para ese fondo."
+        else:
+            note = "La participación de mercado aplica al modo 'Todas (comparar AFP)' + un fondo."
+        return templates.TemplateResponse(request, "partials/afp_chart.html", {
+            "multi": multi or None, "title": title, "normalized": False,
+            "metric_label": "participación", "latest": None, "note": note,
+            "afp": afp, "fund": fund,
+        })
+
     if afp == "TODAS" and fund == "TODOS":
         note = "Elige una AFP específica o un fondo específico para comparar."
     elif afp == "TODAS":
@@ -299,4 +324,38 @@ def afp_chart(
         "multi": multi or None, "title": title, "normalized": normalize,
         "metric_label": metric_label, "latest": latest, "note": note,
         "afp": afp, "fund": fund,
+    })
+
+
+@router.get("/afp/rentabilidad")
+def afp_rentabilidad(request: Request, db: Database = Depends(get_db)):
+    """Fragmento HTMX: rentabilidad 12m por fondo, nominal vs real (descontando IPC)."""
+    fr = db.get_fund_returns_12m()
+    ipc = db.get_latest_value(db.KPI_SERIES["ipc_v12"])
+    ipc12 = ipc["value"] if ipc else None
+    rows = []
+    for f in ("A", "B", "C", "D", "E"):
+        nom = fr[f]["agg"]
+        real = None
+        if nom is not None and ipc12 is not None:
+            real = ((1 + nom / 100.0) / (1 + ipc12 / 100.0) - 1) * 100.0
+        rows.append({"fund": f, "nominal": nom, "real": real})
+    return templates.TemplateResponse(request, "partials/afp_rentabilidad.html", {
+        "rows": rows, "ipc": ipc12,
+    })
+
+
+@router.get("/afp/cartera")
+def afp_cartera(request: Request, fund: str = Query("A"), db: Database = Depends(get_db)):
+    """Fragmento HTMX: composición de cartera de un fondo (último período disponible)."""
+    periods = db.get_portfolio_periods()
+    if not periods:
+        return templates.TemplateResponse(request, "partials/afp_cartera.html",
+                                          {"rows": [], "period": None, "fund": fund})
+    period = periods[0]
+    df = db.get_portfolio_composition(period, fund, "TOTAL", 12)
+    rows = [{"glosa": str(r["instrument_glosa"]), "pct": float(r["porcentaje"])}
+            for _, r in df.iterrows()]
+    return templates.TemplateResponse(request, "partials/afp_cartera.html", {
+        "rows": rows, "period": period, "fund": fund,
     })

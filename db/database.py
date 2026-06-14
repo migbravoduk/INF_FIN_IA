@@ -695,6 +695,37 @@ class Database:
             }
         return out
 
+    def get_fund_equity_rows(self, fund: str, from_date: str):
+        """Patrimonio por AFP y fecha para un fondo (para participación de mercado)."""
+        return self.conn.execute("""
+            SELECT date, afp_name, equity_value
+            FROM sp_quota_values
+            WHERE fund_type = ? AND afp_name <> 'TOTAL' AND date >= ?
+            ORDER BY date ASC
+        """, [fund, from_date]).fetchdf()
+
+    def get_portfolio_composition(self, period: str, fund: str, afp: str = "TOTAL", limit: int = 12):
+        """
+        Composición de cartera de un fondo en un período (top por %), excluyendo las
+        filas de gran total. Devuelve DataFrame [instrument_glosa, porcentaje, monto_pesos].
+        """
+        return self.conn.execute("""
+            SELECT instrument_glosa, porcentaje, monto_pesos
+            FROM sp_portfolio_holdings
+            WHERE period = ? AND fund_type = ? AND UPPER(afp_name) = ?
+              AND porcentaje IS NOT NULL AND porcentaje < 100
+              AND UPPER(instrument_glosa) NOT LIKE 'TOTAL ACTIVOS%'
+            ORDER BY porcentaje DESC
+            LIMIT ?
+        """, [period, fund, afp.upper(), limit]).fetchdf()
+
+    def get_portfolio_periods(self) -> list[str]:
+        """Períodos disponibles en la cartera de inversión SP."""
+        rows = self.conn.execute(
+            "SELECT DISTINCT period FROM sp_portfolio_holdings ORDER BY period DESC"
+        ).fetchall()
+        return [str(r[0]) for r in rows]
+
     def get_afp_equity_ranking(self) -> list[dict]:
         """Ranking de AFP por patrimonio total (suma del último patrimonio de cada fondo)."""
         return self.conn.execute("""

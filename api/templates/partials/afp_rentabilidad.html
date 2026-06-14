@@ -1,0 +1,31 @@
+{#
+  partials/afp_rentabilidad.html — Rentabilidad 12m por fondo: nominal vs real.
+  rows = [{fund, nominal, real}]; ipc = inflación 12m usada.
+#}
+<div class="chart-block" style="margin-top:1.5rem">
+    <h4>Rentabilidad 12m por fondo — nominal vs real
+        {% if ipc is not none %}<span class="lead">(IPC 12m: {{ "{:.2f}".format(ipc) }}%)</span>{% endif %}
+    </h4>
+    <div id="afp-rent-chart" class="chart"></div>
+</div>
+<script>
+(function () {
+    var rows = {{ rows | tojson }};
+    function draw() {
+        if (!window.Plotly) { return setTimeout(draw, 100); }
+        var x = rows.map(function (r) { return "Fondo " + r.fund; });
+        Plotly.newPlot("afp-rent-chart", [
+            { x: x, y: rows.map(function (r) { return r.nominal; }), type: "bar",
+              name: "Nominal", marker: { color: "#38bdf8" } },
+            { x: x, y: rows.map(function (r) { return r.real; }), type: "bar",
+              name: "Real (desc. IPC)", marker: { color: "#4ade80" } }
+        ], {
+            margin: { t: 10, r: 10, b: 30, l: 45 }, height: 300, barmode: "group",
+            paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)",
+            font: { color: "#94a3b8" }, legend: { orientation: "h" },
+            xaxis: { gridcolor: "#334155" }, yaxis: { gridcolor: "#334155", ticksuffix: "%" }
+        }, { displayModeBar: false, responsive: true });
+    }
+    draw();
+})();
+</script>
