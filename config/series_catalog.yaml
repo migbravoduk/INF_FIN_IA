@@ -91,8 +91,8 @@ bcentral:
     name: Precio del Cobre (BML)
     category: materias_primas
     frequency: monthly
-    unit: centavos_USD_por_libra
-    description: Precio del cobre refinado BML mensual (dólares/libra)
+    unit: USD_por_libra
+    description: Precio del cobre refinado BML mensual (dólares por libra)
 
   # ============================================================
   # Fase 2 — Series adicionales del Banco Central (UF, UTM, IVP, IMACEC)
