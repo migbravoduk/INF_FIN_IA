@@ -228,6 +228,10 @@ capa DuckDB existente y se sirve en un solo proceso.
 
 # Generar un HTML local autocontenido del panel (sin servidor) para examinarlo
 .\.venv\Scripts\python.exe main.py web-preview
+
+# Exportar los estados financieros de empresas a HTML navegable (índice + página/empresa)
+.\.venv\Scripts\python.exe main.py eeff-export            # período más reciente
+.\.venv\Scripts\python.exe main.py eeff-export -p 202512  # período específico
 ```
 
 Vistas disponibles:
