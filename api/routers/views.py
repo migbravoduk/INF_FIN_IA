@@ -21,11 +21,12 @@ router = APIRouter()
 # ----------------------------------------------------------
 
 def build_overview_context(db: Database) -> dict:
-    """Contexto del panel: KPIs + serie UF (90 días) para el gráfico. Reusable por el export estático."""
+    """Contexto del panel: KPIs + series UF y TPM (12 meses). Reusable por el export estático."""
     kpi = db.get_overview_kpis()
-    since = (dt.date.today() - dt.timedelta(days=90)).isoformat()
+    since = (dt.date.today() - dt.timedelta(days=365)).isoformat()
     uf_series = records(db.get_series(db.KPI_SERIES["uf"], from_date=since))
-    return {"kpi": kpi, "uf_series": uf_series}
+    tpm_series = records(db.get_series(db.KPI_SERIES["tpm"], from_date=since))
+    return {"kpi": kpi, "uf_series": uf_series, "tpm_series": tpm_series}
 
 
 @router.get("/")

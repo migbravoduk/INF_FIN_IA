@@ -80,9 +80,43 @@ h1 { margin: 0 0 0.2rem; }
 }
 .btn:hover { border-color: var(--accent); }
 
+.chart-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 1rem;
+    margin-top: 2rem;
+}
 .chart-block { margin-top: 2rem; }
-.chart-block h2 { font-size: 1rem; color: var(--muted); }
+.chart-grid .chart-block { margin-top: 0; }
+.chart-block h2, .chart-block h4 { font-size: 0.95rem; color: var(--muted); font-weight: 500; margin: 0 0 0.4rem; }
 .chart { background: var(--panel); border-radius: 12px; padding: 0.5rem; }
+
+/* Signo en variaciones / rentabilidades */
+.pos { color: var(--ok); }
+.neg { color: #f87171; }
+
+/* Bloque banca (top 5 activos / resultado) */
+.banca-block {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 0.8rem 1.2rem 1rem;
+    margin: 1rem 0;
+}
+.banca-block > h3 {
+    margin: 0.2rem 0 0.8rem;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--accent);
+}
+.banca-cols {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1.5rem;
+}
+.banca-col h4 { margin: 0 0 0.5rem; font-size: 0.8rem; color: var(--ink); font-weight: 500; }
+.banca-col h4 .cnt { color: var(--muted); font-weight: 400; font-size: 0.72rem; }
 
 /* Estados financieros (EEFF) */
 .eeff-form {

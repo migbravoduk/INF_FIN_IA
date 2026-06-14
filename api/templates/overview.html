@@ -21,28 +21,40 @@
     {% include "partials/kpi_cards.html" %}
 </section>
 
-<section class="chart-block">
-    <h2>Unidad de Fomento — últimos 90 días</h2>
-    <div id="chart-uf" class="chart"></div>
-</section>
+<div class="chart-grid">
+    <section class="chart-block">
+        <h4>Unidad de Fomento — últimos 12 meses</h4>
+        <div id="chart-uf" class="chart"></div>
+    </section>
+    <section class="chart-block">
+        <h4>Tasa de Política Monetaria (TPM) — últimos 12 meses</h4>
+        <div id="chart-tpm" class="chart"></div>
+    </section>
+</div>
 
 <script>
-    // Serie UF real inyectada desde el backend (JSON-safe).
     var ufSeries = {{ uf_series | tojson }};
-    if (ufSeries && ufSeries.length) {
-        Plotly.newPlot("chart-uf", [{
-            x: ufSeries.map(function (r) { return r.date; }),
-            y: ufSeries.map(function (r) { return r.value; }),
-            type: "scatter", mode: "lines", name: "UF",
-            line: { color: "#38bdf8" }
+    var tpmSeries = {{ tpm_series | tojson }};
+
+    function lineChart(divId, series, color, fill) {
+        if (!series || !series.length) {
+            document.getElementById(divId).innerHTML = "<p class='loading'>Sin datos en el rango.</p>";
+            return;
+        }
+        Plotly.newPlot(divId, [{
+            x: series.map(function (r) { return r.date; }),
+            y: series.map(function (r) { return r.value; }),
+            type: "scatter", mode: "lines",
+            line: { color: color, width: 2, shape: fill ? "hv" : "linear" }
         }], {
-            margin: { t: 10, r: 10, b: 30, l: 60 }, height: 300,
+            margin: { t: 10, r: 10, b: 30, l: 55 }, height: 280,
             paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)",
-            font: { color: "#94a3b8" }
+            font: { color: "#94a3b8" },
+            xaxis: { gridcolor: "#334155" }, yaxis: { gridcolor: "#334155" }
         }, { displayModeBar: false, responsive: true });
-    } else {
-        document.getElementById("chart-uf").innerHTML =
-            "<p class='loading'>Sin datos de UF en el rango.</p>";
     }
+
+    lineChart("chart-uf", ufSeries, "#38bdf8", false);
+    lineChart("chart-tpm", tpmSeries, "#fbbf24", true);
 </script>
 {% endblock %}

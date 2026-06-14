@@ -1,36 +1,26 @@
 {#
   partials/kpi_cards.html — Tarjetas KPI multi-fuente.
-  Recibe `kpi` = get_overview_kpis(): claves macro, banca, afp, mercado.
-  Formateo null-safe (muestra "—" si falta el dato).
+  kpi = get_overview_kpis(): macro {pib_yoy,imacec_yoy,ipc_v12,usd_clp},
+  banca {period, top_assets[], top_results[]}, afp_returns {A..E}, mercado.
 #}
+{% macro signo(v, suf="%") %}{% if v is none %}—{% else %}<b class="{{ 'pos' if v >= 0 else 'neg' }}">{{ "{:+,.2f}".format(v) }}{{ suf }}</b>{% endif %}{% endmacro %}
+
 <div class="kpi-grid">
 
     <article class="kpi-card macro">
         <h3>Macro · BCCh</h3>
-        <div class="kpi-row"><span>UF</span><b>{{ "{:,.2f}".format(kpi.macro.uf) if kpi.macro.uf is not none else "—" }}</b></div>
-        <div class="kpi-row"><span>USD/CLP</span><b>{{ "{:,.2f}".format(kpi.macro.usd_clp) if kpi.macro.usd_clp is not none else "—" }}</b></div>
+        <div class="kpi-row"><span>PIB (var. anual)</span>{{ signo(kpi.macro.pib_yoy) }}</div>
+        <div class="kpi-row"><span>IMACEC (var. anual)</span>{{ signo(kpi.macro.imacec_yoy) }}</div>
         <div class="kpi-row"><span>IPC 12m</span><b>{{ "{:.2f}".format(kpi.macro.ipc_v12) ~ "%" if kpi.macro.ipc_v12 is not none else "—" }}</b></div>
-        <div class="kpi-row"><span>TPM</span><b>{{ "{:.2f}".format(kpi.macro.tpm) ~ "%" if kpi.macro.tpm is not none else "—" }}</b></div>
-    </article>
-
-    <article class="kpi-card banca">
-        <h3>Banca · CMF</h3>
-        {% if kpi.banca.total_activos_sistema is not none %}
-        <div class="kpi-big">{{ "{:,.1f}".format(kpi.banca.total_activos_sistema / 1e12) }}</div>
-        <div class="kpi-sub">billones CLP · activos del sistema · período {{ kpi.banca.period }}</div>
-        {% else %}
-        <div class="kpi-big">—</div>
-        <div class="kpi-sub">sin datos bancarios</div>
-        {% endif %}
+        <div class="kpi-row"><span>USD/CLP</span><b>{{ "{:,.2f}".format(kpi.macro.usd_clp) if kpi.macro.usd_clp is not none else "—" }}</b></div>
     </article>
 
     <article class="kpi-card afp">
-        <h3>AFP · Fondo A (valor cuota)</h3>
-        {% for row in kpi.afp %}
-        <div class="kpi-row"><span>{{ row.afp_name }}</span><b>{{ "{:,.2f}".format(row.quota_value) }}</b></div>
-        {% else %}
-        <div class="kpi-sub">sin datos de cuotas</div>
+        <h3>AFP · rentabilidad 12m por fondo</h3>
+        {% for f in ["A","B","C","D","E"] %}
+        <div class="kpi-row"><span>Fondo {{ f }}</span>{{ signo(kpi.afp_returns[f]) }}</div>
         {% endfor %}
+        <div class="kpi-sub">agregada del sistema (ponderada por patrimonio)</div>
     </article>
 
     <article class="kpi-card mercado">
@@ -39,4 +29,22 @@
         <div class="kpi-sub">instrumentos en cinta · {{ kpi.mercado.date or "—" }}</div>
     </article>
 
+</div>
+
+<div class="banca-block">
+    <h3>Banca · CMF — período {{ kpi.banca.period or "—" }}</h3>
+    <div class="banca-cols">
+        <div class="banca-col">
+            <h4>Top 5 por activos <span class="cnt">· billones CLP</span></h4>
+            {% for r in kpi.banca.top_assets %}
+            <div class="kpi-row"><span>{{ r.bank_name }}</span><b>{{ "{:,.1f}".format(r.val_total / 1e12) }}</b></div>
+            {% else %}<div class="kpi-sub">sin datos</div>{% endfor %}
+        </div>
+        <div class="banca-col">
+            <h4>Top 5 por resultado <span class="cnt">· miles de millones CLP</span></h4>
+            {% for r in kpi.banca.top_results %}
+            <div class="kpi-row"><span>{{ r.bank_name }}</span><b class="{{ 'pos' if r.val_total >= 0 else 'neg' }}">{{ "{:,.0f}".format(r.val_total / 1e9) }}</b></div>
+            {% else %}<div class="kpi-sub">sin datos</div>{% endfor %}
+        </div>
+    </div>
 </div>

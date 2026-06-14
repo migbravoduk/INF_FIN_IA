@@ -607,50 +607,107 @@ class Database:
         "usd_clp": "F073.TCO.PRE.Z.D",
         "ipc_v12": "G073.IPC.V12.2023.M",
         "tpm": "F022.TPM.TIN.D001.NO.Z.D",
+        "pib": "F032.PIB.FLU.R.CLP.EP18.Z.Z.0.T",
+        "imacec": "F032.ICF.IND.Z.Z.EP18.Z.Z.0.M",
     }
+    # Códigos de cuenta bancaria usados en los rankings.
+    BANK_ASSETS_ACCOUNT = "100000000"      # Total activos (balance)
+    BANK_RESULT_ACCOUNT = "590000000"      # Utilidad (pérdida) del ejercicio (resultado)
+
+    def _yoy_pct(self, series_id: str) -> Optional[float]:
+        """Variación interanual (%) del último dato vs el mismo período del año anterior."""
+        latest = self.conn.execute(
+            "SELECT date, value FROM observations WHERE series_id = ? ORDER BY date DESC LIMIT 1",
+            [series_id]
+        ).fetchone()
+        if not latest or latest[1] is None:
+            return None
+        d = latest[0]
+        if isinstance(d, datetime):
+            d = d.date()
+        try:
+            prior = d.replace(year=d.year - 1)
+        except ValueError:
+            prior = d - __import__("datetime").timedelta(days=365)
+        old = self.conn.execute(
+            "SELECT value FROM observations WHERE series_id = ? AND date <= ? ORDER BY date DESC LIMIT 1",
+            [series_id, str(prior)]
+        ).fetchone()
+        if not old or not old[0]:
+            return None
+        return (latest[1] / old[0] - 1) * 100.0
+
+    def _top_banks(self, account_code: str, report_type: str, n: int = 5) -> list[dict]:
+        """Top-n bancos por val_total de una cuenta, en el último período del reporte."""
+        return self.conn.execute("""
+            SELECT bank_name, val_total
+            FROM cmf_bank_statements
+            WHERE account_code = ? AND report_type = ?
+              AND period = (SELECT MAX(period) FROM cmf_bank_statements
+                            WHERE account_code = ? AND report_type = ?)
+            ORDER BY val_total DESC
+            LIMIT ?
+        """, [account_code, report_type, account_code, report_type, n]).fetchdf().to_dict(orient="records")
+
+    def get_fund_returns_12m(self) -> dict:
+        """
+        Rentabilidad nominal a 12 meses por multifondo (A–E), AGREGADA del sistema
+        (ponderada por patrimonio entre las AFP). return = cuota_hoy / cuota_~12m_atrás - 1.
+        """
+        import datetime as _dt
+        import pandas as _pd
+        out = {}
+        for f in ("A", "B", "C", "D", "E"):
+            rows = self.conn.execute("""
+                SELECT q.afp_name, q.date, q.quota_value, q.equity_value
+                FROM sp_quota_values q
+                JOIN (SELECT afp_name, MAX(date) md FROM sp_quota_values
+                      WHERE fund_type = ? AND afp_name <> 'TOTAL' GROUP BY afp_name) l
+                  ON q.afp_name = l.afp_name AND q.date = l.md
+                WHERE q.fund_type = ?
+            """, [f, f]).fetchdf()
+
+            num = den = 0.0
+            for _, r in rows.iterrows():
+                d = _pd.Timestamp(r["date"]).date()
+                target = d - _dt.timedelta(days=365)
+                old = self.conn.execute("""
+                    SELECT quota_value FROM sp_quota_values
+                    WHERE afp_name = ? AND fund_type = ? AND date <= ?
+                    ORDER BY date DESC LIMIT 1
+                """, [r["afp_name"], f, str(target)]).fetchone()
+                if old and old[0] and r["quota_value"]:
+                    ret = r["quota_value"] / old[0] - 1.0
+                    w = float(r["equity_value"] or 0.0)
+                    num += ret * w
+                    den += w
+            out[f] = (num / den * 100.0) if den else None
+        return out
 
     def get_overview_kpis(self) -> dict:
-        """
-        Agrega los últimos valores de las 4 fuentes para el panel multi-fuente.
-        Tolerante a tablas vacías (devuelve None / listas vacías).
-        """
-        # Macro (BCCh)
-        macro = {}
-        for key, sid in self.KPI_SERIES.items():
+        """Indicadores multi-fuente para el panel. Tolerante a tablas vacías."""
+        def latest(sid):
             v = self.get_latest_value(sid)
-            macro[key] = v["value"] if v else None
+            return v["value"] if v else None
 
-        # Banca: total de activos del sistema (cuenta 100000000) en el último período
-        banca = {"total_activos_sistema": None, "period": None}
-        row = self.conn.execute("""
-            SELECT period, SUM(val_total)
-            FROM cmf_bank_statements
-            WHERE account_code = '100000000'
-              AND period = (
-                  SELECT MAX(period) FROM cmf_bank_statements WHERE account_code = '100000000'
-              )
-            GROUP BY period
-        """).fetchone()
-        if row and row[0] is not None:
-            banca = {"period": int(row[0]),
-                     "total_activos_sistema": float(row[1]) if row[1] is not None else None}
+        macro = {
+            "pib_yoy": self._yoy_pct(self.KPI_SERIES["pib"]),
+            "imacec_yoy": self._yoy_pct(self.KPI_SERIES["imacec"]),
+            "ipc_v12": latest(self.KPI_SERIES["ipc_v12"]),
+            "usd_clp": latest(self.KPI_SERIES["usd_clp"]),
+        }
 
-        # AFP: último valor cuota de Fondo A POR AFP (cada una en su última fecha disponible,
-        # para que aparezcan todas aunque publiquen escalonado). Excluye el agregado TOTAL.
-        afp = self.conn.execute("""
-            SELECT q.afp_name, q.quota_value, q.date
-            FROM sp_quota_values q
-            JOIN (
-                SELECT afp_name, MAX(date) AS md
-                FROM sp_quota_values
-                WHERE fund_type = 'A' AND afp_name <> 'TOTAL'
-                GROUP BY afp_name
-            ) m ON q.afp_name = m.afp_name AND q.date = m.md
-            WHERE q.fund_type = 'A'
-            ORDER BY q.quota_value DESC
-        """).fetchdf().to_dict(orient="records")
+        bp = self.conn.execute(
+            "SELECT MAX(period) FROM cmf_bank_statements WHERE report_type = 'balance'"
+        ).fetchone()
+        banca = {
+            "period": int(bp[0]) if bp and bp[0] is not None else None,
+            "top_assets": self._top_banks(self.BANK_ASSETS_ACCOUNT, "balance", 5),
+            "top_results": self._top_banks(self.BANK_RESULT_ACCOUNT, "resultado", 5),
+        }
 
-        # Mercado: nº de instrumentos en la última cinta de precios
+        afp_returns = self.get_fund_returns_12m()
+
         mercado = {"n_instrumentos": 0, "date": None}
         mrow = self.conn.execute("SELECT MAX(date) FROM sp_instrument_prices").fetchone()
         if mrow and mrow[0] is not None:
@@ -660,7 +717,7 @@ class Database:
             ).fetchone()[0]
             mercado = {"n_instrumentos": int(cnt), "date": last_d}
 
-        return {"macro": macro, "banca": banca, "afp": afp, "mercado": mercado}
+        return {"macro": macro, "banca": banca, "afp_returns": afp_returns, "mercado": mercado}
 
     # ----------------------------------------------------------
     # Frescura (catch-up dirigido por publicación)
