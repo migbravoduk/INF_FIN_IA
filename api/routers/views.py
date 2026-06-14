@@ -92,17 +92,30 @@ def eeff_serie(
     request: Request,
     rut: str = Query(...),
     account: str = Query(...),
+    delta: bool = Query(False),
     db: Database = Depends(get_db),
 ):
-    """Fragmento HTMX: evolución por período de una partida de una empresa (gráfico)."""
+    """Fragmento HTMX: evolución por período de una partida. delta=desacumular flujo intra-anual."""
     if not account.strip():
         return templates.TemplateResponse(request, "partials/eeff_serie.html",
                                           {"series": [], "account": None})
     df = db.get_company_account_series(rut, account)
     series = [{"period": str(int(r["period"])), "value": r["value"]}
               for _, r in df.iterrows()]
+
+    if delta and series:
+        # Desacumular: dentro de un mismo año, valor = acumulado - acumulado del período previo.
+        out, prev_by_year = [], {}
+        for p in series:
+            year = p["period"][:4]
+            val = p["value"] - prev_by_year[year] if year in prev_by_year else p["value"]
+            out.append({"period": p["period"], "value": val})
+            prev_by_year[year] = p["value"]
+        series = out
+
+    suffix = " (variación intra-anual)" if delta else ""
     return templates.TemplateResponse(request, "partials/eeff_serie.html", {
-        "series": series, "account": account,
+        "series": series, "account": (account + suffix) if account else account,
     })
 
 
@@ -132,7 +145,7 @@ def banca_table(
         bank_code=bank, period=int(period) if period else None,
         report_type=report_type, limit=2000,
     )
-    meta, rows = None, []
+    meta, rows, graph_accounts = None, [], []
     if not df.empty:
         first = df.iloc[0]
         meta = {
@@ -141,8 +154,29 @@ def banca_table(
             "period": int(first["period"]),
         }
         rows = records(df)
+        graph_accounts = db.get_bank_graphable_accounts(bank, report_type)
     return templates.TemplateResponse(request, "partials/banca_table.html", {
-        "meta": meta, "rows": rows, "report_type": report_type,
+        "meta": meta, "rows": rows, "report_type": report_type, "graph_accounts": graph_accounts,
+    })
+
+
+@router.get("/banca/serie")
+def banca_serie(
+    request: Request,
+    bank: str = Query(...),
+    account: str = Query(...),
+    report_type: str = Query("balance", alias="type"),
+    db: Database = Depends(get_db),
+):
+    """Fragmento HTMX: evolución por período de una cuenta bancaria (gráfico)."""
+    if not account.strip():
+        return templates.TemplateResponse(request, "partials/eeff_serie.html",
+                                          {"series": [], "account": None})
+    df = db.get_bank_account_series(bank, account, report_type)
+    series = [{"period": str(int(r["period"])), "value": r["value"]}
+              for _, r in df.iterrows()]
+    return templates.TemplateResponse(request, "partials/eeff_serie.html", {
+        "series": series, "account": account,
     })
 
 
@@ -166,13 +200,32 @@ def afp_chart(
     fund: str = Query("A"),
     db: Database = Depends(get_db),
 ):
-    """Fragmento HTMX: serie de valor cuota (2 años) + último valor cuota/patrimonio."""
+    """Fragmento HTMX: valor cuota (2 años). fund='TODOS' compara los 5 fondos (base 100)."""
     since = (dt.date.today() - dt.timedelta(days=730)).isoformat()
+
+    if fund == "TODOS":
+        multi = []
+        for f in ("A", "B", "C", "D", "E"):
+            df = db.query_sp_quota_values(afp=afp, fund=f, from_date=since, limit=5000)
+            if df.empty:
+                continue
+            pts = records(df.sort_values("date"))
+            base = pts[0]["quota_value"] or None
+            multi.append({
+                "name": "Fondo " + f,
+                "points": [{"date": p["date"],
+                            "value": (p["quota_value"] / base * 100.0) if base else None}
+                           for p in pts],
+            })
+        return templates.TemplateResponse(request, "partials/afp_chart.html", {
+            "multi": multi, "series": None, "latest": None, "afp": afp, "fund": fund,
+        })
+
     df = db.query_sp_quota_values(afp=afp, fund=fund, from_date=since, limit=5000)
     if not df.empty:
         df = df.sort_values("date")
     series = records(df)
     return templates.TemplateResponse(request, "partials/afp_chart.html", {
         "series": series, "latest": series[-1] if series else None,
-        "afp": afp, "fund": fund,
+        "multi": None, "afp": afp, "fund": fund,
     })

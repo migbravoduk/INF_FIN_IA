@@ -23,6 +23,9 @@
             {% endfor %}
         </select>
     </label>
+    <label class="chk" title="Para partidas de flujo (acumuladas en el año): muestra la variación intra-anual">
+        <input type="checkbox" name="delta" value="1"> Desacumular (flujo)
+    </label>
 </form>
 <div id="eeff-serie"></div>
 {% endif %}

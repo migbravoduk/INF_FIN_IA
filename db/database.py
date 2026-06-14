@@ -695,6 +695,21 @@ class Database:
             }
         return out
 
+    def get_afp_equity_ranking(self) -> list[dict]:
+        """Ranking de AFP por patrimonio total (suma del último patrimonio de cada fondo)."""
+        return self.conn.execute("""
+            WITH latest AS (
+                SELECT afp_name, fund_type, MAX(date) md
+                FROM sp_quota_values WHERE afp_name <> 'TOTAL'
+                GROUP BY afp_name, fund_type
+            )
+            SELECT q.afp_name, SUM(q.equity_value) AS equity
+            FROM sp_quota_values q
+            JOIN latest l ON q.afp_name = l.afp_name AND q.fund_type = l.fund_type AND q.date = l.md
+            GROUP BY q.afp_name
+            ORDER BY equity DESC
+        """).fetchdf().to_dict(orient="records")
+
     # ----------------------------------------------------------
     # Series de partidas por empresa (para graficar en /eeff)
     # ----------------------------------------------------------
@@ -729,6 +744,30 @@ class Database:
             ORDER BY period ASC
         """, [clean, account_name]).fetchdf()
 
+    def get_bank_graphable_accounts(self, bank_code: str, report_type: str) -> list[str]:
+        """Cuentas de un banco/reporte presentes en ≥2 períodos (para graficar)."""
+        clean = str(bank_code).strip().zfill(3)
+        rows = self.conn.execute("""
+            SELECT account_name
+            FROM cmf_bank_statements
+            WHERE bank_code = ? AND report_type = ?
+            GROUP BY account_name
+            HAVING COUNT(DISTINCT period) >= 2
+            ORDER BY account_name
+        """, [clean, report_type]).fetchall()
+        return [str(r[0]) for r in rows]
+
+    def get_bank_account_series(self, bank_code: str, account_name: str, report_type: str):
+        """Evolución de una cuenta bancaria (val_total) por período, como DataFrame."""
+        clean = str(bank_code).strip().zfill(3)
+        return self.conn.execute("""
+            SELECT period, SUM(val_total) AS value
+            FROM cmf_bank_statements
+            WHERE bank_code = ? AND account_name = ? AND report_type = ?
+            GROUP BY period
+            ORDER BY period ASC
+        """, [clean, account_name, report_type]).fetchdf()
+
     def get_overview_kpis(self) -> dict:
         """Indicadores multi-fuente para el panel. Tolerante a tablas vacías."""
         def latest(sid):
@@ -752,6 +791,7 @@ class Database:
         }
 
         afp_returns = self.get_fund_returns_12m()
+        afp_ranking = self.get_afp_equity_ranking()
 
         mercado = {"n_instrumentos": 0, "date": None}
         mrow = self.conn.execute("SELECT MAX(date) FROM sp_instrument_prices").fetchone()
@@ -762,7 +802,8 @@ class Database:
             ).fetchone()[0]
             mercado = {"n_instrumentos": int(cnt), "date": last_d}
 
-        return {"macro": macro, "banca": banca, "afp_returns": afp_returns, "mercado": mercado}
+        return {"macro": macro, "banca": banca, "afp_returns": afp_returns,
+                "afp_ranking": afp_ranking, "mercado": mercado}
 
     # ----------------------------------------------------------
     # Frescura (catch-up dirigido por publicación)

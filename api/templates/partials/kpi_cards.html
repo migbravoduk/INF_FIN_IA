@@ -24,7 +24,13 @@
             {{ signo(fr.agg) }}
         </div>
         {% endfor %}
-        <div class="kpi-sub">agregada del sistema (ponderada) · #1 = AFP líder del fondo</div>
+        {% if kpi.afp_ranking %}
+        <div class="kpi-row" style="border-bottom:none">
+            <span>Mayor por patrimonio</span>
+            <b style="color:var(--accent)">{{ kpi.afp_ranking[0].afp_name }}</b>
+        </div>
+        {% endif %}
+        <div class="kpi-sub">negrita = agregada del sistema (ponderada) · #1 = AFP líder por rentabilidad del fondo</div>
     </article>
 
     <article class="kpi-card mercado">
