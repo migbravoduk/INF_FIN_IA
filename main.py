@@ -1007,6 +1007,38 @@ def web_preview(output):
 
 
 # ----------------------------------------------------------
+# eeff-export
+# ----------------------------------------------------------
+
+@cli.command(name="eeff-export")
+@click.option("--period", "-p", type=int, default=None, help="Período YYYYMM (default: el más reciente)")
+@click.option("--output", "-o", default="preview/eeff", help="Carpeta de salida")
+def eeff_export(period, output):
+    """Exporta los estados financieros de empresas a HTML navegable (índice + página por empresa)."""
+    from api.preview import render_eeff_static
+    try:
+        res = render_eeff_static(period, output)
+    except Exception as e:
+        console.print(f"[bold red]❌ No se pudo exportar:[/] {e}")
+        console.print("[dim]¿Está la BD abierta por otro proceso (escritor)? El export usa read_only.[/]")
+        sys.exit(1)
+
+    if not res.get("companies"):
+        console.print("[yellow]No hay estados financieros para exportar (¿período sin datos?).[/]")
+        return
+
+    console.print(Panel(
+        f"[bold green]✓ EEFF exportados[/]\n\n"
+        f"  • Período: [cyan]{res['period']}[/]\n"
+        f"  • Empresas: [cyan]{res['companies']}[/]\n"
+        f"  • Índice: [cyan]{res['dir']}\\index.html[/]\n\n"
+        "[dim]Abre index.html con doble clic; busca y entra a cada empresa.[/]",
+        title="🗂️  Export EEFF navegable",
+        border_style="green",
+    ))
+
+
+# ----------------------------------------------------------
 # serve
 # ----------------------------------------------------------
 

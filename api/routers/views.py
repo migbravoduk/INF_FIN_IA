@@ -53,13 +53,20 @@ def eeff(request: Request, db: Database = Depends(get_db)):
 def eeff_table(
     request: Request,
     rut: Optional[str] = Query(None),
+    company: Optional[str] = Query(None),
     period: Optional[str] = Query(None),
     db: Database = Depends(get_db),
 ):
     """Fragmento HTMX: estados financieros de una empresa/período, agrupados por estado."""
-    df = db.query_cmf_statements(
-        rut=rut, period=int(period) if period else None, limit=2000,
-    )
+    period_int = int(period) if period else None
+
+    # Si llega el nombre (buscador), resolverlo a un RUT único para no mezclar empresas.
+    if company and not rut:
+        match = db.query_cmf_statements(company=company, limit=1)
+        if not match.empty:
+            rut = str(match.iloc[0]["rut"])
+
+    df = db.query_cmf_statements(rut=rut, period=period_int, limit=2000)
 
     meta, groups = None, []
     if not df.empty:

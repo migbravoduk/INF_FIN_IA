@@ -9,15 +9,18 @@
 <form class="eeff-form"
       hx-get="/eeff/table"
       hx-target="#eeff-results"
-      hx-trigger="load, change from:select"
+      hx-trigger="load, change"
       hx-swap="innerHTML">
 
     <label>Empresa
-        <select name="rut">
+        <input list="companies-list" name="company" autocomplete="off"
+               placeholder="Escribe para buscar… ({{ companies|length }} empresas)"
+               value="{{ companies[0].company_name if companies else '' }}">
+        <datalist id="companies-list">
             {% for c in companies %}
-            <option value="{{ c.rut }}">{{ c.company_name }}</option>
+            <option value="{{ c.company_name }}"></option>
             {% endfor %}
-        </select>
+        </datalist>
     </label>
 
     <label>Período
