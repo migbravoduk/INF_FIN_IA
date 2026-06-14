@@ -3,13 +3,13 @@
 {% block title %}AFP · INF_FIN_IA{% endblock %}
 
 {% block content %}
-<h1>Fondos de pensiones — valor cuota</h1>
-<p class="subtitle">Superintendencia de Pensiones — evolución del valor cuota por AFP y multifondo</p>
+<h1>Fondos de pensiones — evolución y comparativos</h1>
+<p class="subtitle">Superintendencia de Pensiones — valor cuota y patrimonio por AFP y multifondo</p>
 
 <form class="eeff-form"
       hx-get="/afp/chart"
       hx-target="#afp-results"
-      hx-trigger="load, change from:select"
+      hx-trigger="load, change"
       hx-swap="innerHTML">
 
     <label>AFP
@@ -17,6 +17,7 @@
             {% for a in afps %}
             <option value="{{ a }}">{{ a }}</option>
             {% endfor %}
+            <option value="TODAS">Todas (comparar AFP)</option>
         </select>
     </label>
 
@@ -25,12 +26,24 @@
             {% for f in funds %}
             <option value="{{ f }}">{{ f }}</option>
             {% endfor %}
-            <option value="TODOS">Todos (comparar)</option>
+            <option value="TODOS">Todos (comparar fondos)</option>
+        </select>
+    </label>
+
+    <label>Métrica
+        <select name="metric">
+            <option value="cuota">Valor cuota (base 100)</option>
+            <option value="patrimonio">Patrimonio (absoluto)</option>
         </select>
     </label>
 </form>
 
+<p class="afp-hint">
+    Modos: <b>una AFP + un fondo</b> = evolución simple · <b>una AFP + Todos</b> = comparar fondos ·
+    <b>Todas + un fondo</b> = comparar AFP en ese fondo.
+</p>
+
 <section id="afp-results">
-    <p class="loading">Cargando valor cuota…</p>
+    <p class="loading">Cargando…</p>
 </section>
 {% endblock %}

@@ -1,59 +1,41 @@
 {#
-  partials/afp_chart.html — Valor cuota.
-  - Modo single: `series` [{date,quota_value,equity_value}] + `latest`.
-  - Modo comparar: `multi` [{name, points:[{date,value}]}] (base 100).
+  partials/afp_chart.html — Evolución de fondos de pensiones (unificado).
+  multi = [{name, points:[{date,value}]}]; title; normalized (bool); metric_label;
+  latest (solo modo simple); note (mensaje si falta elegir).
 #}
-{% if multi %}
+{% if note %}
+<p class="loading">{{ note }}</p>
+{% elif multi %}
+{% if latest %}
+<div class="afp-stats">
+    <div><span>Valor cuota</span><b>{{ "{:,.2f}".format(latest.quota_value) }}</b></div>
+    <div><span>Patrimonio</span><b>{{ "{:,.0f}".format(latest.equity_value) }}</b></div>
+    <div><span>Al</span><b>{{ latest.date[:10] }}</b></div>
+</div>
+{% endif %}
+
 <div class="chart-block">
-    <h4>{{ afp }} · comparación de fondos (base 100 = inicio del período)</h4>
+    <h4>{{ title }}{% if normalized %} <span class="lead">(base 100 = inicio)</span>{% endif %}</h4>
     <div id="afp-chart" class="chart"></div>
 </div>
 <script>
 (function () {
     var multi = {{ multi | tojson }};
-    var colors = {"Fondo A":"#f87171","Fondo B":"#fbbf24","Fondo C":"#38bdf8","Fondo D":"#4ade80","Fondo E":"#a78bfa"};
+    var fundColors = {"Fondo A":"#f87171","Fondo B":"#fbbf24","Fondo C":"#38bdf8","Fondo D":"#4ade80","Fondo E":"#a78bfa"};
+    var palette = ["#38bdf8","#fbbf24","#4ade80","#f87171","#a78bfa","#fb923c","#22d3ee"];
     function draw() {
         if (!window.Plotly) { return setTimeout(draw, 100); }
-        var traces = multi.map(function (s) {
+        var traces = multi.map(function (s, i) {
             return { x: s.points.map(function (p) { return p.date; }),
                      y: s.points.map(function (p) { return p.value; }),
                      type: "scatter", mode: "lines", name: s.name,
-                     line: { color: colors[s.name] || "#38bdf8", width: 2 } };
+                     line: { color: fundColors[s.name] || palette[i % palette.length], width: 2 } };
         });
         Plotly.newPlot("afp-chart", traces, {
-            margin: { t: 10, r: 10, b: 30, l: 50 }, height: 340,
-            paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)",
-            font: { color: "#94a3b8" }, legend: { orientation: "h" },
-            xaxis: { gridcolor: "#334155" }, yaxis: { gridcolor: "#334155" }
-        }, { displayModeBar: false, responsive: true });
-    }
-    draw();
-})();
-</script>
-{% elif series %}
-<div class="afp-stats">
-    <div><span>Valor cuota</span><b>{{ "{:,.2f}".format(latest.quota_value) }}</b></div>
-    <div><span>Patrimonio</span><b>{{ "{:,.0f}".format(latest.equity_value) }}</b></div>
-    <div><span>Al</span><b>{{ latest.date[:10] }}</b></div>
-    <div><span>Fondo</span><b>{{ fund }}</b></div>
-</div>
-<div class="chart-block">
-    <h4>{{ afp }} · Fondo {{ fund }} — valor cuota (últimos 2 años)</h4>
-    <div id="afp-chart" class="chart"></div>
-</div>
-<script>
-(function () {
-    var data = {{ series | tojson }};
-    function draw() {
-        if (!window.Plotly) { return setTimeout(draw, 100); }
-        Plotly.newPlot("afp-chart", [{
-            x: data.map(function (d) { return d.date; }),
-            y: data.map(function (d) { return d.quota_value; }),
-            type: "scatter", mode: "lines", line: { color: "#38bdf8", width: 2 }
-        }], {
-            margin: { t: 10, r: 10, b: 30, l: 70 }, height: 320,
+            margin: { t: 10, r: 10, b: 30, l: 60 }, height: 360,
             paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)",
             font: { color: "#94a3b8" },
+            legend: { orientation: "h" },
             xaxis: { gridcolor: "#334155" }, yaxis: { gridcolor: "#334155" }
         }, { displayModeBar: false, responsive: true });
     }
@@ -61,5 +43,5 @@
 })();
 </script>
 {% else %}
-<p class="loading">Sin datos de valor cuota para esa AFP/fondo.</p>
+<p class="loading">Sin datos para esa combinación.</p>
 {% endif %}

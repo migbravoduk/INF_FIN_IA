@@ -245,34 +245,58 @@ def afp_chart(
     request: Request,
     afp: Optional[str] = Query(None),
     fund: str = Query("A"),
+    metric: str = Query("cuota"),
     db: Database = Depends(get_db),
 ):
-    """Fragmento HTMX: valor cuota (2 años). fund='TODOS' compara los 5 fondos (base 100)."""
+    """
+    Fragmento HTMX: evolución de fondos de pensiones, con varios modos:
+      - una AFP + un fondo          → serie única.
+      - una AFP + fund='TODOS'      → compara los 5 fondos de esa AFP.
+      - afp='TODAS' + un fondo      → compara todas las AFP en ese fondo.
+    metric='cuota' (valor cuota, normalizado base 100) | 'patrimonio' (absoluto).
+    """
     since = (dt.date.today() - dt.timedelta(days=730)).isoformat()
+    val_key = "equity_value" if metric == "patrimonio" else "quota_value"
+    normalize = metric != "patrimonio"
+    metric_label = "patrimonio" if metric == "patrimonio" else "valor cuota"
+    funds = ["A", "B", "C", "D", "E"]
 
-    if fund == "TODOS":
-        multi = []
-        for f in ("A", "B", "C", "D", "E"):
-            df = db.query_sp_quota_values(afp=afp, fund=f, from_date=since, limit=5000)
-            if df.empty:
-                continue
-            pts = records(df.sort_values("date"))
-            base = pts[0]["quota_value"] or None
-            multi.append({
-                "name": "Fondo " + f,
+    def serie(afp_, fund_):
+        df = db.query_sp_quota_values(afp=afp_, fund=fund_, from_date=since, limit=5000)
+        return records(df.sort_values("date")) if not df.empty else None
+
+    def norm(pts, name):
+        base = pts[0][val_key] or None
+        return {"name": name,
                 "points": [{"date": p["date"],
-                            "value": (p["quota_value"] / base * 100.0) if base else None}
-                           for p in pts],
-            })
-        return templates.TemplateResponse(request, "partials/afp_chart.html", {
-            "multi": multi, "series": None, "latest": None, "afp": afp, "fund": fund,
-        })
+                            "value": (p[val_key] / base * 100.0) if (normalize and base) else p[val_key]}
+                           for p in pts]}
 
-    df = db.query_sp_quota_values(afp=afp, fund=fund, from_date=since, limit=5000)
-    if not df.empty:
-        df = df.sort_values("date")
-    series = records(df)
+    multi, title, latest, note = [], "", None, None
+
+    if afp == "TODAS" and fund == "TODOS":
+        note = "Elige una AFP específica o un fondo específico para comparar."
+    elif afp == "TODAS":
+        for a in db.get_afp_list():
+            pts = serie(a, fund)
+            if pts:
+                multi.append(norm(pts, a))
+        title = f"Comparación de AFP · Fondo {fund} · {metric_label}"
+    elif fund == "TODOS":
+        for f in funds:
+            pts = serie(afp, f)
+            if pts:
+                multi.append(norm(pts, "Fondo " + f))
+        title = f"{afp} · comparación de fondos · {metric_label}"
+    else:
+        pts = serie(afp, fund)
+        if pts:
+            multi.append(norm(pts, f"{afp} · Fondo {fund}"))
+            latest = pts[-1]
+        title = f"{afp} · Fondo {fund} · {metric_label}"
+
     return templates.TemplateResponse(request, "partials/afp_chart.html", {
-        "series": series, "latest": series[-1] if series else None,
-        "multi": None, "afp": afp, "fund": fund,
+        "multi": multi or None, "title": title, "normalized": normalize,
+        "metric_label": metric_label, "latest": latest, "note": note,
+        "afp": afp, "fund": fund,
     })
