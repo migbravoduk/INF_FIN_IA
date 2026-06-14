@@ -160,6 +160,53 @@ def banca_table(
     })
 
 
+@router.get("/comparar")
+def comparar(request: Request, db: Database = Depends(get_db)):
+    """Vista de comparación: misma partida en varias empresas (base 100)."""
+    return templates.TemplateResponse(request, "compare.html", {
+        "companies": records(db.get_cmf_companies()),
+        "partidas": [
+            "Total de activos", "Total de patrimonio", "Total de pasivos",
+            "Ganancia (pérdida)", "Ganancia bruta", "Costo de ventas",
+        ],
+    })
+
+
+@router.get("/comparar/chart")
+def comparar_chart(
+    request: Request,
+    account: str = Query(""),
+    c1: str = Query(""), c2: str = Query(""), c3: str = Query(""),
+    db: Database = Depends(get_db),
+):
+    """Fragmento HTMX: overlay de una misma partida en varias empresas, base 100."""
+    if not account.strip():
+        return templates.TemplateResponse(request, "partials/compare_chart.html",
+                                          {"multi": None, "account": None})
+    multi = []
+    for name in (c1, c2, c3):
+        name = name.strip()
+        if not name:
+            continue
+        match = db.query_cmf_statements(company=name, limit=1)
+        if match.empty:
+            continue
+        rut, cname = str(match.iloc[0]["rut"]), str(match.iloc[0]["company_name"])
+        s = db.get_company_account_series(rut, account)
+        pts = [{"period": str(int(r["period"])), "value": r["value"]} for _, r in s.iterrows()]
+        if not pts:
+            continue
+        base = pts[0]["value"] or None
+        multi.append({
+            "name": cname,
+            "points": [{"x": p["period"], "value": (p["value"] / base * 100.0) if base else None}
+                       for p in pts],
+        })
+    return templates.TemplateResponse(request, "partials/compare_chart.html", {
+        "multi": multi, "account": account,
+    })
+
+
 @router.get("/banca/serie")
 def banca_serie(
     request: Request,
