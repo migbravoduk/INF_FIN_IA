@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}AFP · INF_FIN_IA{% endblock %}
+
+{% block content %}
+<h1>Fondos de pensiones — valor cuota</h1>
+<p class="subtitle">Superintendencia de Pensiones — evolución del valor cuota por AFP y multifondo</p>
+
+<form class="eeff-form"
+      hx-get="/afp/chart"
+      hx-target="#afp-results"
+      hx-trigger="load, change from:select"
+      hx-swap="innerHTML">
+
+    <label>AFP
+        <select name="afp">
+            {% for a in afps %}
+            <option value="{{ a }}">{{ a }}</option>
+            {% endfor %}
+        </select>
+    </label>
+
+    <label>Fondo
+        <select name="fund">
+            {% for f in funds %}
+            <option value="{{ f }}">{{ f }}</option>
+            {% endfor %}
+        </select>
+    </label>
+</form>
+
+<section id="afp-results">
+    <p class="loading">Cargando valor cuota…</p>
+</section>
+{% endblock %}

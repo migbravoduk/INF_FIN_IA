@@ -81,3 +81,75 @@ def eeff_table(
     return templates.TemplateResponse(request, "partials/eeff_table.html", {
         "meta": meta, "groups": groups,
     })
+
+
+# ----------------------------------------------------------
+# Bancos (CMF — desglose por moneda)
+# ----------------------------------------------------------
+
+@router.get("/banca")
+def banca(request: Request, db: Database = Depends(get_db)):
+    """Vista de estados financieros de bancos: selector banco/período/reporte."""
+    return templates.TemplateResponse(request, "banca.html", {
+        "banks": records(db.get_bank_list()),
+        "periods": db.get_bank_periods(),
+    })
+
+
+@router.get("/banca/table")
+def banca_table(
+    request: Request,
+    bank: Optional[str] = Query(None),
+    period: Optional[str] = Query(None),
+    report_type: str = Query("balance", alias="type"),
+    db: Database = Depends(get_db),
+):
+    """Fragmento HTMX: balance o resultados de un banco con desglose por moneda."""
+    df = db.query_bank_statements(
+        bank_code=bank, period=int(period) if period else None,
+        report_type=report_type, limit=2000,
+    )
+    meta, rows = None, []
+    if not df.empty:
+        first = df.iloc[0]
+        meta = {
+            "bank_name": str(first["bank_name"]),
+            "bank_code": str(first["bank_code"]),
+            "period": int(first["period"]),
+        }
+        rows = records(df)
+    return templates.TemplateResponse(request, "partials/banca_table.html", {
+        "meta": meta, "rows": rows, "report_type": report_type,
+    })
+
+
+# ----------------------------------------------------------
+# AFP (SP — valor cuota por multifondo)
+# ----------------------------------------------------------
+
+@router.get("/afp")
+def afp(request: Request, db: Database = Depends(get_db)):
+    """Vista de valor cuota: selector AFP/fondo + gráfico de evolución."""
+    return templates.TemplateResponse(request, "afp.html", {
+        "afps": db.get_afp_list(),
+        "funds": ["A", "B", "C", "D", "E"],
+    })
+
+
+@router.get("/afp/chart")
+def afp_chart(
+    request: Request,
+    afp: Optional[str] = Query(None),
+    fund: str = Query("A"),
+    db: Database = Depends(get_db),
+):
+    """Fragmento HTMX: serie de valor cuota (2 años) + último valor cuota/patrimonio."""
+    since = (dt.date.today() - dt.timedelta(days=730)).isoformat()
+    df = db.query_sp_quota_values(afp=afp, fund=fund, from_date=since, limit=5000)
+    if not df.empty:
+        df = df.sort_values("date")
+    series = records(df)
+    return templates.TemplateResponse(request, "partials/afp_chart.html", {
+        "series": series, "latest": series[-1] if series else None,
+        "afp": afp, "fund": fund,
+    })

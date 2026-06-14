@@ -1,0 +1,40 @@
+{#
+  partials/afp_chart.html — Serie de valor cuota (2 años) + último valor.
+  Recibe `series` (lista {date, quota_value, equity_value}), `latest`, `afp`, `fund`.
+  El <script> se ejecuta al insertarse vía HTMX (Plotly global de base.html).
+#}
+{% if series %}
+<div class="afp-stats">
+    <div><span>Valor cuota</span><b>{{ "{:,.2f}".format(latest.quota_value) }}</b></div>
+    <div><span>Patrimonio</span><b>{{ "{:,.0f}".format(latest.equity_value) }}</b></div>
+    <div><span>Al</span><b>{{ latest.date[:10] }}</b></div>
+    <div><span>Fondo</span><b>{{ fund }}</b></div>
+</div>
+
+<div class="chart-block">
+    <h4>{{ afp }} · Fondo {{ fund }} — valor cuota (últimos 2 años)</h4>
+    <div id="afp-chart" class="chart"></div>
+</div>
+
+<script>
+(function () {
+    var data = {{ series | tojson }};
+    function draw() {
+        if (!window.Plotly) { return setTimeout(draw, 100); }
+        Plotly.newPlot("afp-chart", [{
+            x: data.map(function (d) { return d.date; }),
+            y: data.map(function (d) { return d.quota_value; }),
+            type: "scatter", mode: "lines", line: { color: "#38bdf8", width: 2 }
+        }], {
+            margin: { t: 10, r: 10, b: 30, l: 70 }, height: 320,
+            paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)",
+            font: { color: "#94a3b8" },
+            xaxis: { gridcolor: "#334155" }, yaxis: { gridcolor: "#334155" }
+        }, { displayModeBar: false, responsive: true });
+    }
+    draw();
+})();
+</script>
+{% else %}
+<p class="loading">Sin datos de valor cuota para esa AFP/fondo.</p>
+{% endif %}

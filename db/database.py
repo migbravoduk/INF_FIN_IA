@@ -257,6 +257,30 @@ class Database:
         """).fetchall()
         return [int(r[0]) for r in rows]
 
+    def get_bank_list(self):
+        """Bancos con datos (código + nombre), ordenados por nombre."""
+        return self.conn.execute("""
+            SELECT bank_code, MAX(bank_name) AS bank_name
+            FROM cmf_bank_statements
+            GROUP BY bank_code
+            ORDER BY bank_name ASC
+        """).fetchdf()
+
+    def get_bank_periods(self) -> list[int]:
+        """Períodos (YYYYMM) disponibles en estados bancarios, más reciente primero."""
+        rows = self.conn.execute("""
+            SELECT DISTINCT period FROM cmf_bank_statements ORDER BY period DESC
+        """).fetchall()
+        return [int(r[0]) for r in rows]
+
+    def get_afp_list(self) -> list[str]:
+        """Nombres de AFP con valores cuota (excluye el agregado TOTAL)."""
+        rows = self.conn.execute("""
+            SELECT DISTINCT afp_name FROM sp_quota_values
+            WHERE afp_name <> 'TOTAL' ORDER BY afp_name ASC
+        """).fetchall()
+        return [str(r[0]) for r in rows]
+
     def query_cmf_statements(
         self,
         rut: Optional[str] = None,

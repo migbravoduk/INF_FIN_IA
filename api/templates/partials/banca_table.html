@@ -1,0 +1,50 @@
+{#
+  partials/banca_table.html — Balance o resultados de un banco.
+  Recibe `meta`, `rows` (registros), `report_type` ('balance'|'resultado').
+#}
+{% macro fmt(v) %}{{ "{:,.0f}".format(v) if v not in (none, 0, 0.0) else "—" }}{% endmacro %}
+
+{% if meta %}
+<div class="eeff-head">
+    <h3>{{ meta.bank_name }}</h3>
+    <span class="eeff-meta">
+        Ficha {{ meta.bank_code }} · período {{ meta.period }} ·
+        {{ "Balance" if report_type == "balance" else "Estado de resultados" }} · miles de CLP
+    </span>
+</div>
+
+<div class="eeff-group table-scroll">
+    <table class="bank-table">
+        <thead>
+            {% if report_type == "balance" %}
+            <tr>
+                <th class="acct">Cuenta</th>
+                <th>CLP no reaj.</th>
+                <th>Reaj. UF</th>
+                <th>Reaj. USD</th>
+                <th>M. extranjera</th>
+                <th>Total</th>
+            </tr>
+            {% else %}
+            <tr><th class="acct">Cuenta</th><th>Total</th></tr>
+            {% endif %}
+        </thead>
+        <tbody>
+        {% for r in rows %}
+            <tr>
+                <td class="acct">{{ r.account_name }}</td>
+                {% if report_type == "balance" %}
+                <td class="num">{{ fmt(r.val_clp_no_reaj) }}</td>
+                <td class="num">{{ fmt(r.val_clp_reaj_ipc) }}</td>
+                <td class="num">{{ fmt(r.val_clp_reaj_tc) }}</td>
+                <td class="num">{{ fmt(r.val_extranjera) }}</td>
+                {% endif %}
+                <td class="num strong">{{ fmt(r.val_total) }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<p class="loading">No hay datos bancarios para esa combinación.</p>
+{% endif %}
