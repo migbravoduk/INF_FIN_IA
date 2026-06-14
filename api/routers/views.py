@@ -11,6 +11,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Query, Request
 
 from api.deps import get_db, records, templates
+from api.eeff_format import build_statement_groups
 from db.database import Database
 
 router = APIRouter()
@@ -78,13 +79,7 @@ def eeff_table(
             "report_type": str(first["report_type"]),
             "currency": str(first["currency"]),
         }
-        # Agrupa por estado (ESF, ERFG, ...) preservando el orden de la consulta.
-        for group_name, sub in df.groupby("statement_group", sort=False):
-            groups.append({
-                "group": group_name or "—",
-                "rows": [{"account_name": str(r["account_name"]), "value": r["value"]}
-                         for _, r in sub.iterrows()],
-            })
+        groups = build_statement_groups(df)
 
     return templates.TemplateResponse(request, "partials/eeff_table.html", {
         "meta": meta, "groups": groups,

@@ -12,6 +12,7 @@ from pathlib import Path
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from db.database import Database
+from api.eeff_format import build_statement_groups
 from api.routers.views import build_overview_context
 
 _BASE = Path(__file__).parent
@@ -85,12 +86,7 @@ def render_eeff_static(period: int = None, output_dir: str = "preview/eeff") -> 
             "report_type": str(sub.iloc[0]["report_type"]),
             "currency": str(sub.iloc[0]["currency"]),
         }
-        groups = [
-            {"group": g or "—",
-             "rows": [{"account_name": str(r["account_name"]), "value": r["value"]}
-                      for _, r in g_sub.iterrows()]}
-            for g, g_sub in sub.groupby("statement_group", sort=False)
-        ]
+        groups = build_statement_groups(sub)
         body = table_tpl.render(meta=meta, groups=groups)
         (out / f"{rut}.html").write_text(
             _shell(f"{name} · {period}", body, css), encoding="utf-8"

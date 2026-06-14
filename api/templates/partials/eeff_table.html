@@ -8,7 +8,7 @@
     <span class="eeff-meta">
         RUT {{ meta.rut }} · período {{ meta.period }} ·
         {{ "Individual" if meta.report_type == "I" else "Consolidado" if meta.report_type == "C" else meta.report_type }} ·
-        {{ meta.currency }}
+        cifras en {{ meta.currency }} (moneda de reporte, no en miles)
     </span>
 </div>
 
