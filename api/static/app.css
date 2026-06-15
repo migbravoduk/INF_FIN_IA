@@ -179,6 +179,11 @@ h1 { margin: 0 0 0.2rem; }
 .eeff-table td.acct { color: var(--ink); }
 .eeff-table td.num { text-align: right; font-variant-numeric: tabular-nums; color: var(--ok); white-space: nowrap; padding-left: 1rem; }
 
+/* Filas de totales (resaltadas en negrita) */
+.total-row td { font-weight: 500; border-bottom: 1px solid var(--border); }
+.total-row td.acct { color: var(--ink); }
+.total-row td.num, .total-row td.num.strong { color: var(--ok); }
+
 /* Tabla bancaria (desglose por moneda) */
 .table-scroll { overflow-x: auto; }
 .bank-table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }

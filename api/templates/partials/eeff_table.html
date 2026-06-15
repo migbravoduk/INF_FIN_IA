@@ -36,7 +36,7 @@
     <table class="eeff-table">
         <tbody>
         {% for row in grp.rows %}
-            <tr>
+            <tr class="{{ 'total-row' if 'total' in (row.account_name|lower) else '' }}">
                 <td class="acct">{{ row.account_name }}</td>
                 <td class="num">{{ "{:,.0f}".format(row.value) if row.value is not none else "—" }}</td>
             </tr>
