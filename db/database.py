@@ -708,14 +708,17 @@ class Database:
 
     def get_portfolio_composition(self, period: str, fund: str, afp: str = "TOTAL", limit: int = 12):
         """
-        Composición de cartera de un fondo en un período (top por %), excluyendo las
-        filas de gran total. Devuelve DataFrame [instrument_glosa, porcentaje, monto_pesos].
+        Composición de cartera de un fondo por CATEGORÍA legible (filas "TOTAL ..." que
+        agrupan los instrumentos y suman ~100%), excluyendo el gran total "TOTAL ACTIVOS".
+        Evita los códigos crípticos de instrumento (CMEV, ETFA, ...).
+        Devuelve DataFrame [instrument_glosa, porcentaje, monto_pesos].
         """
         return self.conn.execute("""
             SELECT instrument_glosa, porcentaje, monto_pesos
             FROM sp_portfolio_holdings
             WHERE period = ? AND fund_type = ? AND UPPER(afp_name) = ?
               AND porcentaje IS NOT NULL AND porcentaje < 100
+              AND UPPER(instrument_glosa) LIKE 'TOTAL %'
               AND UPPER(instrument_glosa) NOT LIKE 'TOTAL ACTIVOS%'
             ORDER BY porcentaje DESC
             LIMIT ?

@@ -355,7 +355,14 @@ def afp_cartera(request: Request, fund: str = Query("A"), db: Database = Depends
                                           {"rows": [], "period": None, "fund": fund})
     period = periods[0]
     df = db.get_portfolio_composition(period, fund, "TOTAL", 12)
-    rows = [{"glosa": str(r["instrument_glosa"]), "pct": float(r["porcentaje"])}
+
+    def clean(g: str) -> str:
+        g = str(g).strip()
+        if g.lower().startswith("total "):
+            g = g[6:].strip()
+        return (g[:1].upper() + g[1:].lower()) if g else g
+
+    rows = [{"glosa": clean(r["instrument_glosa"]), "pct": float(r["porcentaje"])}
             for _, r in df.iterrows()]
     return templates.TemplateResponse(request, "partials/afp_cartera.html", {
         "rows": rows, "period": period, "fund": fund,
