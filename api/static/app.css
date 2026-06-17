@@ -179,6 +179,13 @@ h1 { margin: 0 0 0.2rem; }
 .eeff-table td.acct { color: var(--ink); }
 .eeff-table td.num { text-align: right; font-variant-numeric: tabular-nums; color: var(--ok); white-space: nowrap; padding-left: 1rem; }
 
+/* Tabla comparativa de ratios entre empresas */
+.cmp-ratios { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.cmp-ratios th { text-align: right; color: var(--muted); font-weight: 500; padding: 0.4rem 0.8rem; border-bottom: 1px solid var(--border); }
+.cmp-ratios th.acct { text-align: left; }
+.cmp-ratios td { text-align: right; padding: 0.35rem 0.8rem; border-bottom: 1px dashed var(--border); font-variant-numeric: tabular-nums; }
+.cmp-ratios td.acct { text-align: left; color: var(--muted); }
+
 /* Tarjeta de indicadores financieros (ratios) */
 .ratios {
     background: var(--panel);

@@ -208,6 +208,29 @@ def comparar_chart(
     })
 
 
+@router.get("/comparar/ratios")
+def comparar_ratios(
+    request: Request,
+    c1: str = Query(""), c2: str = Query(""), c3: str = Query(""),
+    db: Database = Depends(get_db),
+):
+    """Fragmento HTMX: tabla comparativa de ratios financieros entre empresas (último período)."""
+    cols = []
+    for name in (c1, c2, c3):
+        name = name.strip()
+        if not name:
+            continue
+        match = db.query_cmf_statements(company=name, limit=1)
+        if match.empty:
+            continue
+        rut, cname = str(match.iloc[0]["rut"]), str(match.iloc[0]["company_name"])
+        period = db.get_company_latest_period(rut)
+        ratios = db.get_company_ratios(rut, period) if period else None
+        if ratios:
+            cols.append({"name": cname, "period": period, "ratios": ratios})
+    return templates.TemplateResponse(request, "partials/compare_ratios.html", {"cols": cols})
+
+
 @router.get("/banca/serie")
 def banca_serie(
     request: Request,

@@ -822,6 +822,14 @@ class Database:
         """Indicadores financieros de una empresa/período (ver compute_ratios)."""
         return compute_ratios(self.query_cmf_statements(rut=rut, period=period, limit=2000))
 
+    def get_company_latest_period(self, rut: str) -> Optional[int]:
+        """Último período (YYYYMM) con EEFF para una empresa."""
+        clean = str(rut).strip().replace(".", "").replace("-", "")
+        row = self.conn.execute(
+            "SELECT MAX(period) FROM cmf_financial_statements WHERE rut = ?", [clean]
+        ).fetchone()
+        return int(row[0]) if row and row[0] is not None else None
+
     def get_bank_graphable_accounts(self, bank_code: str, report_type: str) -> list[str]:
         """Cuentas de un banco/reporte presentes en ≥2 períodos (para graficar)."""
         clean = str(bank_code).strip().zfill(3)

@@ -35,4 +35,10 @@
 <section id="compare-result">
     <p class="loading">Elige una partida y 2–3 empresas para comparar.</p>
 </section>
+
+<section id="compare-ratios"
+         hx-get="/comparar/ratios"
+         hx-trigger="change from:.eeff-form"
+         hx-include=".eeff-form"
+         hx-swap="innerHTML"></section>
 {% endblock %}
