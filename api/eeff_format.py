@@ -10,6 +10,7 @@ build_statement_groups() colapsa los duplicados exactos y numera los nombres que
 quedan repetidos con valores distintos, para que la vista sea legible sin perder datos.
 """
 
+import re
 from collections import Counter
 
 # Códigos de estado financiero de la CMF → nombre legible.
@@ -24,6 +25,27 @@ GROUP_LABELS = {
 }
 # Orden lógico de presentación: balance → resultados → integral → flujo de efectivo.
 GROUP_ORDER = ["ESF C/NC", "ESF OL", "ERFG", "ERNG", "ERI", "EFMD", "EFMI"]
+
+
+def _assign_balance_sections(rows):
+    """
+    Marca cada fila del balance (ESF) con su sección (Activos / Pasivos / Patrimonio),
+    usando los grandes totales como delimitadores (orden IFRS garantizado por `id`).
+    Si no encuentra el marcador 'Total de activos', no secciona (deja las filas sin section).
+    """
+    section = "Activos"
+    found = False
+    for r in rows:
+        r["section"] = section
+        nm = re.sub(r"\s*\(\d+\)$", "", r["account_name"]).strip().lower()
+        if nm == "total de activos":
+            section = "Pasivos"
+            found = True
+        elif nm == "total de pasivos":
+            section = "Patrimonio"
+    if not found:
+        for r in rows:
+            r.pop("section", None)
 
 
 def build_statement_groups(df) -> list[dict]:
@@ -56,6 +78,10 @@ def build_statement_groups(df) -> list[dict]:
             else:
                 label = name
             rows.append({"account_name": label, "value": d["value"]})
+
+        # Sub-secciones del balance (Activos / Pasivos / Patrimonio).
+        if code.startswith("ESF"):
+            _assign_balance_sections(rows)
         by_code[code] = rows
 
     # 3. Emitir en orden lógico, con etiqueta legible (extras desconocidos al final).

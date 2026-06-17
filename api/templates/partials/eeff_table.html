@@ -35,7 +35,12 @@
     <h4>{{ grp.group }} <span class="code-tag">{{ grp.code }}</span></h4>
     <table class="eeff-table">
         <tbody>
+        {% set ns = namespace(sec=None) %}
         {% for row in grp.rows %}
+            {% if row.section and row.section != ns.sec %}
+            <tr class="section-head"><td colspan="2">{{ row.section }}</td></tr>
+            {% set ns.sec = row.section %}
+            {% endif %}
             <tr class="{{ 'total-row' if 'total' in (row.account_name|lower) else '' }}">
                 <td class="acct">{{ row.account_name }}</td>
                 <td class="num">{{ "{:,.0f}".format(row.value) if row.value is not none else "—" }}</td>

@@ -179,6 +179,17 @@ h1 { margin: 0 0 0.2rem; }
 .eeff-table td.acct { color: var(--ink); }
 .eeff-table td.num { text-align: right; font-variant-numeric: tabular-nums; color: var(--ok); white-space: nowrap; padding-left: 1rem; }
 
+/* Encabezado de sección del balance (Activos / Pasivos / Patrimonio) */
+.section-head td {
+    padding: 0.7rem 0 0.3rem;
+    color: var(--accent);
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    border-bottom: 1px solid var(--accent);
+}
+
 /* Filas de totales (resaltadas en negrita, incluido el monto) */
 .total-row td { font-weight: 700; border-bottom: 1px solid var(--border); }
 .total-row td.acct { color: var(--ink); }
