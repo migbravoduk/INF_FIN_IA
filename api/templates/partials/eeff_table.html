@@ -43,6 +43,22 @@
     </label>
 </form>
 <div id="eeff-serie"></div>
+
+<form class="eeff-graf" hx-get="/eeff/ratios-serie" hx-target="#ratios-serie" hx-trigger="change" hx-swap="innerHTML">
+    <input type="hidden" name="rut" value="{{ meta.rut }}">
+    <label>Evolución de indicador por período
+        <select name="metric">
+            <option value="" selected>— elegir —</option>
+            <option value="roe">ROE</option>
+            <option value="roa">ROA</option>
+            <option value="margen_neto">Margen neto</option>
+            <option value="margen_bruto">Margen bruto</option>
+            <option value="liquidez">Liquidez corriente</option>
+            <option value="endeudamiento">Deuda / Patrimonio</option>
+        </select>
+    </label>
+</form>
+<div id="ratios-serie"></div>
 {% endif %}
 
 {% for grp in groups %}

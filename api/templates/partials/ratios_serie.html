@@ -1,0 +1,35 @@
+{#
+  partials/ratios_serie.html — Evolución de un indicador por período.
+  series = [{period, value}], label, is_pct.
+#}
+{% if series %}
+<div class="chart-block" style="margin-top:1rem">
+    <h4>{{ label }} — evolución por período
+        {% if is_pct %}<span class="lead">(del período: income acumulado en el año)</span>{% endif %}
+    </h4>
+    <div id="ratios-serie-chart" class="chart"></div>
+</div>
+<script>
+(function () {
+    var data = {{ series | tojson }};
+    var isPct = {{ 'true' if is_pct else 'false' }};
+    function draw() {
+        if (!window.Plotly) { return setTimeout(draw, 100); }
+        Plotly.newPlot("ratios-serie-chart", [{
+            x: data.map(function (d) { return d.period; }),
+            y: data.map(function (d) { return d.value; }),
+            type: "scatter", mode: "lines+markers", line: { color: "#38bdf8", width: 2 },
+            connectgaps: false
+        }], {
+            margin: { t: 10, r: 10, b: 40, l: 55 }, height: 300,
+            paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)",
+            font: { color: "#94a3b8" },
+            xaxis: { type: "category", gridcolor: "#334155" },
+            yaxis: { gridcolor: "#334155", ticksuffix: isPct ? "%" : "x" }
+        }, { displayModeBar: false, responsive: true });
+    }
+    draw();
+})();
+{% elif label %}
+<p class="loading">Sin serie para ese indicador.</p>
+{% endif %}

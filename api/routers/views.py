@@ -262,6 +262,25 @@ def ranking_table(
     })
 
 
+@router.get("/eeff/ratios-serie")
+def eeff_ratios_serie(
+    request: Request,
+    rut: str = Query(...),
+    metric: str = Query(""),
+    db: Database = Depends(get_db),
+):
+    """Fragmento HTMX: evolución de un indicador financiero de una empresa por período."""
+    if not metric.strip():
+        return templates.TemplateResponse(request, "partials/ratios_serie.html",
+                                          {"series": [], "label": None, "is_pct": True})
+    s = db.get_company_ratios_series(rut)
+    series = [{"period": str(r["period"]), "value": r.get(metric)} for r in s]
+    return templates.TemplateResponse(request, "partials/ratios_serie.html", {
+        "series": series, "label": _RATIO_LABELS.get(metric, metric),
+        "is_pct": metric not in ("liquidez", "endeudamiento"),
+    })
+
+
 @router.get("/banca/serie")
 def banca_serie(
     request: Request,

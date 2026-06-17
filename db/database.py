@@ -846,6 +846,25 @@ class Database:
         out.sort(key=lambda x: x["value"], reverse=True)
         return out[:n]
 
+    def get_company_ratios_series(self, rut: str) -> list[dict]:
+        """
+        Serie de ratios por período de una empresa (para graficar evolución).
+        Devuelve [{period, roe, roa, margen_neto, margen_bruto, liquidez, endeudamiento}]
+        ordenado por período. Ratios de income son "del período" (acumulado en el año).
+        """
+        df = self.query_cmf_statements(rut=rut, limit=10**9)
+        if df.empty:
+            return []
+        out = []
+        for period, sub in df.groupby("period", sort=False):
+            r = compute_ratios(sub)
+            if r:
+                row = {"period": int(period)}
+                row.update({k: v for k, v in r.items() if k != "currency"})
+                out.append(row)
+        out.sort(key=lambda x: x["period"])
+        return out
+
     def get_company_latest_period(self, rut: str) -> Optional[int]:
         """Último período (YYYYMM) con EEFF para una empresa."""
         clean = str(rut).strip().replace(".", "").replace("-", "")
