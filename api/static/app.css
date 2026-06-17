@@ -179,6 +179,23 @@ h1 { margin: 0 0 0.2rem; }
 .eeff-table td.acct { color: var(--ink); }
 .eeff-table td.num { text-align: right; font-variant-numeric: tabular-nums; color: var(--ok); white-space: nowrap; padding-left: 1rem; }
 
+/* Tarjeta de indicadores financieros (ratios) */
+.ratios {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 0.7rem 1rem 0.9rem;
+    margin: 1rem 0;
+}
+.ratios h4 { margin: 0.2rem 0 0.7rem; font-size: 0.82rem; color: var(--accent); font-weight: 500; }
+.ratio-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 0.5rem 1.5rem;
+}
+.ratio { display: flex; justify-content: space-between; padding: 0.25rem 0; border-bottom: 1px dashed var(--border); font-size: 0.9rem; }
+.ratio span { color: var(--muted); }
+
 /* Encabezado de sección del balance (Activos / Pasivos / Patrimonio) */
 .section-head td {
     padding: 0.7rem 0 0.3rem;

@@ -69,7 +69,7 @@ def eeff_table(
 
     df = db.query_cmf_statements(rut=rut, period=period_int, limit=2000)
 
-    meta, groups, graph_accounts = None, [], []
+    meta, groups, graph_accounts, ratios = None, [], [], None
     if not df.empty:
         first = df.iloc[0]
         meta = {
@@ -81,9 +81,10 @@ def eeff_table(
         }
         groups = build_statement_groups(df)
         graph_accounts = db.get_company_graphable_accounts(rut)
+        ratios = db.get_company_ratios(rut, meta["period"])
 
     return templates.TemplateResponse(request, "partials/eeff_table.html", {
-        "meta": meta, "groups": groups, "graph_accounts": graph_accounts,
+        "meta": meta, "groups": groups, "graph_accounts": graph_accounts, "ratios": ratios,
     })
 
 

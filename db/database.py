@@ -777,6 +777,48 @@ class Database:
             ORDER BY period ASC
         """, [clean, account_name]).fetchdf()
 
+    def get_company_ratios(self, rut: str, period: int) -> Optional[dict]:
+        """
+        Calcula indicadores financieros de una empresa/período a partir de los EEFF.
+        Devuelve ratios (None donde falte el insumo). Income es del período (acumulado
+        en el año para trimestres), así que ROE/ROA/márgenes son "del período".
+        """
+        df = self.query_cmf_statements(rut=rut, period=period, limit=2000)
+        if df.empty:
+            return None
+        vals = {}
+        for _, r in df.iterrows():
+            n = str(r["account_name"])
+            if n not in vals:  # primera ocurrencia = orden IFRS
+                vals[n] = r["value"]
+
+        def g(name):
+            v = vals.get(name)
+            return float(v) if (v is not None and v == v) else None
+
+        def div(a, b):
+            return (a / b) if (a is not None and b not in (None, 0)) else None
+
+        activos = g("Total de activos")
+        pasivos = g("Total de pasivos")
+        patrim = g("Patrimonio total")
+        ganancia = g("Ganancia (pérdida)")
+        ac, pc = g("Activos corrientes totales"), g("Pasivos corrientes totales")
+        ingresos = g("Ingresos de actividades ordinarias")
+        gbruta = g("Ganancia bruta")
+
+        pct = lambda x: (x * 100.0) if x is not None else None
+        return {
+            "currency": str(df.iloc[0]["currency"]),
+            "roe": pct(div(ganancia, patrim)),
+            "roa": pct(div(ganancia, activos)),
+            "margen_neto": pct(div(ganancia, ingresos)),
+            "margen_bruto": pct(div(gbruta, ingresos)),
+            "liquidez": div(ac, pc),
+            "endeudamiento": div(pasivos, patrim),
+            "pasivo_activo": pct(div(pasivos, activos)),
+        }
+
     def get_bank_graphable_accounts(self, bank_code: str, report_type: str) -> list[str]:
         """Cuentas de un banco/reporte presentes en ≥2 períodos (para graficar)."""
         clean = str(bank_code).strip().zfill(3)

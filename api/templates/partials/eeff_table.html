@@ -12,6 +12,21 @@
     </span>
 </div>
 
+{% if ratios %}
+{% macro rr(v, suf="%") %}{% if v is none %}—{% else %}<b class="{{ 'pos' if v >= 0 else 'neg' }}">{{ "{:+,.1f}".format(v) if suf == "%" else "{:,.2f}".format(v) }}{{ suf }}</b>{% endif %}{% endmacro %}
+<div class="ratios">
+    <h4>Indicadores financieros <span class="lead">(del período)</span></h4>
+    <div class="ratio-grid">
+        <div class="ratio"><span>ROE</span>{{ rr(ratios.roe) }}</div>
+        <div class="ratio"><span>ROA</span>{{ rr(ratios.roa) }}</div>
+        <div class="ratio"><span>Margen neto</span>{{ rr(ratios.margen_neto) }}</div>
+        <div class="ratio"><span>Margen bruto</span>{{ rr(ratios.margen_bruto) }}</div>
+        <div class="ratio"><span>Liquidez corriente</span>{{ rr(ratios.liquidez, "x") }}</div>
+        <div class="ratio"><span>Deuda / Patrimonio</span>{{ rr(ratios.endeudamiento, "x") }}</div>
+    </div>
+</div>
+{% endif %}
+
 {% if graph_accounts %}
 <form class="eeff-graf" hx-get="/eeff/serie" hx-target="#eeff-serie" hx-trigger="change" hx-swap="innerHTML">
     <input type="hidden" name="rut" value="{{ meta.rut }}">
