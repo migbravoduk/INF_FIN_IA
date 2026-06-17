@@ -822,6 +822,30 @@ class Database:
         """Indicadores financieros de una empresa/período (ver compute_ratios)."""
         return compute_ratios(self.query_cmf_statements(rut=rut, period=period, limit=2000))
 
+    def get_ratios_ranking(self, period: int, metric: str = "roe", n: int = 15) -> list[dict]:
+        """
+        Ranking de empresas por un ratio en un período. Calcula ratios de todas las empresas
+        del período (una sola consulta + cómputo en memoria) y ordena desc.
+        Filtra distorsiones: para métricas en % exige |valor| <= 150 y que haya ingresos.
+        """
+        df = self.query_cmf_statements(period=period, limit=10**9)
+        if df.empty:
+            return []
+        is_pct = metric in ("roe", "roa", "margen_neto", "margen_bruto", "pasivo_activo")
+        out = []
+        for rut, sub in df.groupby("rut", sort=False):
+            r = compute_ratios(sub)
+            if not r or r.get(metric) is None:
+                continue
+            v = r[metric]
+            # excluye holdings/fondos sin operación y valores distorsionados
+            if is_pct and (abs(v) > 150 or r.get("margen_neto") is None):
+                continue
+            out.append({"company_name": str(sub.iloc[0]["company_name"]),
+                        "rut": str(rut), "value": v, "currency": r["currency"]})
+        out.sort(key=lambda x: x["value"], reverse=True)
+        return out[:n]
+
     def get_company_latest_period(self, rut: str) -> Optional[int]:
         """Último período (YYYYMM) con EEFF para una empresa."""
         clean = str(rut).strip().replace(".", "").replace("-", "")

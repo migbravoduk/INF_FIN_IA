@@ -231,6 +231,37 @@ def comparar_ratios(
     return templates.TemplateResponse(request, "partials/compare_ratios.html", {"cols": cols})
 
 
+_RATIO_LABELS = {
+    "roe": "ROE", "roa": "ROA", "margen_neto": "Margen neto", "margen_bruto": "Margen bruto",
+    "liquidez": "Liquidez corriente", "endeudamiento": "Deuda / Patrimonio",
+}
+
+
+@router.get("/ranking")
+def ranking(request: Request, db: Database = Depends(get_db)):
+    """Vista de ranking de empresas por indicador financiero."""
+    return templates.TemplateResponse(request, "ranking.html", {
+        "periods": db.get_cmf_periods(), "ratios": _RATIO_LABELS,
+    })
+
+
+@router.get("/ranking/table")
+def ranking_table(
+    request: Request,
+    metric: str = Query("roe"),
+    period: Optional[str] = Query(None),
+    db: Database = Depends(get_db),
+):
+    """Fragmento HTMX: top empresas por un ratio en un período."""
+    periods = db.get_cmf_periods()
+    period_int = int(period) if period else (periods[0] if periods else None)
+    rows = db.get_ratios_ranking(period_int, metric, 15) if period_int else []
+    return templates.TemplateResponse(request, "partials/ranking_table.html", {
+        "rows": rows, "metric_label": _RATIO_LABELS.get(metric, metric),
+        "period": period_int, "is_pct": metric not in ("liquidez", "endeudamiento"),
+    })
+
+
 @router.get("/banca/serie")
 def banca_serie(
     request: Request,
