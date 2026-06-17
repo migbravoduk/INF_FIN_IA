@@ -308,7 +308,9 @@ class Database:
             query += " AND LOWER(company_name) LIKE ?"
             params.append(f"%{company.lower()}%")
 
-        query += " ORDER BY company_name ASC, statement_group ASC, account_name ASC LIMIT ?"
+        # ORDER BY id preserva el orden de ingesta = orden del archivo plano de la CMF,
+        # que es el orden oficial de presentación de la taxonomía IFRS (no alfabético).
+        query += " ORDER BY id ASC LIMIT ?"
         params.append(limit)
 
         return self.conn.execute(query, params).fetchdf()
