@@ -11,7 +11,7 @@ from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-from db.database import Database
+from db.database import Database, compute_ratios
 from api.eeff_format import build_statement_groups
 from api.routers.views import build_overview_context
 
@@ -87,7 +87,7 @@ def render_eeff_static(period: int = None, output_dir: str = "preview/eeff") -> 
             "currency": str(sub.iloc[0]["currency"]),
         }
         groups = build_statement_groups(sub)
-        body = table_tpl.render(meta=meta, groups=groups)
+        body = table_tpl.render(meta=meta, groups=groups, ratios=compute_ratios(sub))
         (out / f"{rut}.html").write_text(
             _shell(f"{name} · {period}", body, css), encoding="utf-8"
         )
