@@ -83,8 +83,16 @@ Fuentes (BCCh BDE API · CMF XBRL plano · CMF/SBIF API · SP scraping)
   en `partials/kpi_cards.html`.
 - **Regenerar estáticos**: `web-preview` (panel) y `eeff-export` (EEFF) → carpeta `preview/` (gitignored).
 
+## Análisis (Fase 6, iniciada)
+
+- **Ratios financieros**: `db.database.compute_ratios(df)` (función módulo, sin conexión) →
+  ROE, ROA, márgenes neto/bruto, liquidez corriente, deuda/patrimonio. Son "del período"
+  (income acumulado en el año para trimestres). Se muestran en `/eeff` (tarjeta) y en
+  `/comparar` (tabla comparativa entre empresas). El export estático también los incluye.
+
 ## Estado y roadmap
 
-Fases 1–4 + SP operativas; catch-up (Fase 5 parcial) y capa web (Fase 7) muy avanzadas.
-**Siguiente: Fase 6** — análisis (proyecciones macro ARIMA/VAR, ratios, anomalías) y Fase 8
-storytelling con LLM (Anthropic SDK con prompt caching). Trabajo en rama `feature/web-api-skeleton`.
+Fases 1–4 + SP operativas; catch-up (Fase 5 parcial) y capa web (Fase 7) muy avanzadas;
+**Fase 6 iniciada** (ratios + comparación sectorial). Falta: proyecciones macro (ARIMA/VAR),
+detección de anomalías, y Fase 8 storytelling con LLM (Anthropic SDK con prompt caching).
+Trabajo en rama `feature/web-api-skeleton`.

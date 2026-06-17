@@ -28,7 +28,7 @@ STORYTELLING (dashboard web, API REST, reportes Jules)
 | **4 — CMF: Bancos e Inst. Financieras** | ✅ Activa | Ingesta mensual de balances y resultados con desglose por moneda desde la API REST SBIFv3 |
 | **SP — Fondos de Pensiones** | ✅ Activa | Valores cuota diarios (desde 2008), carteras mensuales XML, cinta de precios diaria |
 | **5 — Calendarios y Alertas** | 🟡 Parcial | Catch-up por frescura: ingesta automática "al publicarse" (`main.py catchup`) |
-| **6 — Análisis y Proyecciones** | ⏳ Planificada | Proyecciones macrofundadas, ratios, anomalías |
+| **6 — Análisis y Proyecciones** | 🟡 Iniciada | Ratios financieros (ROE/ROA/márgenes/liquidez/deuda) + comparación sectorial; faltan proyecciones y anomalías |
 | **7 — API + Dashboard** | 🟡 En desarrollo | FastAPI + dashboard (panel multi-fuente, EEFF, banca, AFP) — ver "Capa Web" |
 | **8 — Storytelling / Jules** | ⏳ Planificada | Reportes narrativos automáticos con LLM |
 
@@ -243,8 +243,8 @@ Vistas disponibles:
 | Ruta | Descripción |
 |---|---|
 | `/` | Panel multi-fuente: PIB/IMACEC var. anual, IPC, USD/CLP; top-5 bancos por activos y resultado; rentabilidad 12m por fondo AFP (+ AFP nº1 por rentabilidad y por patrimonio); gráficos UF y TPM a 12 meses |
-| `/eeff` | Estados financieros corporativos (CMF) por empresa (buscador) y período. Orden **IFRS oficial**, nombres de estado legibles, totales en negrita, gráfico de evolución de cualquier partida (con opción desacumular flujos) |
-| `/comparar` | Compara una misma partida en hasta 3 empresas, normalizada a base 100 |
+| `/eeff` | Estados financieros corporativos (CMF) por empresa (buscador) y período. Orden **IFRS oficial**, subsecciones del balance (Activos/Pasivos/Patrimonio), nombres de estado legibles, totales en negrita, **indicadores financieros (ROE/ROA/márgenes/liquidez/deuda)**, gráfico de evolución de cualquier partida (con opción desacumular flujos) |
+| `/comparar` | Compara una misma partida en hasta 3 empresas (base 100) **+ tabla comparativa de ratios** |
 | `/banca` | Estados bancarios con desglose por moneda; gráfico de evolución de cualquier cuenta |
 | `/afp` | Evolución de fondos de pensiones: una AFP/un fondo, comparar fondos, comparar AFP; métrica valor cuota / patrimonio / participación de mercado; rentabilidad nominal vs real; composición de cartera |
 | `/docs` | Swagger de la API REST (`/api/...`) |
