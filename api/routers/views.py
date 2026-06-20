@@ -11,7 +11,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Query, Request
 
 from api.deps import get_db, records, templates
-from api.eeff_format import build_statement_groups
+from api.eeff_format import build_statement_groups, GROUP_LABELS, GROUP_ORDER, _assign_balance_sections
 from db.database import Database
 
 router = APIRouter()
@@ -259,6 +259,60 @@ def ranking_table(
     return templates.TemplateResponse(request, "partials/ranking_table.html", {
         "rows": rows, "metric_label": _RATIO_LABELS.get(metric, metric),
         "period": period_int, "is_pct": metric not in ("liquidez", "endeudamiento"),
+    })
+
+
+def _select_periods(allp: list, serie: str) -> list:
+    """Selecciona períodos según el tipo de serie evolutiva."""
+    allp = sorted(int(p) for p in allp)
+    if not allp:
+        return []
+    if serie.startswith("anual"):
+        n = 10 if "10" in serie else 5
+        return [p for p in allp if p % 100 == 12][-n:]
+    if serie.startswith("trimq"):
+        n = 10 if "10" in serie else 5
+        q = max(allp) % 100
+        return [p for p in allp if p % 100 == q][-n:]
+    if serie == "trim8":
+        return allp[-8:]
+    return allp[-5:]
+
+
+# Estados ofrecidos en la vista evolutiva (código → etiqueta), en orden lógico.
+_ESTADOS = [(c, GROUP_LABELS[c]) for c in GROUP_ORDER if c in GROUP_LABELS]
+
+
+@router.get("/evolucion")
+def evolucion(request: Request, db: Database = Depends(get_db)):
+    """Vista evolutiva: un estado financiero de una empresa a través de varios períodos."""
+    return templates.TemplateResponse(request, "evolucion.html", {
+        "companies": records(db.get_cmf_companies()), "estados": _ESTADOS,
+    })
+
+
+@router.get("/evolucion/table")
+def evolucion_table(
+    request: Request,
+    company: str = Query(""),
+    serie: str = Query("anual5"),
+    estado: str = Query("ESF C/NC"),
+    db: Database = Depends(get_db),
+):
+    """Fragmento HTMX: matriz de un estado (filas = cuentas, columnas = períodos)."""
+    if not company.strip():
+        return templates.TemplateResponse(request, "partials/evolucion_table.html", {"ev": None})
+    match = db.query_cmf_statements(company=company, limit=1)
+    if match.empty:
+        return templates.TemplateResponse(request, "partials/evolucion_table.html", {"ev": None})
+    rut, cname = str(match.iloc[0]["rut"]), str(match.iloc[0]["company_name"])
+    periods = _select_periods(db.get_company_periods(rut), serie)
+    ev = db.get_statement_evolution(rut, periods, estado)
+    if estado.startswith("ESF"):
+        _assign_balance_sections(ev["accounts"])
+    return templates.TemplateResponse(request, "partials/evolucion_table.html", {
+        "ev": ev, "company": cname, "rut": rut,
+        "estado_label": GROUP_LABELS.get(estado, estado), "estado_code": estado,
     })
 
 

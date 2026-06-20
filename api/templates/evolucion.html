@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block title %}Evolución EEFF · INF_FIN_IA{% endblock %}
+
+{% block content %}
+<h1>Estados financieros — vista evolutiva</h1>
+<p class="subtitle">Una cuenta a través del tiempo: cierres anuales, mismo trimestre interanual, o series de trimestres</p>
+
+<form class="eeff-form"
+      hx-get="/evolucion/table"
+      hx-target="#evol-result"
+      hx-trigger="load, change"
+      hx-swap="innerHTML">
+
+    <label>Empresa
+        <input list="evol-companies" name="company" autocomplete="off" placeholder="Buscar…"
+               value="{{ companies[0].company_name if companies else '' }}">
+        <datalist id="evol-companies">
+            {% for c in companies %}<option value="{{ c.company_name }}"></option>{% endfor %}
+        </datalist>
+    </label>
+
+    <label>Serie
+        <select name="serie">
+            <option value="anual5">Cierres anuales — últimos 5</option>
+            <option value="anual10">Cierres anuales — últimos 10</option>
+            <option value="trimq5">Mismo trimestre — últimos 5 años</option>
+            <option value="trimq10">Mismo trimestre — últimos 10 años</option>
+            <option value="trim8">Trimestral — últimos 8 (2 años)</option>
+        </select>
+    </label>
+
+    <label>Estado
+        <select name="estado">
+            {% for code, label in estados %}<option value="{{ code }}">{{ label }}</option>{% endfor %}
+        </select>
+    </label>
+</form>
+
+<section id="evol-result">
+    <p class="loading">Cargando…</p>
+</section>
+{% endblock %}

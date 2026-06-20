@@ -865,6 +865,61 @@ class Database:
         out.sort(key=lambda x: x["period"])
         return out
 
+    def get_company_periods(self, rut: str) -> list[int]:
+        """Períodos (YYYYMM) con EEFF de una empresa, más reciente primero."""
+        clean = str(rut).strip().replace(".", "").replace("-", "")
+        rows = self.conn.execute(
+            "SELECT DISTINCT period FROM cmf_financial_statements WHERE rut = ? ORDER BY period DESC",
+            [clean]
+        ).fetchall()
+        return [int(r[0]) for r in rows]
+
+    def get_statement_evolution(self, rut: str, periods: list[int], statement_group: str) -> dict:
+        """
+        Matriz de evolución de UN estado financiero de una empresa a través de varios períodos.
+        Devuelve {"periods": [asc], "accounts": [{account_name, values:[por período]}]}.
+        Orden de cuentas = orden IFRS (id) del período más reciente.
+        """
+        clean = str(rut).strip().replace(".", "").replace("-", "")
+        periods = [int(p) for p in periods]
+        if not periods:
+            return {"periods": [], "accounts": []}
+        ph = ",".join(["?"] * len(periods))
+        df = self.conn.execute(f"""
+            SELECT period, account_name, value, id
+            FROM cmf_financial_statements
+            WHERE rut = ? AND statement_group = ? AND period IN ({ph})
+            ORDER BY period DESC, id ASC
+        """, [clean, statement_group] + periods).fetchdf()
+        if df.empty:
+            return {"periods": [], "accounts": []}
+
+        latest = int(df["period"].max())
+        order, seen = [], set()
+        # orden de cuentas según el período más reciente (orden IFRS por id)
+        for _, r in df[df["period"] == latest].iterrows():
+            a = str(r["account_name"])
+            if a not in seen:
+                order.append(a)
+                seen.add(a)
+        for _, r in df.iterrows():  # cuentas presentes solo en períodos antiguos
+            a = str(r["account_name"])
+            if a not in seen:
+                order.append(a)
+                seen.add(a)
+
+        pivot = {}  # account -> {period: value} (primera ocurrencia por período)
+        for _, r in df.iterrows():
+            a, p = str(r["account_name"]), int(r["period"])
+            pivot.setdefault(a, {})
+            if p not in pivot[a]:
+                pivot[a][p] = r["value"]
+
+        periods_asc = sorted(set(int(p) for p in df["period"]))
+        accounts = [{"account_name": a, "vals": [pivot[a].get(p) for p in periods_asc]}
+                    for a in order]
+        return {"periods": periods_asc, "accounts": accounts}
+
     def get_company_latest_period(self, rut: str) -> Optional[int]:
         """Último período (YYYYMM) con EEFF para una empresa."""
         clean = str(rut).strip().replace(".", "").replace("-", "")

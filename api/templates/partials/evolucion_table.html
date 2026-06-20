@@ -1,0 +1,37 @@
+{#
+  partials/evolucion_table.html — Matriz evolutiva de un estado financiero.
+  ev = {periods:[asc], accounts:[{account_name, values:[por período], section?}]}.
+#}
+{% if ev and ev.accounts %}
+<div class="eeff-head">
+    <h3>{{ company }}</h3>
+    <span class="eeff-meta">{{ estado_label }} <span class="code-tag">{{ estado_code }}</span> ·
+        {{ ev.periods|length }} períodos · cifras en moneda de reporte</span>
+</div>
+<div class="table-scroll">
+    <table class="evol-table">
+        <thead>
+            <tr>
+                <th class="acct">Cuenta</th>
+                {% for p in ev.periods %}<th>{{ p // 100 }}-{{ "%02d"|format(p % 100) }}</th>{% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+        {% set ns = namespace(sec=None) %}
+        {% for a in ev.accounts %}
+            {% if a.section and a.section != ns.sec %}
+            <tr class="section-head"><td colspan="{{ ev.periods|length + 1 }}">{{ a.section }}</td></tr>
+            {% set ns.sec = a.section %}
+            {% endif %}
+            <tr class="{{ 'total-row' if 'total' in (a.account_name|lower) else '' }}">
+                <td class="acct">{{ a.account_name }}</td>
+                {% for v in a.vals %}<td class="num">{{ "{:,.0f}".format(v) if v is not none else "—" }}</td>{% endfor %}
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+<p class="afp-hint">Cuentas de resultado y flujo son "del período" (acumulado en el año); las de balance son punto en el tiempo.</p>
+{% elif ev is not none %}
+<p class="loading">Sin datos para esa empresa / serie / estado.</p>
+{% endif %}
