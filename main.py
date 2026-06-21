@@ -1047,7 +1047,9 @@ def eeff_export(period, output):
 @click.option("--port", "-p", default=8000, type=int, help="Puerto (default 8000)")
 @click.option("--with-scheduler", is_flag=True,
               help="Arranca el scheduler embebido (proceso único; abre la BD en lectura/escritura).")
-def serve(host, port, with_scheduler):
+@click.option("--open/--no-open", "open_browser", default=True,
+              help="Abrir el navegador automáticamente (default: sí).")
+def serve(host, port, with_scheduler, open_browser):
     """Levanta la API REST + dashboard web (opcionalmente con el scheduler embebido)."""
     import uvicorn
 
@@ -1055,15 +1057,21 @@ def serve(host, port, with_scheduler):
         settings.RUN_SCHEDULER_IN_APP = True
         console.print("[cyan]Modo proceso único:[/] scheduler embebido + API en R/W.")
 
+    url = f"http://{host}:{port}/"
     console.print(Panel(
-        f"[bold green]🌐 Servidor web iniciado[/]\n\n"
-        f"  • Panel:   [cyan]http://{host}:{port}/[/]\n"
-        f"  • API docs:[cyan]http://{host}:{port}/docs[/]\n"
+        f"[bold green]🌐 Entorno web local iniciado[/]\n\n"
+        f"  • Panel:    [cyan]{url}[/]\n"
+        f"  • API docs: [cyan]{url}docs[/]\n"
+        f"  • Vistas:   panel · EEFF · evolución · comparar · ranking · banca · AFP\n"
         f"  • Scheduler embebido: [yellow]{'sí' if with_scheduler else 'no'}[/]\n\n"
         "[dim]Ctrl+C para detener.[/]",
         title="🚀 INF_FIN_IA Web",
         border_style="green",
     ))
+
+    if open_browser:
+        import webbrowser, threading
+        threading.Timer(1.5, lambda: webbrowser.open(url)).start()
 
     from api.main import app
     uvicorn.run(app, host=host, port=port)

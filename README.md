@@ -223,8 +223,12 @@ copy .env.example .env
 Stack: **FastAPI + Jinja2 + HTMX + Plotly** (server-rendered, sin Node). La API reusa la
 capa DuckDB existente y se sirve en un solo proceso.
 
+**Inicio rápido (un clic):** doble clic en **`iniciar_web.bat`** (en la raíz del proyecto).
+La primera vez crea el entorno virtual e instala dependencias; luego levanta el servidor y
+abre el navegador en `http://127.0.0.1:8000/`. Equivale a `main.py serve`.
+
 ```powershell
-# Levantar la web (panel + API navegable en /docs)
+# Levantar la web (panel + API navegable en /docs); abre el navegador solo
 .\.venv\Scripts\python.exe main.py serve
 
 # Levantar en proceso único CON el scheduler embebido (BD en lectura/escritura)
