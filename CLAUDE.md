@@ -93,6 +93,12 @@ Fuentes (BCCh BDE API · CMF XBRL plano · CMF/SBIF API · SP scraping)
 ## Estado y roadmap
 
 Fases 1–4 + SP operativas; catch-up (Fase 5 parcial) y capa web (Fase 7) muy avanzadas;
-**Fase 6 iniciada** (ratios + comparación sectorial). Falta: proyecciones macro (ARIMA/VAR),
-detección de anomalías, y Fase 8 storytelling con LLM (Anthropic SDK con prompt caching).
-Trabajo en rama `feature/web-api-skeleton`.
+**Fase 6 iniciada** (ratios + comparación + ranking). Datos: ~1,9M filas; CMF con 45
+períodos (201503→202603, 10 cierres anuales). Vistas: panel, EEFF, evolución, comparar,
+ranking, banca, AFP. Reseñas de empresas en `config/company_profiles.yaml` +
+`api/company_profiles.py` (inferencia por tipo). Lanzador de un clic: `iniciar_web.bat`.
+
+**El plan vivo y las decisiones pendientes están en `docs/wiki/Hoja-de-Ruta.md`** (mantenerlo
+al día). Convenciones EEFF: solo se muestran los estados estándar **ESF C/NC, ERFG, ERI, EFMD**
+(se descartan ESF OL, ERNG, EFMI). Falta: proyecciones macro (ARIMA/VAR), anomalías, Fase 8
+storytelling con LLM. Trabajo en rama `feature/web-api-skeleton`.

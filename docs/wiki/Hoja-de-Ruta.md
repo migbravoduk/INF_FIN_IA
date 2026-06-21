@@ -1,74 +1,59 @@
 # Hoja de Ruta (Roadmap)
 
-Estado actual del proyecto y planificación de fases futuras.
+> Situación actual y plan. Última actualización: junio 2026 (rama `feature/web-api-skeleton`).
 
 ---
 
-## Estado por fase
+## 1. Situación actual (lo que ya existe)
 
-| Fase | Estado | Descripción | Completado |
-|------|--------|-------------|-----------|
-| **1 — Macro BCCh** | ✅ Activa | PIB, IPC, TPM, empleo, tipo de cambio via BDE API | 2024 |
-| **2 — Series adicionales BCCh** | ✅ Activa | UF, UTM, IVP, IMACEC | 2024 |
-| **3 — CMF: Empresas** | ✅ Activa | EEFF corporativos trimestrales (XBRL plano .txt) | 2024 |
-| **4 — CMF: Bancos** | ✅ Activa | Balances y resultados bancarios mensuales (API SBIFv3) | 2024 |
-| **SP — Fondos de Pensiones** | ✅ **Activa** | Cuotas, carteras y cinta de precios (SP) | **Junio 2025** |
-| **5 — Calendarios y Alertas** | ⏳ Planificada | Fechas de publicaciones, alertas automáticas | — |
-| **6 — Análisis y Proyecciones** | ⏳ Planificada | Proyecciones macro, ratios sectoriales, detección de anomalías | — |
-| **7 — API + Dashboard** | ⏳ Planificada | FastAPI REST + visualización web (Chart.js / Plotly) | — |
-| **8 — Storytelling / LLM** | ⏳ Planificada | Reportes narrativos automáticos generados por LLM | — |
+### Datos (DuckDB, ~1,9M filas, ~130 MB)
+- **BCCh macro** (`observations`): 1975–2026, ~53k filas (PIB, IPC, TPM, UF, IVP, UTM, IMACEC, USD/CLP, cobre, etc.). Parser decimal corregido; datos validados.
+- **CMF empresas** (`cmf_financial_statements`): ~1,5M filas, **45 períodos (201503→202603)** = 10 cierres anuales + trimestres. Orden IFRS verificado.
+- **CMF bancos** (`cmf_bank_statements`): balances/resultados mensuales con desglose por moneda.
+- **SP pensiones**: cuotas (~207k, 2008+), precios (~96k), cartera (1 período: 2026-01).
 
----
-
-## Fase SP — Detalle completado (Junio 2025)
-
-### Nuevos datos disponibles
-
-- **Valores Cuota Diarios (2002–presente):** valor cuota y patrimonio neto de todos los multifondos (A, B, C, D, E) para todas las AFP del sistema (Capital, Cuprum, Habitat, Modelo, PlanVital, Provida, Uno).
-- **Cartera de Inversiones Mensual:** distribución porcentual y montos en CLP/USD de los activos de inversión desagregados por tipo de instrumento.
-- **Cinta de Precios Diaria:** precios de cierre de todos los instrumentos de renta fija y variable chilenos publicados por la SP (últimos 5 años diarios + 5 años anteriores los miércoles).
-
-### Datos acumulados en BD
-
-| Tabla | Registros | Período |
-|-------|-----------|---------|
-| `sp_quota_values` | ~207.000 | 2002–2026 (A, B, C completos) |
-| `sp_portfolio_holdings` | ~3.000 | Enero 2026 (prueba) |
-| `sp_instrument_prices` | ~839 | 2026-01-02 (prueba) |
+### Capa web (FastAPI + Jinja2 + HTMX + Plotly) — `iniciar_web.bat` / `main.py serve`
+- **Panel** `/`: KPIs multi-fuente (PIB/IMACEC var, IPC, USD/CLP; top-5 bancos; rentabilidad 12m AFP + líder por rentabilidad y patrimonio; mercado) + gráficos UF y TPM.
+- **EEFF** `/eeff`: por empresa/período. Reseña del negocio, ratios (ROE/ROA/márgenes/liquidez/deuda), orden IFRS, subsecciones del balance, totales en negrita, gráfico de partidas (con desacumular) y de evolución de ratios.
+- **Evolución** `/evolucion`: matriz de un estado × períodos (cierres anuales 5/10, mismo trimestre 5/10 años, 8 trimestres).
+- **Comparar** `/comparar`: partida base 100 entre empresas + tabla de ratios.
+- **Ranking** `/ranking`: top empresas por indicador.
+- **Banca** `/banca`: estados con desglose por moneda + gráfico de cuenta.
+- **AFP** `/afp`: evolución cuota/patrimonio/participación, comparar fondos/AFP, nominal vs real, cartera por categoría.
+- **Reseñas de empresas**: `config/company_profiles.yaml` (101 curadas) + inferencia por tipo (520) = 70% cobertura; sin info → nombre como placeholder.
+- Export estático (`web-preview`, `eeff-export`) en `preview/`.
 
 ---
 
-## Próximas prioridades
+## 2. Decisiones y mejoras pendientes (feedback junio 2026)
 
-### Corto plazo (próximas semanas)
+### En curso (este lote)
+- [ ] **Quitar estados no estándar de la vista**: dejar solo **ESF C/NC** (balance), **ERFG** (resultados por función), **ERI** (resultado integral) y **EFMD** (flujo, método directo). Eliminar **ESF OL** (orden de liquidez), **ERNG** (resultados por naturaleza) y **EFMI** (flujo indirecto).
+- [ ] **Unificar EEFF + Evolución en una sola pestaña** (ver "harto", no poco): la vista de empresa muestra reseña + ratios + matriz evolutiva de cada estado.
+- [ ] **Comparativo por partida**: (a) **etiquetar** las series (en el gráfico no queda claro cuál es cuál); (b) **desacumular** las partidas de resultado/flujo (el caso BBVA AM se veía plano por mostrar acumulado).
+- [ ] **EFE sin totalizadores**: revisar/exponer los subtotales del flujo de efectivo (operación/inversión/financiación).
 
-- [ ] Completar backfill de precios diarios históricos (`fetch-sp-precios --history`)
-- [ ] Backfill de carteras mensuales del último año
-- [ ] Validar consistencia de datos entre AFP y fechas (especialmente AFPs antiguas como Magister, Santa María)
-- [ ] Añadir `fetch-sp-cartera --backfill-months N` para descargar los últimos N meses en un comando
+### Próximo (perfeccionar comparativo y análisis)
+- [ ] **Clusterizar empresas por sector/actividad** para comparaciones por grupo (además de comparación libre). Aprovechar las reseñas/tipos.
+- [ ] **Mix de indicadores**: combos que deben mirarse en conjunto (p. ej. ROE + deuda/patrimonio + liquidez) para detectar anomalías, "unicornios" y empresas en riesgo.
+- [ ] **Ranking**: más indicadores y vistas combinadas (el ranking ya permite ver anomalías y apalancamiento).
 
-### Mediano plazo (Fase 5)
+### Banca
+- [ ] **Vista evolutiva de bancos** (otra pestaña): cuentas × meses. Conservar el **desglose por moneda de la CMF**; a futuro, balances en moneda extranjera para inversionistas FX.
 
-- [ ] Calendario de publicaciones: alertar cuando la SP, CMF o BCCh publicarán datos nuevos
-- [ ] Dashboard simple de valores cuota con gráficos de series temporales
+### AFP
+- [ ] **Comparar indicadores por AFP y fondo** (no solo cuota/patrimonio).
+- [ ] **Cartera**: evaluar **desagregar la porción extranjera** (¿el dato SP lo permite a futuro?).
 
-### Largo plazo (Fases 6–8)
-
-- [ ] Modelos de proyección macro (VAR, ARIMA)
-- [ ] API REST (FastAPI) para consumo externo
-- [ ] Integración con LLM para reportes narrativos automáticos
+### Fases mayores (6–8)
+- [ ] Proyecciones macro (ARIMA/VAR), detección de anomalías.
+- [ ] Storytelling con LLM (Anthropic SDK + prompt caching) para reportes narrativos.
 
 ---
 
-## Issues conocidos
+## 3. Backfills/datos pendientes
+- [ ] Cartera SP: solo 2026-01 cargado → backfill de meses para series de cartera.
+- [ ] Precios SP: nivelado hasta ~2026-06 (tope de 10 días hábiles por corrida del catch-up).
+- [ ] Bancos: historia mensual completa para el evolutivo.
 
-Ver página **[Issues-Resueltos](Issues-Resueltos)** para el registro histórico de problemas técnicos resueltos.
-
-### Issues abiertos actualmente
-
-| # | Descripción | Prioridad |
-|---|-------------|-----------|
-| 1 | Backfill de fondos D y E pendiente de completarse | 🟡 Media |
-| 2 | Backfill histórico de cinta de precios no ejecutado aún | 🟡 Media |
-| 3 | Backfill de carteras mensuales (solo período 202601 cargado) | 🟡 Media |
-| 4 | AFPs históricas (Magister, Santa María, Summa Bansander) incluidas en CSV antiguo pero no en el actual — verificar consistencia | 🔵 Baja |
+Ver **[Issues-Resueltos](Issues-Resueltos)** para el registro histórico.
