@@ -11,7 +11,8 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Query, Request
 
 from api.deps import get_db, records, templates
-from api.eeff_format import build_statement_groups, GROUP_LABELS, GROUP_ORDER, _assign_balance_sections
+from api.eeff_format import (build_statement_groups, GROUP_LABELS, GROUP_ORDER,
+                             GROUP_SLOTS, _assign_balance_sections)
 from api.company_profiles import get_profile
 from db.database import Database
 
@@ -54,39 +55,49 @@ def eeff(request: Request, db: Database = Depends(get_db)):
 @router.get("/eeff/table")
 def eeff_table(
     request: Request,
-    rut: Optional[str] = Query(None),
-    company: Optional[str] = Query(None),
-    period: Optional[str] = Query(None),
+    company: str = Query(""),
+    serie: str = Query("anual5"),
     db: Database = Depends(get_db),
 ):
-    """Fragmento HTMX: estados financieros de una empresa/período, agrupados por estado."""
-    period_int = int(period) if period else None
+    """
+    Fragmento HTMX: vista de empresa fusionada (EEFF + Evolución). Muestra reseña, ratios
+    (último período), selectores de gráfico y la MATRIZ evolutiva (cuentas × períodos) de
+    cada estado estándar, según el tipo de serie elegido.
+    """
+    empty = templates.TemplateResponse(request, "partials/eeff_table.html", {"meta": None})
+    if not company.strip():
+        return empty
+    match = db.query_cmf_statements(company=company, limit=1)
+    if match.empty:
+        return empty
+    rut, cname = str(match.iloc[0]["rut"]), str(match.iloc[0]["company_name"])
 
-    # Si llega el nombre (buscador), resolverlo a un RUT único para no mezclar empresas.
-    if company and not rut:
-        match = db.query_cmf_statements(company=company, limit=1)
-        if not match.empty:
-            rut = str(match.iloc[0]["rut"])
+    periods = _select_periods(db.get_company_periods(rut), serie)
+    if not periods:
+        return empty
+    latest = max(periods)
+    latest_df = db.query_cmf_statements(rut=rut, period=latest, limit=3000)
+    codes_present = set(str(x) for x in latest_df["statement_group"].unique()) if not latest_df.empty else set()
 
-    df = db.query_cmf_statements(rut=rut, period=period_int, limit=2000)
+    statements = []
+    for slot in GROUP_SLOTS:
+        chosen = next((c for c in slot if c in codes_present), None)
+        if not chosen:
+            continue
+        ev = db.get_statement_evolution(rut, periods, chosen)
+        if chosen.startswith("ESF"):
+            _assign_balance_sections(ev["accounts"])
+        statements.append({"label": GROUP_LABELS[chosen], "code": chosen, "ev": ev})
 
-    meta, groups, graph_accounts, ratios = None, [], [], None
-    if not df.empty:
-        first = df.iloc[0]
-        meta = {
-            "company_name": str(first["company_name"]),
-            "rut": str(first["rut"]),
-            "period": int(first["period"]),
-            "report_type": str(first["report_type"]),
-            "currency": str(first["currency"]),
-        }
-        groups = build_statement_groups(df)
-        graph_accounts = db.get_company_graphable_accounts(rut)
-        ratios = db.get_company_ratios(rut, meta["period"])
-        meta["profile"] = get_profile(meta["rut"], meta["company_name"])
-
+    meta = {
+        "company_name": cname, "rut": rut,
+        "report_type": str(latest_df.iloc[0]["report_type"]) if not latest_df.empty else "",
+        "currency": str(latest_df.iloc[0]["currency"]) if not latest_df.empty else "",
+        "periods": periods, "latest": latest, "profile": get_profile(rut, cname),
+    }
     return templates.TemplateResponse(request, "partials/eeff_table.html", {
-        "meta": meta, "groups": groups, "graph_accounts": graph_accounts, "ratios": ratios,
+        "meta": meta, "ratios": db.get_company_ratios(rut, latest),
+        "graph_accounts": db.get_company_graphable_accounts(rut), "statements": statements,
     })
 
 
@@ -302,41 +313,11 @@ def _select_periods(allp: list, serie: str) -> list:
     return allp[-5:]
 
 
-# Estados ofrecidos en la vista evolutiva (código → etiqueta), en orden lógico.
-_ESTADOS = [(c, GROUP_LABELS[c]) for c in GROUP_ORDER if c in GROUP_LABELS]
-
-
 @router.get("/evolucion")
-def evolucion(request: Request, db: Database = Depends(get_db)):
-    """Vista evolutiva: un estado financiero de una empresa a través de varios períodos."""
-    return templates.TemplateResponse(request, "evolucion.html", {
-        "companies": records(db.get_cmf_companies()), "estados": _ESTADOS,
-    })
-
-
-@router.get("/evolucion/table")
-def evolucion_table(
-    request: Request,
-    company: str = Query(""),
-    serie: str = Query("anual5"),
-    estado: str = Query("ESF C/NC"),
-    db: Database = Depends(get_db),
-):
-    """Fragmento HTMX: matriz de un estado (filas = cuentas, columnas = períodos)."""
-    if not company.strip():
-        return templates.TemplateResponse(request, "partials/evolucion_table.html", {"ev": None})
-    match = db.query_cmf_statements(company=company, limit=1)
-    if match.empty:
-        return templates.TemplateResponse(request, "partials/evolucion_table.html", {"ev": None})
-    rut, cname = str(match.iloc[0]["rut"]), str(match.iloc[0]["company_name"])
-    periods = _select_periods(db.get_company_periods(rut), serie)
-    ev = db.get_statement_evolution(rut, periods, estado)
-    if estado.startswith("ESF"):
-        _assign_balance_sections(ev["accounts"])
-    return templates.TemplateResponse(request, "partials/evolucion_table.html", {
-        "ev": ev, "company": cname, "rut": rut, "profile": get_profile(rut, cname),
-        "estado_label": GROUP_LABELS.get(estado, estado), "estado_code": estado,
-    })
+def evolucion():
+    """La vista evolutiva se fusionó con /eeff; se redirige por compatibilidad."""
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(url="/eeff", status_code=307)
 
 
 @router.get("/eeff/ratios-serie")

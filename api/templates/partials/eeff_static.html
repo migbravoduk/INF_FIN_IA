@@ -1,0 +1,55 @@
+{#
+  partials/eeff_static.html — Estados financieros de UNA empresa/período (export estático).
+  Recibe `meta` (con profile) y `groups` (de build_statement_groups) + `ratios`.
+#}
+{% if meta %}
+<div class="eeff-head">
+    <h3>{{ meta.company_name }}</h3>
+    {% if meta.profile %}
+    <p class="resena">{{ meta.profile.text }}{% if meta.profile.source == "inferida" %} <span class="lead">· reseña inferida por tipo</span>{% endif %}</p>
+    {% endif %}
+    <span class="eeff-meta">
+        RUT {{ meta.rut }} · período {{ meta.period }} ·
+        {{ "Individual" if meta.report_type == "I" else "Consolidado" if meta.report_type == "C" else meta.report_type }} ·
+        cifras en {{ meta.currency }} (moneda de reporte, no en miles)
+    </span>
+</div>
+
+{% if ratios %}
+{% macro rr(v, suf="%") %}{% if v is none %}—{% else %}<b class="{{ 'pos' if v >= 0 else 'neg' }}">{{ "{:+,.1f}".format(v) if suf == "%" else "{:,.2f}".format(v) }}{{ suf }}</b>{% endif %}{% endmacro %}
+<div class="ratios">
+    <h4>Indicadores financieros <span class="lead">(del período)</span></h4>
+    <div class="ratio-grid">
+        <div class="ratio"><span>ROE</span>{{ rr(ratios.roe) }}</div>
+        <div class="ratio"><span>ROA</span>{{ rr(ratios.roa) }}</div>
+        <div class="ratio"><span>Margen neto</span>{{ rr(ratios.margen_neto) }}</div>
+        <div class="ratio"><span>Margen bruto</span>{{ rr(ratios.margen_bruto) }}</div>
+        <div class="ratio"><span>Liquidez corriente</span>{{ rr(ratios.liquidez, "x") }}</div>
+        <div class="ratio"><span>Deuda / Patrimonio</span>{{ rr(ratios.endeudamiento, "x") }}</div>
+    </div>
+</div>
+{% endif %}
+
+{% for grp in groups %}
+<div class="eeff-group">
+    <h4>{{ grp.group }} <span class="code-tag">{{ grp.code }}</span></h4>
+    <table class="eeff-table">
+        <tbody>
+        {% set ns = namespace(sec=None) %}
+        {% for row in grp.rows %}
+            {% if row.section and row.section != ns.sec %}
+            <tr class="section-head"><td colspan="2">{{ row.section }}</td></tr>
+            {% set ns.sec = row.section %}
+            {% endif %}
+            <tr class="{{ 'total-row' if 'total' in (row.account_name|lower) else '' }}">
+                <td class="acct">{{ row.account_name }}</td>
+                <td class="num">{{ "{:,.0f}".format(row.value) if row.value is not none else "—" }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endfor %}
+{% else %}
+<p class="loading">No hay estados financieros para esa combinación.</p>
+{% endif %}

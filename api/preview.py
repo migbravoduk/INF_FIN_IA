@@ -65,7 +65,7 @@ def render_eeff_static(period: int = None, output_dir: str = "preview/eeff") -> 
         loader=FileSystemLoader(str(_TEMPLATES)),
         autoescape=select_autoescape(["html"]),
     )
-    table_tpl = env.get_template("partials/eeff_table.html")
+    table_tpl = env.get_template("partials/eeff_static.html")
     css = (_STATIC / "app.css").read_text(encoding="utf-8")
     out = Path(output_dir)
     out.mkdir(parents=True, exist_ok=True)

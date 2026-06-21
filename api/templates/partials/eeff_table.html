@@ -1,6 +1,7 @@
 {#
-  partials/eeff_table.html — Estados financieros de una empresa/período.
-  Recibe `meta` (cabecera) y `groups` (lista de {group, rows[{account_name, value}]}).
+  partials/eeff_table.html — Vista de empresa (EEFF + Evolución fusionados).
+  Recibe: meta (con profile), ratios (último período), graph_accounts,
+  statements = [{label, code, ev:{periods, accounts}}].
 #}
 {% if meta %}
 <div class="eeff-head">
@@ -9,16 +10,17 @@
     <p class="resena">{{ meta.profile.text }}{% if meta.profile.source == "inferida" %} <span class="lead">· reseña inferida por tipo</span>{% endif %}</p>
     {% endif %}
     <span class="eeff-meta">
-        RUT {{ meta.rut }} · período {{ meta.period }} ·
+        RUT {{ meta.rut }} ·
         {{ "Individual" if meta.report_type == "I" else "Consolidado" if meta.report_type == "C" else meta.report_type }} ·
-        cifras en {{ meta.currency }} (moneda de reporte, no en miles)
+        cifras en {{ meta.currency }} (moneda de reporte) ·
+        {{ meta.periods|length }} períodos
     </span>
 </div>
 
 {% if ratios %}
 {% macro rr(v, suf="%") %}{% if v is none %}—{% else %}<b class="{{ 'pos' if v >= 0 else 'neg' }}">{{ "{:+,.1f}".format(v) if suf == "%" else "{:,.2f}".format(v) }}{{ suf }}</b>{% endif %}{% endmacro %}
 <div class="ratios">
-    <h4>Indicadores financieros <span class="lead">(del período)</span></h4>
+    <h4>Indicadores financieros <span class="lead">(último período: {{ meta.latest }})</span></h4>
     <div class="ratio-grid">
         <div class="ratio"><span>ROE</span>{{ rr(ratios.roe) }}</div>
         <div class="ratio"><span>ROA</span>{{ rr(ratios.roa) }}</div>
@@ -31,59 +33,41 @@
 {% endif %}
 
 {% if graph_accounts %}
-<form class="eeff-graf" hx-get="/eeff/serie" hx-target="#eeff-serie" hx-trigger="change" hx-swap="innerHTML">
-    <input type="hidden" name="rut" value="{{ meta.rut }}">
-    <label>Graficar partida (evolución por período)
-        <select name="account">
-            <option value="" selected>— elegir partida —</option>
-            {% for a in graph_accounts %}
-            <option value="{{ a }}">{{ a }}</option>
-            {% endfor %}
-        </select>
-    </label>
-    <label class="chk" title="Para partidas de flujo (acumuladas en el año): muestra la variación intra-anual">
-        <input type="checkbox" name="delta" value="1"> Desacumular (flujo)
-    </label>
-</form>
+<div class="graf-row">
+    <form class="eeff-graf" hx-get="/eeff/serie" hx-target="#eeff-serie" hx-trigger="change" hx-swap="innerHTML">
+        <input type="hidden" name="rut" value="{{ meta.rut }}">
+        <label>Graficar partida
+            <select name="account">
+                <option value="" selected>— elegir partida —</option>
+                {% for a in graph_accounts %}<option value="{{ a }}">{{ a }}</option>{% endfor %}
+            </select>
+        </label>
+        <label class="chk" title="Para partidas de flujo (acumuladas en el año): variación intra-anual">
+            <input type="checkbox" name="delta" value="1"> Desacumular
+        </label>
+    </form>
+    <form class="eeff-graf" hx-get="/eeff/ratios-serie" hx-target="#ratios-serie" hx-trigger="change" hx-swap="innerHTML">
+        <input type="hidden" name="rut" value="{{ meta.rut }}">
+        <label>Graficar indicador
+            <select name="metric">
+                <option value="" selected>— elegir —</option>
+                <option value="roe">ROE</option>
+                <option value="roa">ROA</option>
+                <option value="margen_neto">Margen neto</option>
+                <option value="margen_bruto">Margen bruto</option>
+                <option value="liquidez">Liquidez corriente</option>
+                <option value="endeudamiento">Deuda / Patrimonio</option>
+            </select>
+        </label>
+    </form>
+</div>
 <div id="eeff-serie"></div>
-
-<form class="eeff-graf" hx-get="/eeff/ratios-serie" hx-target="#ratios-serie" hx-trigger="change" hx-swap="innerHTML">
-    <input type="hidden" name="rut" value="{{ meta.rut }}">
-    <label>Evolución de indicador por período
-        <select name="metric">
-            <option value="" selected>— elegir —</option>
-            <option value="roe">ROE</option>
-            <option value="roa">ROA</option>
-            <option value="margen_neto">Margen neto</option>
-            <option value="margen_bruto">Margen bruto</option>
-            <option value="liquidez">Liquidez corriente</option>
-            <option value="endeudamiento">Deuda / Patrimonio</option>
-        </select>
-    </label>
-</form>
 <div id="ratios-serie"></div>
 {% endif %}
 
-{% for grp in groups %}
-<div class="eeff-group">
-    <h4>{{ grp.group }} <span class="code-tag">{{ grp.code }}</span></h4>
-    <table class="eeff-table">
-        <tbody>
-        {% set ns = namespace(sec=None) %}
-        {% for row in grp.rows %}
-            {% if row.section and row.section != ns.sec %}
-            <tr class="section-head"><td colspan="2">{{ row.section }}</td></tr>
-            {% set ns.sec = row.section %}
-            {% endif %}
-            <tr class="{{ 'total-row' if 'total' in (row.account_name|lower) else '' }}">
-                <td class="acct">{{ row.account_name }}</td>
-                <td class="num">{{ "{:,.0f}".format(row.value) if row.value is not none else "—" }}</td>
-            </tr>
-        {% endfor %}
-        </tbody>
-    </table>
-</div>
+{% for st in statements %}
+    {% include "partials/statement_matrix.html" %}
 {% endfor %}
 {% else %}
-<p class="loading">No hay estados financieros para esa combinación.</p>
+<p class="loading">No hay estados financieros para esa empresa.</p>
 {% endif %}

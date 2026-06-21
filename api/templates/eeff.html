@@ -4,7 +4,7 @@
 
 {% block content %}
 <h1>Estados financieros corporativos</h1>
-<p class="subtitle">CMF · Empresas y Mercados — balance, resultados y flujo de caja por emisor</p>
+<p class="subtitle">CMF · Empresas y Mercados — balance, resultados y flujo de caja, en serie (vista evolutiva)</p>
 
 <form class="eeff-form"
       hx-get="/eeff/table"
@@ -23,11 +23,13 @@
         </datalist>
     </label>
 
-    <label>Período
-        <select name="period">
-            {% for p in periods %}
-            <option value="{{ p }}">{{ p }}</option>
-            {% endfor %}
+    <label>Serie
+        <select name="serie">
+            <option value="anual5">Cierres anuales — últimos 5</option>
+            <option value="anual10">Cierres anuales — últimos 10</option>
+            <option value="trimq5">Mismo trimestre — últimos 5 años</option>
+            <option value="trimq10">Mismo trimestre — últimos 10 años</option>
+            <option value="trim8">Trimestral — últimos 8 (2 años)</option>
         </select>
     </label>
 </form>

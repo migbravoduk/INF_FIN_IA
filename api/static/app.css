@@ -97,6 +97,7 @@ h1 { margin: 0 0 0.2rem; }
 .lead { color: var(--muted); font-size: 0.72rem; font-style: normal; }
 
 /* Selector para graficar partidas en /eeff */
+.graf-row { display: flex; flex-wrap: wrap; gap: 1.5rem; }
 .eeff-graf { margin: 0.8rem 0; }
 .eeff-graf label { display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.8rem; color: var(--muted); }
 .eeff-graf select {
