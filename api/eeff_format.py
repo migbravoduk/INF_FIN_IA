@@ -13,18 +13,27 @@ quedan repetidos con valores distintos, para que la vista sea legible sin perder
 import re
 from collections import Counter
 
-# Códigos de estado financiero de la CMF → nombre legible.
+# Etiqueta uniforme por código (sin distinguir variantes en la UI).
 GROUP_LABELS = {
-    "ESF C/NC": "Estado de Situación Financiera (corriente / no corriente)",
-    "ESF OL": "Estado de Situación Financiera (orden de liquidez)",
-    "ERFG": "Estado de Resultados (por función)",
-    "ERNG": "Estado de Resultados (por naturaleza)",
+    "ESF C/NC": "Estado de Situación Financiera",
+    "ESF OL": "Estado de Situación Financiera",
+    "ERFG": "Estado de Resultados",
+    "ERNG": "Estado de Resultados",
     "ERI": "Estado de Resultado Integral",
-    "EFMD": "Estado de Flujo de Efectivo (método directo)",
-    "EFMI": "Estado de Flujo de Efectivo (método indirecto)",
+    "EFMD": "Estado de Flujo de Efectivo",
+    "EFMI": "Estado de Flujo de Efectivo",
 }
-# Orden lógico de presentación: balance → resultados → integral → flujo de efectivo.
-GROUP_ORDER = ["ESF C/NC", "ESF OL", "ERFG", "ERNG", "ERI", "EFMD", "EFMI"]
+# Slots de presentación con PREFERENCIA por el estándar (primero el preferido):
+#   balance corriente/no corriente > orden de liquidez; resultados por función > naturaleza;
+#   flujo directo > indirecto. Se muestra UNO por slot (el estándar si existe).
+GROUP_SLOTS = [
+    ["ESF C/NC", "ESF OL"],
+    ["ERFG", "ERNG"],
+    ["ERI"],
+    ["EFMD", "EFMI"],
+]
+# Códigos estándar (para selectores y orden por defecto).
+GROUP_ORDER = ["ESF C/NC", "ERFG", "ERI", "EFMD"]
 
 
 def _assign_balance_sections(rows):
@@ -84,13 +93,12 @@ def build_statement_groups(df) -> list[dict]:
             _assign_balance_sections(rows)
         by_code[code] = rows
 
-    # 3. Emitir en orden lógico, con etiqueta legible (extras desconocidos al final).
-    groups, seen_codes = [], set()
-    for code in GROUP_ORDER:
-        if code in by_code:
-            groups.append({"group": GROUP_LABELS.get(code, code), "code": code, "rows": by_code[code]})
-            seen_codes.add(code)
-    for code, rows in by_code.items():
-        if code not in seen_codes:
-            groups.append({"group": GROUP_LABELS.get(code, code), "code": code, "rows": rows})
+    # 3. Emitir un estado por slot, prefiriendo el estándar; fallback al no estándar
+    #    solo si el estándar no existe (p. ej. utilities que reportan por naturaleza).
+    groups = []
+    for slot in GROUP_SLOTS:
+        for code in slot:
+            if code in by_code:
+                groups.append({"group": GROUP_LABELS[code], "code": code, "rows": by_code[code]})
+                break
     return groups
