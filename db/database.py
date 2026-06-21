@@ -21,6 +21,26 @@ from config.settings import settings
 logger = logging.getLogger(__name__)
 
 
+import re as _re
+
+# Detecta líneas de total/subtotal (para resaltarlas), incluyendo los totalizadores del
+# flujo de efectivo y los resultados clave, que no contienen la palabra "total".
+_TOTAL_RE = _re.compile(
+    r"\btotal\b"
+    r"|flujos de efectivo netos procedentes"
+    r"|incremento \(disminución\) neto de efectivo"
+    r"|^efectivo y equivalentes al efectivo al "
+    r"|^ganancia bruta( \(\d+\))?$"
+    r"|^ganancia \(pérdida\)( \(\d+\))?$",
+    _re.IGNORECASE,
+)
+
+
+def is_total_account(name: str) -> bool:
+    """True si la cuenta es un total/subtotal a resaltar (incluye totalizadores del EFE)."""
+    return bool(_TOTAL_RE.search(name or ""))
+
+
 def compute_ratios(df) -> Optional[dict]:
     """
     Calcula indicadores financieros desde un DataFrame de EEFF de UNA empresa/período.
@@ -916,7 +936,8 @@ class Database:
                 pivot[a][p] = r["value"]
 
         periods_asc = sorted(set(int(p) for p in df["period"]))
-        accounts = [{"account_name": a, "vals": [pivot[a].get(p) for p in periods_asc]}
+        accounts = [{"account_name": a, "vals": [pivot[a].get(p) for p in periods_asc],
+                     "is_total": is_total_account(a)}
                     for a in order]
         return {"periods": periods_asc, "accounts": accounts}
 

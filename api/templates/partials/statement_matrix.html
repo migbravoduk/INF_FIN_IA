@@ -20,7 +20,7 @@
                 <tr class="section-head"><td colspan="{{ st.ev.periods|length + 1 }}">{{ a.section }}</td></tr>
                 {% set ns.sec = a.section %}
                 {% endif %}
-                <tr class="{{ 'total-row' if 'total' in (a.account_name|lower) else '' }}">
+                <tr class="{{ 'total-row' if a.is_total else '' }}">
                     <td class="acct">{{ a.account_name }}</td>
                     {% for v in a.vals %}<td class="num">{{ "{:,.0f}".format(v) if v is not none else "—" }}</td>{% endfor %}
                 </tr>

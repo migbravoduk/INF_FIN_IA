@@ -13,6 +13,8 @@ quedan repetidos con valores distintos, para que la vista sea legible sin perder
 import re
 from collections import Counter
 
+from db.database import is_total_account
+
 # Etiqueta uniforme por código (sin distinguir variantes en la UI).
 GROUP_LABELS = {
     "ESF C/NC": "Estado de Situación Financiera",
@@ -86,7 +88,8 @@ def build_statement_groups(df) -> list[dict]:
                 label = f"{name} ({running[name]})"
             else:
                 label = name
-            rows.append({"account_name": label, "value": d["value"]})
+            rows.append({"account_name": label, "value": d["value"],
+                         "is_total": is_total_account(label)})
 
         # Sub-secciones del balance (Activos / Pasivos / Patrimonio).
         if code.startswith("ESF"):
