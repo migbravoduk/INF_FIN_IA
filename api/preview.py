@@ -13,6 +13,7 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from db.database import Database, compute_ratios
 from api.eeff_format import build_statement_groups
+from api.company_profiles import get_profile
 from api.routers.views import build_overview_context
 
 _BASE = Path(__file__).parent
@@ -85,6 +86,7 @@ def render_eeff_static(period: int = None, output_dir: str = "preview/eeff") -> 
             "company_name": name, "rut": str(rut), "period": int(period),
             "report_type": str(sub.iloc[0]["report_type"]),
             "currency": str(sub.iloc[0]["currency"]),
+            "profile": get_profile(str(rut), name),
         }
         groups = build_statement_groups(sub)
         body = table_tpl.render(meta=meta, groups=groups, ratios=compute_ratios(sub))

@@ -153,6 +153,15 @@ h1 { margin: 0 0 0.2rem; }
 .eeff-head { margin-bottom: 1rem; }
 .eeff-head h3 { margin: 0; }
 .eeff-meta { color: var(--muted); font-size: 0.8rem; }
+.resena {
+    margin: 0.3rem 0 0.4rem;
+    color: var(--ink);
+    font-size: 0.9rem;
+    line-height: 1.5;
+    max-width: 720px;
+    border-left: 2px solid var(--accent);
+    padding-left: 0.7rem;
+}
 .eeff-group {
     background: var(--panel);
     border: 1px solid var(--border);

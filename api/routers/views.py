@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, Query, Request
 
 from api.deps import get_db, records, templates
 from api.eeff_format import build_statement_groups, GROUP_LABELS, GROUP_ORDER, _assign_balance_sections
+from api.company_profiles import get_profile
 from db.database import Database
 
 router = APIRouter()
@@ -82,6 +83,7 @@ def eeff_table(
         groups = build_statement_groups(df)
         graph_accounts = db.get_company_graphable_accounts(rut)
         ratios = db.get_company_ratios(rut, meta["period"])
+        meta["profile"] = get_profile(meta["rut"], meta["company_name"])
 
     return templates.TemplateResponse(request, "partials/eeff_table.html", {
         "meta": meta, "groups": groups, "graph_accounts": graph_accounts, "ratios": ratios,
@@ -311,7 +313,7 @@ def evolucion_table(
     if estado.startswith("ESF"):
         _assign_balance_sections(ev["accounts"])
     return templates.TemplateResponse(request, "partials/evolucion_table.html", {
-        "ev": ev, "company": cname, "rut": rut,
+        "ev": ev, "company": cname, "rut": rut, "profile": get_profile(rut, cname),
         "estado_label": GROUP_LABELS.get(estado, estado), "estado_code": estado,
     })
 
