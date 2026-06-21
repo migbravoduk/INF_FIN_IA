@@ -175,6 +175,23 @@ def comparar(request: Request, db: Database = Depends(get_db)):
     })
 
 
+# Partidas de flujo/resultado (acumuladas en el año): se desacumulan y se muestran en
+# valores del período (no base 100, que distorsiona income con signos/ceros).
+_FLOW_PARTIDAS = {"Ganancia (pérdida)", "Ganancia bruta", "Costo de ventas",
+                  "Ingresos de actividades ordinarias"}
+
+
+def _deaccumulate(pts: list) -> list:
+    """Desacumula intra-anual: valor = acumulado - acumulado del período previo del mismo año."""
+    out, prev_by_year = [], {}
+    for p in pts:
+        year = p["period"][:4]
+        v = p["value"] - prev_by_year[year] if year in prev_by_year else p["value"]
+        out.append({"period": p["period"], "value": v})
+        prev_by_year[year] = p["value"]
+    return out
+
+
 @router.get("/comparar/chart")
 def comparar_chart(
     request: Request,
@@ -182,10 +199,11 @@ def comparar_chart(
     c1: str = Query(""), c2: str = Query(""), c3: str = Query(""),
     db: Database = Depends(get_db),
 ):
-    """Fragmento HTMX: overlay de una misma partida en varias empresas, base 100."""
+    """Fragmento HTMX: overlay de una misma partida en varias empresas."""
     if not account.strip():
         return templates.TemplateResponse(request, "partials/compare_chart.html",
-                                          {"multi": None, "account": None})
+                                          {"multi": None, "account": None, "mode": None})
+    is_flow = account in _FLOW_PARTIDAS
     multi = []
     for name in (c1, c2, c3):
         name = name.strip()
@@ -196,17 +214,20 @@ def comparar_chart(
             continue
         rut, cname = str(match.iloc[0]["rut"]), str(match.iloc[0]["company_name"])
         s = db.get_company_account_series(rut, account)
-        pts = [{"period": str(int(r["period"])), "value": r["value"]} for _, r in s.iterrows()]
+        pts = [{"period": str(int(r["period"])), "value": r["value"]}
+               for _, r in s.iterrows() if r["value"] is not None]
         if not pts:
             continue
-        base = pts[0]["value"] or None
-        multi.append({
-            "name": cname,
-            "points": [{"x": p["period"], "value": (p["value"] / base * 100.0) if base else None}
-                       for p in pts],
-        })
+        if is_flow:
+            pts = _deaccumulate(pts)
+            points = [{"x": p["period"], "value": p["value"]} for p in pts]
+        else:
+            base = pts[0]["value"] or None
+            points = [{"x": p["period"], "value": (p["value"] / base * 100.0) if base else None}
+                      for p in pts]
+        multi.append({"name": cname, "points": points})
     return templates.TemplateResponse(request, "partials/compare_chart.html", {
-        "multi": multi, "account": account,
+        "multi": multi, "account": account, "mode": "periodo" if is_flow else "base100",
     })
 
 
