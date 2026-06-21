@@ -49,6 +49,14 @@ _INFER = [
     (r"CONSTRUCTORA|CONSTRUCCION|INGENIERIA|MONTAJES", "Construcción e ingeniería."),
     (r"INVERSIONES|\bHOLDING\b|MATRIZ|RENTAS Y", "Sociedad de inversiones / holding."),
     (r"COMERCIAL|RETAIL|TIENDAS|SUPERMERCADO", "Comercio minorista (retail)."),
+    (r"NAVIER|MARITIM|MAR[ÍI]TIM", "Transporte marítimo / negocio naviero."),
+    (r"CEMENTO|HORMIG[ÓO]N", "Producción de cemento y materiales de construcción."),
+    (r"MINER|\bORO\b|\bCOBRE\b|LITIO", "Minería / recursos naturales."),
+    (r"UNIVERSIDAD|EDUCACION|EDUCACIONAL", "Institución de educación."),
+    (r"QU[ÍI]MIC|OX[ÍI]GENO|GASES", "Química industrial."),
+    (r"ENJOY|ENTRETENCION|RESORT", "Entretenimiento, casinos y resorts."),
+    (r"ALIMENTOS|LACTEO|CONSERVA", "Industria de alimentos."),
+    (r"ZONA FRANCA", "Operación de zona franca."),
 ]
 
 _GENERIC = "Empresa emisora registrada en la CMF; reseña no disponible (inferida por tipo no aplicable)."
