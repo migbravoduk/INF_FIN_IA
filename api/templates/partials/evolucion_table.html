@@ -6,7 +6,7 @@
 <div class="eeff-head">
     <h3>{{ company }}</h3>
     {% if profile %}
-    <p class="resena">{{ profile.text }}{% if profile.source != "curada" %} <span class="lead">· reseña inferida por tipo</span>{% endif %}</p>
+    <p class="resena">{{ profile.text }}{% if profile.source == "inferida" %} <span class="lead">· reseña inferida por tipo</span>{% endif %}</p>
     {% endif %}
     <span class="eeff-meta">{{ estado_label }} <span class="code-tag">{{ estado_code }}</span> ·
         {{ ev.periods|length }} períodos · cifras en moneda de reporte</span>

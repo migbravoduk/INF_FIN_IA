@@ -6,7 +6,7 @@
 <div class="eeff-head">
     <h3>{{ meta.company_name }}</h3>
     {% if meta.profile %}
-    <p class="resena">{{ meta.profile.text }}{% if meta.profile.source != "curada" %} <span class="lead">· reseña inferida por tipo</span>{% endif %}</p>
+    <p class="resena">{{ meta.profile.text }}{% if meta.profile.source == "inferida" %} <span class="lead">· reseña inferida por tipo</span>{% endif %}</p>
     {% endif %}
     <span class="eeff-meta">
         RUT {{ meta.rut }} · período {{ meta.period }} ·

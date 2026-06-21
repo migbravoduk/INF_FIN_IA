@@ -88,4 +88,7 @@ def get_profile(rut: str, name: str) -> dict:
     if curated:
         return {"text": curated, "source": "curada"}
     inferred = infer_profile(name)
-    return {"text": inferred, "source": "inferida" if inferred != _GENERIC else "generica"}
+    if inferred == _GENERIC:
+        # Sin reseña: se deja el nombre de la empresa como marca/placeholder.
+        return {"text": name, "source": "generica"}
+    return {"text": inferred, "source": "inferida"}
