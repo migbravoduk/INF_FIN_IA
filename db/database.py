@@ -437,6 +437,7 @@ class Database:
         self,
         bank_code: Optional[str] = None,
         period: Optional[int] = None,
+        periods: Optional[list[int]] = None,
         account_code: Optional[str] = None,
         report_type: Optional[str] = None,
         limit: int = 50
@@ -454,6 +455,10 @@ class Database:
         if period:
             query += " AND period = ?"
             params.append(period)
+        elif periods:
+            placeholders = ",".join("?" for _ in periods)
+            query += f" AND period IN ({placeholders})"
+            params.extend(periods)
         if bank_code:
             # Estandarizar a 3 dígitos (ej: '1' -> '001')
             clean_code = str(bank_code).strip().zfill(3)
@@ -782,6 +787,22 @@ class Database:
             LIMIT ?
         """, [period, fund, afp.upper(), limit]).fetchdf()
 
+    def get_foreign_portfolio(self, period: str, fund: str, afp: str = "TOTAL", limit: int = 15):
+        """
+        Detalle de la cartera extranjera (instrumentos que contienen 'EXTRANJER' pero no son 'TOTAL').
+        Devuelve DataFrame [instrument_glosa, porcentaje, monto_pesos].
+        """
+        return self.conn.execute("""
+            SELECT instrument_glosa, porcentaje, monto_pesos
+            FROM sp_portfolio_holdings
+            WHERE period = ? AND fund_type = ? AND UPPER(afp_name) = ?
+              AND porcentaje IS NOT NULL AND porcentaje > 0
+              AND UPPER(instrument_glosa) LIKE '%EXTRANJER%'
+              AND UPPER(instrument_glosa) NOT LIKE 'TOTAL%'
+            ORDER BY porcentaje DESC
+            LIMIT ?
+        """, [period, fund, afp.upper(), limit]).fetchdf()
+
     def get_portfolio_periods(self) -> list[str]:
         """Períodos disponibles en la cartera de inversión SP."""
         rows = self.conn.execute(
@@ -842,7 +863,7 @@ class Database:
         """Indicadores financieros de una empresa/período (ver compute_ratios)."""
         return compute_ratios(self.query_cmf_statements(rut=rut, period=period, limit=2000))
 
-    def get_ratios_ranking(self, period: int, metric: str = "roe", n: int = 15) -> list[dict]:
+    def get_ratios_ranking(self, period: int, metric: str = "roe", n: int = 15, sector: str = None) -> list[dict]:
         """
         Ranking de empresas por un ratio en un período. Calcula ratios de todas las empresas
         del período (una sola consulta + cómputo en memoria) y ordena desc.
@@ -853,7 +874,13 @@ class Database:
             return []
         is_pct = metric in ("roe", "roa", "margen_neto", "margen_bruto", "pasivo_activo")
         out = []
+        from api.company_profiles import get_profile
         for rut, sub in df.groupby("rut", sort=False):
+            cname = str(sub.iloc[0]["company_name"])
+            if sector:
+                prof = get_profile(rut, cname)
+                if prof["macro_sector"] != sector:
+                    continue
             r = compute_ratios(sub)
             if not r or r.get(metric) is None:
                 continue
@@ -861,7 +888,7 @@ class Database:
             # excluye holdings/fondos sin operación y valores distorsionados
             if is_pct and (abs(v) > 150 or r.get("margen_neto") is None):
                 continue
-            out.append({"company_name": str(sub.iloc[0]["company_name"]),
+            out.append({"company_name": cname,
                         "rut": str(rut), "value": v, "currency": r["currency"]})
         out.sort(key=lambda x: x["value"], reverse=True)
         return out[:n]
@@ -898,7 +925,7 @@ class Database:
         """
         Matriz de evolución de UN estado financiero de una empresa a través de varios períodos.
         Devuelve {"periods": [asc], "accounts": [{account_name, values:[por período]}]}.
-        Orden de cuentas = orden IFRS (id) del período más reciente.
+        Orden de cuentas = posición relativa promedio en el balance para evitar cuentas descolocadas.
         """
         clean = str(rut).strip().replace(".", "").replace("-", "")
         periods = [int(p) for p in periods]
@@ -906,23 +933,29 @@ class Database:
             return {"periods": [], "accounts": []}
         ph = ",".join(["?"] * len(periods))
         df = self.conn.execute(f"""
-            SELECT period, account_name, value, id
-            FROM cmf_financial_statements
-            WHERE rut = ? AND statement_group = ? AND period IN ({ph})
-            ORDER BY period DESC, id ASC
+            WITH ranked AS (
+                SELECT 
+                    period, account_name, value, id,
+                    ROW_NUMBER() OVER (PARTITION BY period ORDER BY id ASC) as rn,
+                    COUNT(*) OVER (PARTITION BY period) as total
+                FROM cmf_financial_statements
+                WHERE rut = ? AND statement_group = ? AND period IN ({ph})
+            ),
+            avg_positions AS (
+                SELECT account_name, AVG(rn * 1.0 / total) as avg_pos
+                FROM ranked
+                GROUP BY account_name
+            )
+            SELECT r.period, r.account_name, r.value, a.avg_pos
+            FROM ranked r
+            JOIN avg_positions a ON r.account_name = a.account_name
+            ORDER BY a.avg_pos ASC, r.period DESC
         """, [clean, statement_group] + periods).fetchdf()
         if df.empty:
             return {"periods": [], "accounts": []}
 
-        latest = int(df["period"].max())
         order, seen = [], set()
-        # orden de cuentas según el período más reciente (orden IFRS por id)
-        for _, r in df[df["period"] == latest].iterrows():
-            a = str(r["account_name"])
-            if a not in seen:
-                order.append(a)
-                seen.add(a)
-        for _, r in df.iterrows():  # cuentas presentes solo en períodos antiguos
+        for _, r in df.iterrows():
             a = str(r["account_name"])
             if a not in seen:
                 order.append(a)

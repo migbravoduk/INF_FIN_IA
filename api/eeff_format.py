@@ -18,21 +18,18 @@ from db.database import is_total_account
 # Etiqueta uniforme por código (sin distinguir variantes en la UI).
 GROUP_LABELS = {
     "ESF C/NC": "Estado de Situación Financiera",
-    "ESF OL": "Estado de Situación Financiera",
     "ERFG": "Estado de Resultados",
-    "ERNG": "Estado de Resultados",
     "ERI": "Estado de Resultado Integral",
     "EFMD": "Estado de Flujo de Efectivo",
-    "EFMI": "Estado de Flujo de Efectivo",
 }
 # Slots de presentación con PREFERENCIA por el estándar (primero el preferido):
 #   balance corriente/no corriente > orden de liquidez; resultados por función > naturaleza;
 #   flujo directo > indirecto. Se muestra UNO por slot (el estándar si existe).
 GROUP_SLOTS = [
-    ["ESF C/NC", "ESF OL"],
-    ["ERFG", "ERNG"],
+    ["ESF C/NC"],
+    ["ERFG"],
     ["ERI"],
-    ["EFMD", "EFMI"],
+    ["EFMD"],
 ]
 # Códigos estándar (para selectores y orden por defecto).
 GROUP_ORDER = ["ESF C/NC", "ERFG", "ERI", "EFMD"]
@@ -88,6 +85,11 @@ def build_statement_groups(df) -> list[dict]:
                 label = f"{name} ({running[name]})"
             else:
                 label = name
+
+            # Limpieza visual del EFE
+            if label.startswith("Flujos de efectivo netos procedentes de (utilizados en) actividades de"):
+                label = label.replace("Flujos de efectivo netos procedentes de (utilizados en) actividades de", "Flujos de efectivo de")
+
             rows.append({"account_name": label, "value": d["value"],
                          "is_total": is_total_account(label)})
 

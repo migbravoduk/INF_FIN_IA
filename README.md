@@ -28,8 +28,8 @@ STORYTELLING (dashboard web, API REST, reportes Jules)
 | **4 — CMF: Bancos e Inst. Financieras** | ✅ Activa | Ingesta mensual de balances y resultados con desglose por moneda desde la API REST SBIFv3 |
 | **SP — Fondos de Pensiones** | ✅ Activa | Valores cuota diarios (desde 2008), carteras mensuales XML, cinta de precios diaria |
 | **5 — Calendarios y Alertas** | 🟡 Parcial | Catch-up por frescura: ingesta automática "al publicarse" (`main.py catchup`) |
-| **6 — Análisis y Proyecciones** | 🟡 Iniciada | Ratios financieros (ROE/ROA/márgenes/liquidez/deuda) + comparación sectorial; faltan proyecciones y anomalías |
-| **7 — API + Dashboard** | 🟡 En desarrollo | FastAPI + dashboard (panel multi-fuente, EEFF, banca, AFP) — ver "Capa Web" |
+| **6 — Análisis y Proyecciones** | 🟡 Avanzada | Ratios financieros, comparación sectorial y radar de salud (Deuda vs ROE vs Liquidez); faltan proyecciones macro predictivas |
+| **7 — API + Dashboard** | 🟡 Avanzada | FastAPI + dashboard (panel, EEFF, comparar, salud, banca, AFP) — ver "Capa Web" |
 | **8 — Storytelling / Jules** | ⏳ Planificada | Reportes narrativos automáticos con LLM |
 
 ---
@@ -248,8 +248,9 @@ Vistas disponibles:
 |---|---|
 | `/` | Panel multi-fuente: PIB/IMACEC var. anual, IPC, USD/CLP; top-5 bancos por activos y resultado; rentabilidad 12m por fondo AFP (+ AFP nº1 por rentabilidad y por patrimonio); gráficos UF y TPM a 12 meses |
 | `/eeff` | Estados financieros corporativos (CMF) por empresa (buscador) y período. Orden **IFRS oficial**, subsecciones del balance (Activos/Pasivos/Patrimonio), nombres de estado legibles, totales en negrita, **indicadores financieros (ROE/ROA/márgenes/liquidez/deuda)**, gráfico de evolución de cualquier partida (con opción desacumular flujos) |
-| `/comparar` | Compara una misma partida en hasta 3 empresas (base 100) **+ tabla comparativa de ratios** |
-| `/ranking` | Top 15 empresas por un indicador (ROE, ROA, márgenes, liquidez, deuda) en un período |
+| `/comparar` | Compara una misma partida en hasta 3 empresas libres o superposición automática del Top 5 de un sector **+ tabla comparativa de ratios** |
+| `/ranking` | Top 15 empresas por un indicador (ROE, ROA, márgenes, liquidez, deuda) en un período, con **filtro por sector** |
+| `/salud` | Radar de Salud Financiera: gráfico de dispersión cruzando Riesgo (Deuda) vs Rentabilidad (ROE) y Liquidez, identificando unicornios y empresas en riesgo por sector |
 | `/banca` | Estados bancarios con desglose por moneda; gráfico de evolución de cualquier cuenta |
 | `/afp` | Evolución de fondos de pensiones: una AFP/un fondo, comparar fondos, comparar AFP; métrica valor cuota / patrimonio / participación de mercado; rentabilidad nominal vs real; composición de cartera |
 | `/docs` | Swagger de la API REST (`/api/...`) |
@@ -468,8 +469,8 @@ Una vez que la base de datos tenga cobertura histórica, se incorporarán:
 |---|---|---|
 | **Proyecciones macro** | Modelos de proyección de variables macro (VAR, ARIMA, Kalman) usando los datos del BCCh | Fase 1–2 completas |
 | **Proyecciones de EEFF** | Proyecciones de estados financieros de empresas ancladas al escenario macro | Fase 3 completa |
-| **Ratios y comparación sectorial** | Cálculo automático de ROE, ROA, EV/EBITDA por empresa y sector | Fase 3 completa |
-| **Detección de anomalías** | Alertas cuando una empresa o indicador se desvía de su comportamiento histórico | Fase 3 + datos históricos |
+| **Ratios y comparación sectorial** | Cálculo automático de ROE, ROA, EV/EBITDA, Radar de Salud por empresa y sector | ✅ Operativa |
+| **Detección de anomalías** | Alertas visuales en Radar de Salud; falta detección estadística (Z-Score/Outliers ML) | 🟡 Parcial |
 | **Informes narrativos (Jules)** | Integración con el agente Jules para generación automática de reportes Word/PPT | Fase 6 |
 
 ---

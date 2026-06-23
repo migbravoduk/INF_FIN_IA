@@ -39,15 +39,24 @@
                 <th>Reaj. UF</th>
                 <th>Reaj. USD</th>
                 <th>M. extranjera</th>
-                <th>Total</th>
+                <th>Total ({{ meta.period }})</th>
+                {% for p in history_periods %}
+                <th>Hist. {{ p }}</th>
+                {% endfor %}
             </tr>
             {% else %}
-            <tr><th class="acct">Cuenta</th><th>Total</th></tr>
+            <tr>
+                <th class="acct">Cuenta</th>
+                <th>Total ({{ meta.period }})</th>
+                {% for p in history_periods %}
+                <th>Hist. {{ p }}</th>
+                {% endfor %}
+            </tr>
             {% endif %}
         </thead>
         <tbody>
         {% for r in rows %}
-            <tr class="{{ 'total-row' if 'total' in (r.account_name|lower) else '' }}">
+            <tr class="{{ 'total-row' if r.is_total else '' }}">
                 <td class="acct">{{ r.account_name }}</td>
                 {% if report_type == "balance" %}
                 <td class="num">{{ fmt(r.val_clp_no_reaj) }}</td>
@@ -56,6 +65,9 @@
                 <td class="num">{{ fmt(r.val_extranjera) }}</td>
                 {% endif %}
                 <td class="num strong">{{ fmt(r.val_total) }}</td>
+                {% for h in r.history %}
+                <td class="num" style="color: #64748b;">{{ fmt(h) }}</td>
+                {% endfor %}
             </tr>
         {% endfor %}
         </tbody>

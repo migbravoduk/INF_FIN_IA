@@ -48,6 +48,14 @@
     <p class="loading">Cargando…</p>
 </section>
 
+<section id="afp-comparativa"
+         hx-get="/afp/comparativa"
+         hx-trigger="load, change from:select[name='fund']"
+         hx-include="[name='fund']">
+    <p class="loading">Cargando comparativa detallada…</p>
+</section>
+
+
 <section hx-get="/afp/rentabilidad" hx-trigger="load" hx-swap="innerHTML">
     <p class="loading">Cargando rentabilidad nominal vs real…</p>
 </section>

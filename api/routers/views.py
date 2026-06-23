@@ -101,6 +101,23 @@ def eeff_table(
     })
 
 
+# Partidas de flujo/resultado (acumuladas en el año): se desacumulan y se muestran en
+# valores del período (no base 100, que distorsiona income con signos/ceros).
+_FLOW_PARTIDAS = {"Ganancia (pérdida)", "Ganancia bruta", "Costo de ventas",
+                  "Ingresos de actividades ordinarias"}
+
+
+def _deaccumulate(pts: list) -> list:
+    """Desacumula intra-anual: valor = acumulado - acumulado del período previo del mismo año."""
+    out, prev_by_year = [], {}
+    for p in pts:
+        year = p["period"][:4]
+        v = p["value"] - prev_by_year[year] if year in prev_by_year else p["value"]
+        out.append({"period": p["period"], "value": v})
+        prev_by_year[year] = p["value"]
+    return out
+
+
 @router.get("/eeff/serie")
 def eeff_serie(
     request: Request,
@@ -117,17 +134,10 @@ def eeff_serie(
     series = [{"period": str(int(r["period"])), "value": r["value"]}
               for _, r in df.iterrows()]
 
-    if delta and series:
-        # Desacumular: dentro de un mismo año, valor = acumulado - acumulado del período previo.
-        out, prev_by_year = [], {}
-        for p in series:
-            year = p["period"][:4]
-            val = p["value"] - prev_by_year[year] if year in prev_by_year else p["value"]
-            out.append({"period": p["period"], "value": val})
-            prev_by_year[year] = p["value"]
-        series = out
+    if (delta or account in _FLOW_PARTIDAS) and series:
+        series = _deaccumulate(series)
 
-    suffix = " (variación intra-anual)" if delta else ""
+    suffix = " (variación intra-anual)" if (delta or account in _FLOW_PARTIDAS) else ""
     return templates.TemplateResponse(request, "partials/eeff_serie.html", {
         "series": series, "account": (account + suffix) if account else account,
     })
@@ -155,52 +165,74 @@ def banca_table(
     db: Database = Depends(get_db),
 ):
     """Fragmento HTMX: balance o resultados de un banco con desglose por moneda."""
+    period_int = int(period) if period else None
+    
+    # Calcular los 12 períodos (el actual y 11 anteriores)
+    periods = []
+    if period_int:
+        y = period_int // 100
+        m = period_int % 100
+        for _ in range(12):
+            periods.append(y * 100 + m)
+            m -= 1
+            if m == 0:
+                m = 12
+                y -= 1
+                
     df = db.query_bank_statements(
-        bank_code=bank, period=int(period) if period else None,
-        report_type=report_type, limit=2000,
+        bank_code=bank, periods=periods if periods else None,
+        report_type=report_type, limit=50000,
     )
     meta, rows, graph_accounts = None, [], []
+    history_periods = []
+    
     if not df.empty:
-        first = df.iloc[0]
-        meta = {
-            "bank_name": str(first["bank_name"]),
-            "bank_code": str(first["bank_code"]),
-            "period": int(first["period"]),
-        }
-        rows = records(df)
-        graph_accounts = db.get_bank_graphable_accounts(bank, report_type)
+        df_base = df[df["period"] == period_int] if period_int else df
+        if not df_base.empty:
+            first = df_base.iloc[0]
+            meta = {
+                "bank_name": str(first["bank_name"]),
+                "bank_code": str(first["bank_code"]),
+                "period": int(first["period"]),
+            }
+            from api.eeff_format import is_total_account
+            
+            history_periods = periods[1:] if periods else []
+            
+            hist_dict = {}
+            for _, r in df.iterrows():
+                hist_dict[(str(r["account_code"]), int(r["period"]))] = r["val_total"]
+                
+            raw_rows = records(df_base)
+            for r in raw_rows:
+                r["is_total"] = is_total_account(r["account_name"])
+                code = str(r["account_code"])
+                r["history"] = [hist_dict.get((code, p), None) for p in history_periods]
+                
+            rows = raw_rows
+            graph_accounts = db.get_bank_graphable_accounts(bank, report_type)
+            
     return templates.TemplateResponse(request, "partials/banca_table.html", {
         "meta": meta, "rows": rows, "report_type": report_type, "graph_accounts": graph_accounts,
+        "history_periods": history_periods,
     })
 
 
 @router.get("/comparar")
 def comparar(request: Request, db: Database = Depends(get_db)):
     """Vista de comparación: misma partida en varias empresas (base 100)."""
+    from api.company_profiles import get_all_sectors
     return templates.TemplateResponse(request, "compare.html", {
         "companies": records(db.get_cmf_companies()),
         "partidas": [
             "Total de activos", "Total de patrimonio", "Total de pasivos",
             "Ganancia (pérdida)", "Ganancia bruta", "Costo de ventas",
         ],
+        "sectors": get_all_sectors(),
     })
 
 
-# Partidas de flujo/resultado (acumuladas en el año): se desacumulan y se muestran en
-# valores del período (no base 100, que distorsiona income con signos/ceros).
-_FLOW_PARTIDAS = {"Ganancia (pérdida)", "Ganancia bruta", "Costo de ventas",
-                  "Ingresos de actividades ordinarias"}
 
-
-def _deaccumulate(pts: list) -> list:
-    """Desacumula intra-anual: valor = acumulado - acumulado del período previo del mismo año."""
-    out, prev_by_year = [], {}
-    for p in pts:
-        year = p["period"][:4]
-        v = p["value"] - prev_by_year[year] if year in prev_by_year else p["value"]
-        out.append({"period": p["period"], "value": v})
-        prev_by_year[year] = p["value"]
-    return out
 
 
 @router.get("/comparar/chart")
@@ -208,18 +240,29 @@ def comparar_chart(
     request: Request,
     account: str = Query(""),
     c1: str = Query(""), c2: str = Query(""), c3: str = Query(""),
+    sector: str = Query(""),
     db: Database = Depends(get_db),
 ):
-    """Fragmento HTMX: overlay de una misma partida en varias empresas."""
+    """Fragmento HTMX: overlay de una misma partida en varias empresas, o Top 5 de un sector."""
     if not account.strip():
         return templates.TemplateResponse(request, "partials/compare_chart.html",
                                           {"multi": None, "account": None, "mode": None})
     is_flow = account in _FLOW_PARTIDAS
     multi = []
-    for name in (c1, c2, c3):
-        name = name.strip()
-        if not name:
-            continue
+    
+    names_to_compare = []
+    if sector:
+        from api.company_profiles import get_profile
+        all_comps = db.get_cmf_companies()
+        for _, row in all_comps.iterrows():
+            if get_profile(row["rut"], row["company_name"])["macro_sector"] == sector:
+                names_to_compare.append(str(row["company_name"]))
+                if len(names_to_compare) >= 5:
+                    break
+    else:
+        names_to_compare = [n for n in (c1, c2, c3) if n.strip()]
+
+    for name in names_to_compare:
         match = db.query_cmf_statements(company=name, limit=1)
         if match.empty:
             continue
@@ -274,8 +317,10 @@ _RATIO_LABELS = {
 @router.get("/ranking")
 def ranking(request: Request, db: Database = Depends(get_db)):
     """Vista de ranking de empresas por indicador financiero."""
+    from api.company_profiles import get_all_sectors
     return templates.TemplateResponse(request, "ranking.html", {
         "periods": db.get_cmf_periods(), "ratios": _RATIO_LABELS,
+        "sectors": get_all_sectors(),
     })
 
 
@@ -284,12 +329,14 @@ def ranking_table(
     request: Request,
     metric: str = Query("roe"),
     period: Optional[str] = Query(None),
+    sector: Optional[str] = Query(None),
     db: Database = Depends(get_db),
 ):
     """Fragmento HTMX: top empresas por un ratio en un período."""
     periods = db.get_cmf_periods()
     period_int = int(period) if period else (periods[0] if periods else None)
-    rows = db.get_ratios_ranking(period_int, metric, 15) if period_int else []
+    sec = sector.strip() if sector else None
+    rows = db.get_ratios_ranking(period_int, metric, 15, sec) if period_int else []
     return templates.TemplateResponse(request, "partials/ranking_table.html", {
         "rows": rows, "metric_label": _RATIO_LABELS.get(metric, metric),
         "period": period_int, "is_pct": metric not in ("liquidez", "endeudamiento"),
@@ -486,6 +533,7 @@ def afp_cartera(request: Request, fund: str = Query("A"), db: Database = Depends
                                           {"rows": [], "period": None, "fund": fund})
     period = periods[0]
     df = db.get_portfolio_composition(period, fund, "TOTAL", 12)
+    df_foreign = db.get_foreign_portfolio(period, fund, "TOTAL", 15)
 
     def clean(g: str) -> str:
         g = str(g).strip()
@@ -495,6 +543,129 @@ def afp_cartera(request: Request, fund: str = Query("A"), db: Database = Depends
 
     rows = [{"glosa": clean(r["instrument_glosa"]), "pct": float(r["porcentaje"])}
             for _, r in df.iterrows()]
+    foreign_rows = [{"glosa": clean(r["instrument_glosa"]), "pct": float(r["porcentaje"])}
+                    for _, r in df_foreign.iterrows()]
+
     return templates.TemplateResponse(request, "partials/afp_cartera.html", {
-        "rows": rows, "period": period, "fund": fund,
+        "rows": rows, "foreign_rows": foreign_rows, "period": period, "fund": fund,
     })
+
+
+@router.get("/afp/comparativa")
+def afp_comparativa(request: Request, fund: str = Query("A"), db: Database = Depends(get_db)):
+    """Fragmento HTMX: tabla comparativa detallada por AFP para un fondo."""
+    import datetime as dt
+    since = (dt.date.today() - dt.timedelta(days=365)).isoformat()
+    
+    # Obtener listado para el fondo seleccionado (si es TODOS, la query mezclará, así que iteramos)
+    target_funds = ["A", "B", "C", "D", "E"] if fund == "TODOS" else [fund]
+    afps = db.get_afp_list()
+    
+    results = []
+    
+    for f in target_funds:
+        df = db.query_sp_quota_values(fund=f, from_date=since, limit=20000)
+        if df.empty:
+            continue
+            
+        df = df.sort_values("date")
+        
+        # Filtrar solo último día para patrimonio
+        last_date = df["date"].max()
+        df_last = df[df["date"] == last_date]
+        total_equity = df_last["equity_value"].sum()
+        
+        for a in afps:
+            df_afp = df[df["afp_name"] == a]
+            if df_afp.empty:
+                continue
+                
+            latest = df_afp.iloc[-1]
+            earliest = df_afp.iloc[0]
+            
+            c_latest = latest["quota_value"]
+            c_earliest = earliest["quota_value"]
+            eq = latest["equity_value"]
+            
+            ret_12m = ((c_latest / c_earliest) - 1) * 100 if c_latest and c_earliest else None
+            share = (eq / total_equity) * 100 if eq and total_equity else None
+            
+            # Formatear
+            results.append({
+                "afp": a,
+                "fund": f,
+                "rentabilidad": ret_12m,
+                "cuota": c_latest,
+                "patrimonio": eq,
+                "share": share
+            })
+            
+    # Si se seleccionó "TODOS", agrupar por AFP sumando patrimonio y promediando rentabilidad?
+    # Mejor mostrarlo tal cual o dejarlo claro que es una vista combinada.
+    # Por simplicidad, lo ordenaremos por Rentabilidad descendente
+    results.sort(key=lambda x: x["rentabilidad"] or -999, reverse=True)
+    
+    return templates.TemplateResponse(request, "partials/afp_comparativa.html", {
+        "results": results, "fund": fund
+    })
+
+
+@router.get("/salud")
+def salud(request: Request, db: Database = Depends(get_db)):
+    """Vista principal de Salud Financiera (Radar de anomalías)."""
+    from api.company_profiles import get_all_sectors
+    return templates.TemplateResponse(request, "salud.html", {
+        "periods": db.get_cmf_periods(),
+        "sectors": get_all_sectors(),
+    })
+
+
+@router.get("/salud/chart")
+def salud_chart(
+    request: Request,
+    period: Optional[str] = Query(None),
+    sector: Optional[str] = Query(None),
+    db: Database = Depends(get_db),
+):
+    """Fragmento HTMX: datos para scatter plot de riesgo vs rentabilidad."""
+    periods = db.get_cmf_periods()
+    period_int = int(period) if period else (periods[0] if periods else None)
+    
+    if not period_int:
+        return templates.TemplateResponse(request, "partials/salud_chart.html", {"data": []})
+        
+    df = db.query_cmf_statements(period=period_int, limit=10**9)
+    if df.empty:
+        return templates.TemplateResponse(request, "partials/salud_chart.html", {"data": []})
+
+    from api.company_profiles import get_profile
+    sec = sector.strip() if sector else None
+    data = []
+    
+    from db.database import compute_ratios
+    for rut, sub in df.groupby("rut", sort=False):
+        cname = str(sub.iloc[0]["company_name"])
+        if sec:
+            prof = get_profile(rut, cname)
+            if prof["macro_sector"] != sec:
+                continue
+                
+        r = compute_ratios(sub)
+        if not r or r.get("roe") is None or r.get("endeudamiento") is None or r.get("liquidez") is None:
+            continue
+            
+        roe = r["roe"]
+        deuda = r["endeudamiento"]
+        liquidez = r["liquidez"]
+        
+        if abs(roe) > 150 or deuda < 0 or deuda > 20 or liquidez < 0 or liquidez > 100:
+            continue
+            
+        data.append({
+            "name": cname,
+            "roe": roe,
+            "deuda": deuda,
+            "liquidez": liquidez
+        })
+        
+    return templates.TemplateResponse(request, "partials/salud_chart.html", {"data": data})

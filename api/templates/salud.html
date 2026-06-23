@@ -1,24 +1,16 @@
 {% extends "base.html" %}
 
-{% block title %}Ranking · INF_FIN_IA{% endblock %}
+{% block title %}Salud Financiera · INF_FIN_IA{% endblock %}
 
 {% block content %}
-<h1>Ranking de empresas por indicador</h1>
-<p class="subtitle">Top 15 empresas (CMF) por un ratio financiero en un período</p>
+<h1>Salud Financiera (Mix de Indicadores)</h1>
+<p class="subtitle">Gráfico de dispersión para detectar unicornios y empresas en riesgo.</p>
 
 <form class="eeff-form"
-      hx-get="/ranking/table"
-      hx-target="#ranking-result"
+      hx-get="/salud/chart"
+      hx-target="#salud-result"
       hx-trigger="load, change"
       hx-swap="innerHTML">
-
-    <label>Indicador
-        <select name="metric">
-            {% for k, v in ratios.items() %}
-            <option value="{{ k }}">{{ v }}</option>
-            {% endfor %}
-        </select>
-    </label>
 
     <label>Período
         <select name="period">
@@ -38,7 +30,7 @@
     </label>
 </form>
 
-<section id="ranking-result">
-    <p class="loading">Calculando ranking…</p>
+<section id="salud-result" style="margin-top: 2rem;">
+    <p class="loading">Cargando matriz de riesgo vs rentabilidad…</p>
 </section>
 {% endblock %}

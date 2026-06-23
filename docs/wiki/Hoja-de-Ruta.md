@@ -28,22 +28,22 @@
 ## 2. Decisiones y mejoras pendientes (feedback junio 2026)
 
 ### En curso (este lote)
-- [ ] **Quitar estados no estándar de la vista**: dejar solo **ESF C/NC** (balance), **ERFG** (resultados por función), **ERI** (resultado integral) y **EFMD** (flujo, método directo). Eliminar **ESF OL** (orden de liquidez), **ERNG** (resultados por naturaleza) y **EFMI** (flujo indirecto).
-- [ ] **Unificar EEFF + Evolución en una sola pestaña** (ver "harto", no poco): la vista de empresa muestra reseña + ratios + matriz evolutiva de cada estado.
-- [ ] **Comparativo por partida**: (a) **etiquetar** las series (en el gráfico no queda claro cuál es cuál); (b) **desacumular** las partidas de resultado/flujo (el caso BBVA AM se veía plano por mostrar acumulado).
-- [ ] **EFE sin totalizadores**: revisar/exponer los subtotales del flujo de efectivo (operación/inversión/financiación).
+- [x] **Quitar estados no estándar de la vista**: dejar solo **ESF C/NC** (balance), **ERFG** (resultados por función), **ERI** (resultado integral) y **EFMD** (flujo, método directo). Eliminar **ESF OL** (orden de liquidez), **ERNG** (resultados por naturaleza) y **EFMI** (flujo indirecto).
+- [x] **Unificar EEFF + Evolución en una sola pestaña** (ver "harto", no poco): la vista de empresa muestra reseña + ratios + matriz evolutiva de cada estado.
+- [x] **Comparativo por partida**: (a) **etiquetar** las series (en el gráfico no queda claro cuál es cuál); (b) **desacumular** las partidas de resultado/flujo (el caso BBVA AM se veía plano por mostrar acumulado).
+- [x] **EFE sin totalizadores**: revisar/exponer los subtotales del flujo de efectivo (operación/inversión/financiación).
 
 ### Próximo (perfeccionar comparativo y análisis)
-- [ ] **Clusterizar empresas por sector/actividad** para comparaciones por grupo (además de comparación libre). Aprovechar las reseñas/tipos.
-- [ ] **Mix de indicadores**: combos que deben mirarse en conjunto (p. ej. ROE + deuda/patrimonio + liquidez) para detectar anomalías, "unicornios" y empresas en riesgo.
-- [ ] **Ranking**: más indicadores y vistas combinadas (el ranking ya permite ver anomalías y apalancamiento).
+- [x] **Clusterizar empresas por sector/actividad** para comparaciones por grupo (además de comparación libre). Aprovechar las reseñas/tipos.
+- [x] **Mix de indicadores**: combos que deben mirarse en conjunto (p. ej. ROE + deuda/patrimonio + liquidez) para detectar anomalías, "unicornios" y empresas en riesgo. (Añadido Radar de Salud).
+- [x] **Ranking**: más indicadores y vistas combinadas (agregado filtrado sectorial en la vista actual).
 
 ### Banca
 - [ ] **Vista evolutiva de bancos** (otra pestaña): cuentas × meses. Conservar el **desglose por moneda de la CMF**; a futuro, balances en moneda extranjera para inversionistas FX.
 
 ### AFP
-- [ ] **Comparar indicadores por AFP y fondo** (no solo cuota/patrimonio).
-- [ ] **Cartera**: evaluar **desagregar la porción extranjera** (¿el dato SP lo permite a futuro?).
+- [x] **Comparar indicadores por AFP y fondo** (no solo cuota/patrimonio).
+- [x] **Cartera**: evaluar **desagregar la porción extranjera** (¿el dato SP lo permite a futuro?).
 
 ### Fases mayores (6–8)
 - [ ] Proyecciones macro (ARIMA/VAR), detección de anomalías.
