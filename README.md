@@ -28,9 +28,9 @@ STORYTELLING (dashboard web, API REST, reportes Jules)
 | **4 — CMF: Bancos e Inst. Financieras** | ✅ Activa | Ingesta mensual de balances y resultados con desglose por moneda desde la API REST SBIFv3 |
 | **SP — Fondos de Pensiones** | ✅ Activa | Valores cuota diarios (desde 2008), carteras mensuales XML, cinta de precios diaria |
 | **5 — Calendarios y Alertas** | 🟡 Parcial | Catch-up por frescura: ingesta automática "al publicarse" (`main.py catchup`) |
-| **6 — Análisis y Proyecciones** | 🟡 Avanzada | Ratios financieros, comparación sectorial y radar de salud (Deuda vs ROE vs Liquidez); faltan proyecciones macro predictivas |
-| **7 — API + Dashboard** | 🟡 Avanzada | FastAPI + dashboard (panel, EEFF, comparar, salud, banca, AFP) — ver "Capa Web" |
-| **8 — Storytelling / Jules** | ⏳ Planificada | Reportes narrativos automáticos con LLM |
+| **6 — Análisis y Proyecciones** | ✅ Activa | Ratios, comparación sectorial, radar de salud **y proyecciones de EEFF en producción** (modelo híbrido estructural + SARIMAX, validado por backtest — ver "Capa Analítica") |
+| **7 — API + Dashboard** | 🟡 Avanzada | FastAPI + dashboard (panel, EEFF, comparar, salud, **proyecciones**, banca, AFP) — ver "Capa Web" |
+| **8 — Storytelling / Jules** | ⏳ Planificada | Reportes narrativos automáticos con LLM (la trayectoria estructural de la Fase 6 es su materia prima) |
 
 ---
 
@@ -251,6 +251,7 @@ Vistas disponibles:
 | `/comparar` | Compara una misma partida en hasta 3 empresas libres o superposición automática del Top 5 de un sector **+ tabla comparativa de ratios** |
 | `/ranking` | Top 15 empresas por un indicador (ROE, ROA, márgenes, liquidez, deuda) en un período, con **filtro por sector** |
 | `/salud` | Radar de Salud Financiera: gráfico de dispersión cruzando Riesgo (Deuda) vs Rentabilidad (ROE) y Liquidez, identificando unicornios y empresas en riesgo por sector |
+| `/proyecciones` | **Proyecciones de EEFF a 1–3 años** (ingresos y resultado neto): fan charts con bandas empíricas 80/95%, supuestos macro anclados a las encuestas EEE+EOF del BCCh y trayectoria estructural (activos → rotación → margen). Modelo híbrido validado por backtest |
 | `/banca` | Estados bancarios con desglose por moneda; gráfico de evolución de cualquier cuenta |
 | `/afp` | Evolución de fondos de pensiones: una AFP/un fondo, comparar fondos, comparar AFP; métrica valor cuota / patrimonio / participación de mercado; rentabilidad nominal vs real; composición de cartera |
 | `/docs` | Swagger de la API REST (`/api/...`) |
@@ -278,6 +279,41 @@ como job horario dentro del scheduler.
 
 ---
 
+## Capa Analítica (Fase 6) — Proyecciones macrofundadas
+
+**Principio metodológico**: los factores macro futuros **no se proyectan internamente**.
+Se anclan a las medianas de las dos encuestas oficiales del Banco Central — la
+**Encuesta de Expectativas Económicas** (EEE, economistas, mensual) y la **Encuesta de
+Operadores Financieros** (EOF, mercado, quincenal) — interpolando linealmente entre sus
+horizontes publicados (1 → 36 meses). Máxima defendibilidad: los insumos son consenso
+experto oficial; la mecánica es auditable a mano.
+
+**Modelo de producción** (`/proyecciones`): híbrido por horizonte, calibrado por backtest
+fuera de muestra (40 empresas × 8 orígenes, vintages honestos de encuestas):
+
+| Horizonte | Modelo | Por qué |
+|---|---|---|
+| 1er trimestre | SARIMAX(1,0,0)×(0,1,1,4) puro | El momentum de la propia serie manda a corto plazo |
+| 2° trimestre en adelante | **Estructural**: Δlog(activos operacionales) ← macro (panel con shrinkage empresa→sector→global) → ingresos vía rotación → resultado vía margen | Robustez muy superior (los errores no explotan) y coherencia económica |
+
+Las **bandas de confianza (80/95%) son empíricas**: cuantiles del error real medido en el
+backtest, reescalados por la volatilidad de cada empresa — no supuestos gaussianos.
+
+```powershell
+# Re-correr el backtest de modelos (resultados a scratch/, resumen en consola)
+.\.venv\Scripts\python.exe -m models.backtest --companies 40 --origins 8 --horizon 4
+```
+
+Módulos en `models/`: `macro_path.py` (senda EEE+EOF, con soporte de vintage `as_of` para
+backtesting), `structural.py` (cadena activos→productividad→resultados), `forecast.py`
+(SARIMAX), `hybrid.py` (empalme de producción + bandas empíricas), `backtest.py` (arnés
+rolling-origin). Metodología y resultados: **`docs/wiki/Backtest-Modelos.md`**.
+
+> Hallazgo clave del backtest: usar el macro como exógena de flujos trimestrales EMPEORA
+> las proyecciones; el macro solo aporta en la ecuación de activos (stocks). No reintroducir.
+
+---
+
 ## Estructura del proyecto
 
 ```
@@ -299,9 +335,16 @@ INF_FIN_IA/
 ├── scheduler/
 │   ├── jobs.py              # ✅ APScheduler: daily/monthly/quarterly/annual + catch-up
 │   └── freshness.py         # ✅ Sondas de frescura (ingesta "al publicarse")
+├── models/                  # ✅ Fase 6: proyecciones macrofundadas
+│   ├── macro_path.py        #    senda macro anclada a encuestas EEE+EOF (vintage as_of)
+│   ├── structural.py        #    activos operacionales ← macro → rotación → margen
+│   ├── forecast.py          #    SARIMAX trimestral (partidas ERFG desacumuladas)
+│   ├── hybrid.py            #    modelo de producción (empalme + bandas empíricas)
+│   └── backtest.py          #    arnés rolling-origin (python -m models.backtest)
 ├── config/
 │   ├── settings.py          # ✅ Configuración centralizada (pydantic-settings)
-│   └── series_catalog.yaml  # ✅ Catálogo de series a ingestar
+│   ├── series_catalog.yaml  # ✅ Catálogo de series a ingestar (macro + expectativas EEE/EOF)
+│   └── company_profiles.yaml# ✅ Reseñas y sectores de empresas (101 curadas + inferencia)
 ├── api/                     # ✅ FastAPI: routers /api/*, vistas HTML, templates Jinja2, static
 │   ├── main.py              #    app + lifespan (scheduler embebido opcional)
 │   ├── routers/             #    macro, cmf, banks, sp, dashboard_kpi, views
@@ -340,6 +383,11 @@ INF_FIN_IA/
 | **Fase 2: IVP** | Índice de Valor Promedio | `F073.IVP.PRE.Z.D` | Diario |
 | **Fase 2: UTM** | Unidad Tributaria Mensual | `F073.UTR.PRE.Z.M` | Mensual |
 | **Fase 2: IMACEC** | IMACEC mensual (Base 2018) | `F032.ICF.IND.Z.Z.EP18.Z.Z.0.M` | Mensual |
+
+Además, la **Fase 6** ingesta ~27 series de expectativas (prefijo `F089`): la **EEE**
+(medianas de IPC/TPM/TC/PIB/IMACEC en horizontes móviles + largo plazo, mensual) y la
+**EOF** (TPM/inflación/TC, quincenal). Categoría `expectativas` en el catálogo. Alimentan
+la senda macro de las proyecciones (`models/macro_path.py`).
 
 Para agregar más series, editar `config/series_catalog.yaml`.
 
@@ -467,11 +515,12 @@ Una vez que la base de datos tenga cobertura histórica, se incorporarán:
 
 | Capacidad | Descripción | Dependencias |
 |---|---|---|
-| **Proyecciones macro** | Modelos de proyección de variables macro (VAR, ARIMA, Kalman) usando los datos del BCCh | Fase 1–2 completas |
-| **Proyecciones de EEFF** | Proyecciones de estados financieros de empresas ancladas al escenario macro | Fase 3 completa |
-| **Ratios y comparación sectorial** | Cálculo automático de ROE, ROA, EV/EBITDA, Radar de Salud por empresa y sector | ✅ Operativa |
+| **Supuestos macro** | La senda de factores se ancla a las encuestas EEE+EOF del BCCh (no se proyecta macro propio) | ✅ Operativa |
+| **Proyecciones de EEFF** | Proyecciones de ingresos y resultado de empresas, modelo híbrido estructural + SARIMAX validado por backtest (`/proyecciones`) | ✅ Operativa |
+| **Ratios y comparación sectorial** | Cálculo automático de ROE, ROA, márgenes, Radar de Salud por empresa y sector | ✅ Operativa |
 | **Detección de anomalías** | Alertas visuales en Radar de Salud; falta detección estadística (Z-Score/Outliers ML) | 🟡 Parcial |
-| **Informes narrativos (Jules)** | Integración con el agente Jules para generación automática de reportes Word/PPT | Fase 6 |
+| **Ampliar proyecciones** | Más partidas (márgenes intermedios), rezagos post-M&A, backtest por sub-sector | ⏳ Siguiente |
+| **Informes narrativos (Jules)** | Reportes automáticos con LLM a partir de la trayectoria estructural | ⏳ Fase 8 |
 
 ---
 

@@ -11,8 +11,11 @@ lxml>=5.0.0
 # Database
 duckdb>=0.10.0
 
-# Modelos predictivos macrofundados (Fase 6) — SARIMAX con senda EEE
+# Modelos predictivos macrofundados (Fase 6) — SARIMAX + estructural
+# pandas/numpy son también transitivos (duckdb/statsmodels) pero models/ los usa directo
 statsmodels>=0.14.0
+pandas>=2.0.0
+numpy>=1.24.0
 
 # Scheduler
 APScheduler>=3.10.4

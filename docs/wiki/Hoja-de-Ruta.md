@@ -1,16 +1,16 @@
 # Hoja de Ruta (Roadmap)
 
-> Situación actual y plan. Última actualización: junio 2026 (rama `feature/web-api-skeleton`).
+> Situación actual y plan. Última actualización: julio 2026 (rama `feature/web-api-skeleton`).
 
 ---
 
 ## 1. Situación actual (lo que ya existe)
 
-### Datos (DuckDB, ~1,9M filas, ~130 MB)
-- **BCCh macro** (`observations`): 1975–2026, ~53k filas (PIB, IPC, TPM, UF, IVP, UTM, IMACEC, USD/CLP, cobre, etc.). Parser decimal corregido; datos validados.
+### Datos (DuckDB, ~3,06M filas, ~168 MB)
+- **BCCh macro** (`observations`): 1975–2026, ~59k filas (PIB, IPC, TPM, UF, IVP, UTM, IMACEC, USD/CLP, cobre, etc.) + **expectativas F089** (EEE mensual + EOF quincenal). Parser decimal corregido; datos validados.
 - **CMF empresas** (`cmf_financial_statements`): ~1,5M filas, **45 períodos (201503→202603)** = 10 cierres anuales + trimestres. Orden IFRS verificado.
-- **CMF bancos** (`cmf_bank_statements`): balances/resultados mensuales con desglose por moneda.
-- **SP pensiones**: cuotas (~207k, 2008+), precios (~96k), cartera (1 período: 2026-01).
+- **CMF bancos** (`cmf_bank_statements`): ~857k filas, balances/resultados mensuales con desglose por moneda.
+- **SP pensiones**: cuotas (~207k, 2008+), precios (~96k), **cartera (~341k, 133 meses 2015-01→2026-01)** con `section`/`row_order`.
 
 ### Capa web (FastAPI + Jinja2 + HTMX + Plotly) — `iniciar_web.bat` / `main.py serve`
 - **Panel** `/`: KPIs multi-fuente (PIB/IMACEC var, IPC, USD/CLP; top-5 bancos; rentabilidad 12m AFP + líder por rentabilidad y patrimonio; mercado) + gráficos UF y TPM.
@@ -18,7 +18,8 @@
 - **Evolución** `/evolucion`: matriz de un estado × períodos (cierres anuales 5/10, mismo trimestre 5/10 años, 8 trimestres).
 - **Comparar** `/comparar`: partida base 100 entre empresas + tabla de ratios.
 - **Ranking** `/ranking`: top empresas por indicador.
-- **Banca** `/banca`: estados con desglose por moneda + gráfico de cuenta.
+- **Proyecciones** `/proyecciones`: ingresos y resultado a 1–3 años (modelo híbrido estructural+SARIMAX), fan charts con bandas empíricas, supuestos macro EEE+EOF y trayectoria estructural.
+- **Banca** `/banca`: estados con desglose por moneda + gráfico de cuenta + evolución por moneda.
 - **AFP** `/afp`: evolución cuota/patrimonio/participación, comparar fondos/AFP, nominal vs real, cartera por categoría.
 - **Reseñas de empresas**: `config/company_profiles.yaml` (101 curadas) + inferencia por tipo (520) = 70% cobertura; sin info → nombre como placeholder.
 - Export estático (`web-preview`, `eeff-export`) en `preview/`.

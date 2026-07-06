@@ -10,13 +10,13 @@ Este sistema acumula datos financieros y macroeconómicos chilenos de forma cont
 
 | Página | Descripción |
 |--------|-------------|
-| **[Arquitectura-General](Arquitectura-General)** | Diseño del sistema, flujo de datos y stack tecnológico |
-| **[Fuentes-de-Datos](Fuentes-de-Datos)** | Detalles de cada origen de datos integrado (BCCh, CMF, SP, etc.) |
 | **[Integración-SP](Integracion-SP)** | Documentación técnica completa de la integración con la Superintendencia de Pensiones |
-| **[CLI-y-Comandos](CLI-y-Comandos)** | Referencia completa de todos los comandos disponibles |
-| **[Base-de-Datos](Base-de-Datos)** | Esquema DuckDB, tablas, ejemplos de consultas SQL |
+| **[Backtest-Modelos](Backtest-Modelos)** | Metodología, resultados y decisiones del backtest de las proyecciones de EEFF |
 | **[Hoja-de-Ruta](Hoja-de-Ruta)** | Roadmap de fases planificadas y estado actual |
 | **[Issues-Resueltos](Issues-Resueltos)** | Registro de problemas técnicos encontrados y resueltos |
+
+> La guía de usuario completa (instalación, CLI, capa web, esquema DuckDB) está en el
+> **[README](../../README.md)**; la guía de desarrollo (arquitectura, gotchas) en **[CLAUDE.md](../../CLAUDE.md)**.
 
 ---
 
@@ -24,29 +24,36 @@ Este sistema acumula datos financieros y macroeconómicos chilenos de forma cont
 
 | Fuente | Estado | Datos disponibles desde |
 |--------|--------|------------------------|
-| Banco Central de Chile (BCCh) | ✅ Activo | 1991 |
-| CMF — Empresas y Mercados | ✅ Activo | 2009 |
+| Banco Central de Chile (BCCh) | ✅ Activo | 1975 |
+| CMF — Empresas y Mercados | ✅ Activo | 2015 |
 | CMF — Bancos e Instituciones Financieras | ✅ Activo | 2020 |
-| **Superintendencia de Pensiones (SP)** | ✅ **Activo (nuevo)** | 2002 |
+| Superintendencia de Pensiones (SP) | ✅ Activo | 2002 (cuotas) · 2015 (cartera) |
+| Expectativas macro (EEE + EOF, BCCh) | ✅ Activo | 2001 |
 | Bolsa de Santiago | ⏳ Planificado | — |
+
+**Capa analítica**: proyecciones de EEFF en producción (`/proyecciones`) — ver
+[Backtest-Modelos](Backtest-Modelos).
 
 ---
 
 ## ⚡ Inicio rápido
 
+> Usar siempre el intérprete del entorno virtual del proyecto (`.\.venv\Scripts\python.exe`),
+> no una instalación global. En Windows, un clic en `iniciar_web.bat` prepara todo y levanta la web.
+
 ```powershell
 # Instalar dependencias
-C:\Users\mbrav\anaconda3\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
 
 # Configurar credenciales
 copy .env.example .env
 
 # Verificar conexiones
-C:\Users\mbrav\anaconda3\python.exe main.py status
+.\.venv\Scripts\python.exe main.py status
 
 # Descargar histórico cuotas AFP (desde 2002)
-C:\Users\mbrav\anaconda3\python.exe main.py fetch-sp-cuotas --year-start 2002
+.\.venv\Scripts\python.exe main.py fetch-sp-cuotas --year-start 2002
 
 # Iniciar scheduler automático
-C:\Users\mbrav\anaconda3\python.exe main.py run-scheduler
+.\.venv\Scripts\python.exe main.py run-scheduler
 ```
