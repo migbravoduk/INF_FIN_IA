@@ -591,11 +591,31 @@ def afp_cartera(request: Request, fund: str = Query("A"), db: Database = Depends
 
     rows = [{"glosa": clean(r["instrument_glosa"]), "pct": float(r["porcentaje"])}
             for _, r in df.iterrows()]
-    foreign_rows = [{"glosa": clean(r["instrument_glosa"]), "pct": float(r["porcentaje"])}
-                    for _, r in df_foreign.iterrows()]
+    # Nemotécnicos extranjeros traducidos con el glosario oficial SP
+    from api.sp_glossary import describe
+    foreign_rows = []
+    for _, r in df_foreign.iterrows():
+        g = describe(r["instrument_glosa"])
+        foreign_rows.append({"glosa": g["label"], "code": g["code"],
+                             "desc": g["desc"], "pct": float(r["porcentaje"])})
 
     return templates.TemplateResponse(request, "partials/afp_cartera.html", {
         "rows": rows, "foreign_rows": foreign_rows, "period": period, "fund": fund,
+    })
+
+
+@router.get("/afp/neta")
+def afp_neta(
+    request: Request,
+    fund: str = Query("C"),
+    salary: int = Query(1_000_000),
+    db: Database = Depends(get_db),
+):
+    """Fragmento HTMX: ranking de AFP por rentabilidad neta de comisiones (12m corridos)."""
+    salary = min(max(salary, 100_000), 10_000_000)
+    sim = db.get_afp_net_simulation(fund=fund, salary=float(salary), months=12)
+    return templates.TemplateResponse(request, "partials/afp_neta.html", {
+        "sim": sim, "fund": fund, "salary": salary,
     })
 
 

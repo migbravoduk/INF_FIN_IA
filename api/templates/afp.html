@@ -60,6 +60,19 @@
     <p class="loading">Cargando rentabilidad nominal vs real…</p>
 </section>
 
+<h2 style="font-size:1rem;color:var(--muted);margin-top:2rem">¿Qué AFP conviene? — neto de comisiones</h2>
+<form class="eeff-form" hx-get="/afp/neta" hx-target="#afp-neta" hx-trigger="load, change, keyup delay:600ms from:input" hx-swap="innerHTML">
+    <label>Fondo
+        <select name="fund">
+            {% for f in funds %}<option value="{{ f }}" {{ "selected" if f == "C" }}>{{ f }}</option>{% endfor %}
+        </select>
+    </label>
+    <label>Sueldo bruto mensual (CLP)
+        <input type="number" name="salary" value="1000000" min="100000" max="10000000" step="50000">
+    </label>
+</form>
+<div id="afp-neta"></div>
+
 <h2 style="font-size:1rem;color:var(--muted);margin-top:2rem">Cartera de inversión</h2>
 <form class="eeff-form" hx-get="/afp/cartera" hx-target="#afp-cartera" hx-trigger="load, change" hx-swap="innerHTML">
     <label>Fondo (cartera)

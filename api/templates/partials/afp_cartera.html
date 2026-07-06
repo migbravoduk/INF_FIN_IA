@@ -37,12 +37,15 @@
             Plotly.newPlot("afp-foreign-chart", [{
                 y: foreign_rows.map(function (r) { return r.glosa; }).reverse(),
                 x: foreign_rows.map(function (r) { return r.pct; }).reverse(),
+                customdata: foreign_rows.map(function (r) { return [r.code, r.desc]; }).reverse(),
+                hovertemplate: "<b>%{y}</b> (%{customdata[0]})<br>%{customdata[1]}<br>%{x:.2f}%<extra></extra>",
                 type: "bar", orientation: "h", marker: { color: "#38bdf8" }
             }], {
-                margin: { t: 10, r: 10, b: 30, l: 200 }, height: 340,
+                margin: { t: 10, r: 10, b: 30, l: 230 }, height: 380,
                 paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)",
                 font: { color: "#94a3b8" },
-                xaxis: { gridcolor: "#334155", ticksuffix: "%" }, yaxis: { gridcolor: "#334155" }
+                xaxis: { gridcolor: "#334155", ticksuffix: "%" },
+                yaxis: { gridcolor: "#334155", tickfont: { size: 10 } }
             }, { displayModeBar: false, responsive: true });
         }
     }
