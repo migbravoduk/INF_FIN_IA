@@ -51,13 +51,14 @@
   - [x] **Senda macro** (`models/macro_path.py`): historia efectiva + futuro interpolando anclajes EEE (1→36 meses), consistentes como exógenas.
   - [x] **Proyección EEFF** (`models/forecast.py`): SARIMAX(1,0,0)×(0,1,1,4) trimestral desacumulado con exógenas macro; ingresos + resultado neto, bandas 80/95%.
   - [x] **Vista `/proyecciones`**: fan charts + tabla de supuestos EEE + nota metodológica.
-  - [ ] Ampliar partidas (márgenes intermedios), backtesting fuera de muestra, y evaluar VARX/ML.
+  - [x] **Backtest fuera de muestra** (`models/backtest.py`, ver [Backtest-Modelos](Backtest-Modelos)): rolling-origin con vintage EEE. Veredicto: las exógenas macro EMPEORAN el SARIMAX de flujos; el aporte del modelo es solo a 1-2 trimestres. Motiva el rediseño estructural.
+  - [ ] **Modelo estructural (próximo)**: proyectar los activos productivos en función de factores macro y derivar resultados manteniendo las relaciones de productividad de activos (rotación/márgenes). Comparar con el mismo arnés de backtest.
 - [ ] Storytelling con LLM (Anthropic SDK + prompt caching) para explicar las proyecciones.
 
 ---
 
 ## 3. Backfills/datos pendientes
-- [ ] Cartera SP: solo 2026-01 cargado → backfill de meses para series de cartera.
+- [x] Cartera SP: backfill completo 2015-01 → 2026-01 (133 meses, ~341k filas, 132/132 disponibles en la SP, `section` resuelta en todos los años; el esquema pasó de 8 a 9 secciones en 2018 con los activos alternativos).
 - [ ] Precios SP: nivelado hasta ~2026-06 (tope de 10 días hábiles por corrida del catch-up).
 - [x] Bancos: historia mensual completa ingestada y disponible para las vistas evolutivas.
 

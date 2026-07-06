@@ -100,18 +100,28 @@ def build_history(db) -> pd.DataFrame:
     return hist
 
 
-def build_future(db, horizon_months: int = 24) -> tuple[pd.DataFrame, pd.Timestamp, dict]:
+def build_future(db, horizon_months: int = 24,
+                 as_of: pd.Timestamp | str | None = None) -> tuple[pd.DataFrame, pd.Timestamp, dict]:
     """
     Senda futura mensual interpolando los anclajes EEE de la última encuesta.
+    `as_of` (vintage): usar solo observaciones disponibles hasta esa fecha — permite
+    reconstruir la senda "tal como se veía" en un mes pasado (backtesting honesto).
     Devuelve (df_future, mes_encuesta, anclajes_usados).
     """
     conn = db.conn
+    cutoff = pd.Timestamp(as_of).date().isoformat() if as_of is not None else None
 
     def latest(series_id: str):
-        row = conn.execute(
-            "SELECT date, value FROM observations WHERE series_id = ? "
-            "ORDER BY date DESC LIMIT 1", [series_id]
-        ).fetchone()
+        if cutoff is None:
+            row = conn.execute(
+                "SELECT date, value FROM observations WHERE series_id = ? "
+                "ORDER BY date DESC LIMIT 1", [series_id]
+            ).fetchone()
+        else:
+            row = conn.execute(
+                "SELECT date, value FROM observations WHERE series_id = ? AND date <= ? "
+                "ORDER BY date DESC LIMIT 1", [series_id, cutoff]
+            ).fetchone()
         return (pd.Timestamp(row[0]), float(row[1])) if row else (None, None)
 
     # Mes de la encuesta: el más reciente entre los anclajes de horizonte corto
@@ -164,10 +174,17 @@ def build_future(db, horizon_months: int = 24) -> tuple[pd.DataFrame, pd.Timesta
     return future, survey_month, used_anchors
 
 
-def build_macro_path(db, horizon_months: int = 24) -> MacroPath:
-    """Construye historia + senda futura consistentes para los modelos."""
+def build_macro_path(db, horizon_months: int = 24,
+                     as_of: pd.Timestamp | str | None = None) -> MacroPath:
+    """
+    Construye historia + senda futura consistentes para los modelos.
+    Con `as_of`, tanto la historia como los anclajes EEE se truncan a esa fecha
+    (vintage: la foto que un analista habría tenido en ese momento).
+    """
     history = build_history(db)
-    future, survey_month, anchors = build_future(db, horizon_months)
+    if as_of is not None:
+        history = history[history.index <= pd.Timestamp(as_of)]
+    future, survey_month, anchors = build_future(db, horizon_months, as_of=as_of)
     # La historia no debe traslapar la senda futura
     history = history[history.index < future.index.min()]
     return MacroPath(history=history, future=future,
