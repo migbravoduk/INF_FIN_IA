@@ -35,19 +35,28 @@ HIST_SERIES = {
     "act_idx": "F032.ICF.IND.Z.Z.EP18.Z.Z.0.M",  # IMACEC índice -> var 12m
 }
 
-# --- Anclajes EEE: variable -> [(horizonte_en_meses, series_id)] ---
-# El horizonte es relativo al mes de la encuesta. "LP" (largo plazo) se ancla a 36m.
+# --- Anclajes de encuestas: variable -> [(horizonte_en_meses, series_id)] ---
+# Doble anclaje oficial del BCCh: EEE (economistas, mensual) + EOF (operadores
+# financieros / mercado, quincenal). NO se proyecta ningún factor macro propio:
+# la senda solo interpola linealmente entre las medianas publicadas. El horizonte
+# es relativo al mes de la encuesta; "LP" (largo plazo) se ancla a 36m.
+# (F089.EOF.TC.7MA está descontinuada desde 2018 — no usar.)
 LP_MONTH = 36
 EEE_ANCHORS = {
     "ipc_yoy": [(11, "F089.IPC.V12.14.M"), (23, "F089.IPC.V12.15.M"),
-                (LP_MONTH, "F089.IPC.V12.LP.M")],
+                (LP_MONTH, "F089.IPC.V12.LP.M"),
+                (12, "F089.EOF.VII.12MS.D"), (24, "F089.EOF.VII.S12M.D")],
     "tpm": [(0, "F089.TPM.TAS.11.M"), (5, "F089.TPM.TAS.26.M"),
             (11, "F089.TPM.TAS.14.M"), (17, "F089.TPM.TAS.30.M"),
-            (23, "F089.TPM.TAS.15.M"), (LP_MONTH, "F089.TPM.TAS.LP.M")],
+            (23, "F089.TPM.TAS.15.M"), (LP_MONTH, "F089.TPM.TAS.LP.M"),
+            (1, "F089.EOF.TPM.MA.D"), (3, "F089.EOF.TPM.3MS.D"),
+            (6, "F089.EOF.TPM.6MS.D"), (12, "F089.EOF.TPM.12MS.D"),
+            (24, "F089.EOF.TPM.24MS.D")],
     # OJO: F089.TCN.V12.LP.M NO es un nivel sino la variación 12m de largo plazo (%);
     # se usa como pendiente de extensión más allá del anclaje de 23 meses.
     "tc": [(2, "F089.TCN.PRE.13.M"), (11, "F089.TCN.PRE.14.M"),
-           (23, "F089.TCN.PRE.15.M")],
+           (23, "F089.TCN.PRE.15.M"),
+           (1, "F089.EOF.TC.28DA.D")],
     "act_yoy": [(0, "F089.PIB.V12.33.M"), (LP_MONTH, "F089.PIB.V12.LP.M")],
 }
 TC_LP_VAR_SERIES = "F089.TCN.V12.LP.M"  # % anual, pendiente del TC tras 23m
@@ -124,11 +133,14 @@ def build_future(db, horizon_months: int = 24,
             ).fetchone()
         return (pd.Timestamp(row[0]), float(row[1])) if row else (None, None)
 
-    # Mes de la encuesta: el más reciente entre los anclajes de horizonte corto
+    # Mes de la encuesta vigente: el más reciente entre EEE y EOF (la EOF es
+    # quincenal, así que entre publicaciones de la EEE suele ser la más fresca).
+    # Normalizado a inicio de mes para que la malla mensual quede alineada.
     survey_month = max(
-        d for d, _ in (latest("F089.TPM.TAS.11.M"), latest("F089.IPC.V12.14.M"))
+        d for d, _ in (latest("F089.TPM.TAS.11.M"), latest("F089.IPC.V12.14.M"),
+                       latest("F089.EOF.TPM.MA.D"))
         if d is not None
-    )
+    ).to_period("M").to_timestamp()
 
     idx = pd.date_range(survey_month + pd.DateOffset(months=1),
                         periods=horizon_months, freq="MS")
@@ -150,6 +162,12 @@ def build_future(db, horizon_months: int = 24,
         if not pts:
             logger.warning("Sin anclajes vigentes para %s; senda vacía", var)
             continue
+        # Ordenar por horizonte (EEE y EOF se intercalan) y promediar si dos
+        # encuestas anclan exactamente el mismo mes.
+        agg: dict[int, list[float]] = {}
+        for off, v in pts:
+            agg.setdefault(off, []).append(v)
+        pts = sorted((off, float(np.mean(vs))) for off, vs in agg.items())
         used_anchors[var] = pts
 
         offsets = np.array([p[0] for p in pts], dtype=float)

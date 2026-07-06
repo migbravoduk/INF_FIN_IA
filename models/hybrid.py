@@ -28,17 +28,18 @@ from models.structural import (estimate_asset_model, forecast_structural,
 
 logger = logging.getLogger(__name__)
 
-# Cuantiles de |error|/escala por (partida, h) — backtest jul-2026 (hibrido:
-# noexog en h=1, estr_last en h>=2). Para h>4 se usa el valor de h=4.
+# Cuantiles de |error|/escala por (partida, h) — backtest jul-2026 con anclaje
+# dual EEE+EOF (hibrido: noexog en h=1, estr_last en h>=2). Para h>4 se usa el
+# valor de h=4. Regenerar si cambian los specs o los anclajes de la senda.
 BAND_QUANTILES = {
     ("Ingresos de actividades ordinarias", 1): (1.258, 3.349),
-    ("Ingresos de actividades ordinarias", 2): (1.670, 3.888),
-    ("Ingresos de actividades ordinarias", 3): (1.812, 4.244),
-    ("Ingresos de actividades ordinarias", 4): (1.877, 5.404),
+    ("Ingresos de actividades ordinarias", 2): (1.675, 3.816),
+    ("Ingresos de actividades ordinarias", 3): (1.781, 4.244),
+    ("Ingresos de actividades ordinarias", 4): (1.889, 5.395),
     ("Ganancia (pérdida)", 1): (1.877, 3.743),
-    ("Ganancia (pérdida)", 2): (2.313, 3.949),
-    ("Ganancia (pérdida)", 3): (2.507, 4.219),
-    ("Ganancia (pérdida)", 4): (2.407, 4.403),
+    ("Ganancia (pérdida)", 2): (2.310, 3.951),
+    ("Ganancia (pérdida)", 3): (2.504, 4.221),
+    ("Ganancia (pérdida)", 4): (2.411, 4.402),
 }
 _STRUCT_KEY = {"Ingresos de actividades ordinarias": "ingresos",
                "Ganancia (pérdida)": "ganancia"}

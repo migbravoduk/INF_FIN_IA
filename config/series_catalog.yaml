@@ -277,3 +277,67 @@ bcentral:
     unit: porcentaje
     publish_lag_days: 12
     description: Expectativa de variación del IMACEC del mes anterior (nowcast, mediana EEE)
+
+  # --- Encuesta de Operadores Financieros (EOF, quincenal — visión de mercado) ---
+  - id: F089.EOF.TPM.MA.D
+    name: EOF TPM próxima RPM
+    category: expectativas
+    frequency: daily
+    unit: porcentaje_anual
+    description: Expectativa de TPM en la próxima RPM (mediana EOF, quincenal)
+
+  - id: F089.EOF.TPM.3MS.D
+    name: EOF TPM 3 meses (2 reuniones)
+    category: expectativas
+    frequency: daily
+    unit: porcentaje_anual
+    description: Expectativa de TPM a 2 reuniones / 3 meses (mediana EOF)
+
+  - id: F089.EOF.TPM.6MS.D
+    name: EOF TPM 6 meses (4 reuniones)
+    category: expectativas
+    frequency: daily
+    unit: porcentaje_anual
+    description: Expectativa de TPM a 4 reuniones / 6 meses (mediana EOF)
+
+  - id: F089.EOF.TPM.12MS.D
+    name: EOF TPM 12 meses
+    category: expectativas
+    frequency: daily
+    unit: porcentaje_anual
+    description: Expectativa de TPM a 12 meses (mediana EOF)
+
+  - id: F089.EOF.TPM.24MS.D
+    name: EOF TPM 24 meses
+    category: expectativas
+    frequency: daily
+    unit: porcentaje_anual
+    description: Expectativa de TPM a 24 meses (mediana EOF)
+
+  - id: F089.EOF.VII.12MS.D
+    name: EOF Inflación 12 meses (var. IPC)
+    category: expectativas
+    frequency: daily
+    unit: porcentaje
+    description: Expectativa de inflación siguientes 12 meses (mediana EOF)
+
+  - id: F089.EOF.VII.S12M.D
+    name: EOF Inflación 13-24 meses (var. IPC)
+    category: expectativas
+    frequency: daily
+    unit: porcentaje
+    description: Expectativa de inflación de los 12 meses subsiguientes (mediana EOF)
+
+  - id: F089.EOF.TC.28DA.D
+    name: EOF Tipo de cambio 28 días
+    category: expectativas
+    frequency: daily
+    unit: CLP_por_USD
+    description: Expectativa del tipo de cambio a 28 días (mediana EOF)
+
+  - id: F089.EOF.TC.7MA.D
+    name: EOF Tipo de cambio 3 meses
+    category: expectativas
+    frequency: daily
+    unit: CLP_por_USD
+    description: Expectativa del tipo de cambio a 3 meses (mediana EOF)

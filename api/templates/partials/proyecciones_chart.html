@@ -23,7 +23,7 @@
 {% endfor %}
 
 <div class="eeff-group table-scroll" style="margin-top:2rem">
-    <h4>Supuestos macro (senda EEE — medianas de la encuesta)</h4>
+    <h4>Supuestos macro (anclados en las encuestas EEE + EOF del BCCh)</h4>
     <table class="bank-table">
         <thead>
             <tr>
@@ -80,8 +80,11 @@
         (momentum de la propia serie); del segundo en adelante manda el modelo
         <strong>estructural</strong>: los activos operacionales (PP&amp;E + inventarios +
         deudores) se proyectan según factores macro —con elasticidades estimadas en panel
-        sectorial ancladas a la senda esperada de la <strong>Encuesta de Expectativas
-        Económicas</strong> del BCCh— y los resultados se derivan manteniendo las
+        sectorial—. Los factores macro futuros <strong>no se proyectan</strong>: se anclan
+        a las medianas de las dos encuestas oficiales del BCCh —la <strong>Encuesta de
+        Expectativas Económicas</strong> (economistas, mensual) y la <strong>Encuesta de
+        Operadores Financieros</strong> (mercado, quincenal)— interpolando linealmente
+        entre sus horizontes publicados. Los resultados se derivan manteniendo las
         relaciones de productividad de activos (rotación y margen, con reversión suave a
         la media histórica). Las bandas del 80% y 95% son <strong>empíricas</strong>:
         cuantiles del error real medido en el backtest, reescalados por la volatilidad de

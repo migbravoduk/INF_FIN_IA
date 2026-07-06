@@ -7,9 +7,12 @@
 
 - **Rolling origin**: para cada origen T (8 trimestres, re-ajuste en cada uno), el modelo
   solo ve datos hasta T y proyecta h = 1..4 trimestres.
-- **Vintage EEE honesto**: las exógenas futuras usan la senda de expectativas tal como se
-  veía ~2 meses después del cierre de T (`build_macro_path(as_of=...)`) — la encuesta que
-  un analista tenía cuando el EEFF de T recién se publicaba. Sin fuga de información.
+- **Vintage de encuestas honesto**: las exógenas futuras usan la senda de expectativas tal
+  como se veía ~2 meses después del cierre de T (`build_macro_path(as_of=...)`) — las
+  encuestas que un analista tenía cuando el EEFF de T recién se publicaba. Sin fuga de
+  información. Desde jul-2026 la senda ancla en **EEE + EOF** (doble encuesta oficial del
+  BCCh; ningún factor macro se proyecta internamente — solo se interpola entre medianas
+  publicadas).
 - **Universo**: 40 empresas de mayor materialidad (mediana |ingresos|) con historia
   suficiente; partidas ERFG desacumuladas (ingresos y ganancia neta).
 - **Métrica**: MASE — |error| / media|y_t − y_{t−4}| del entrenamiento. Escala-libre
@@ -88,5 +91,15 @@ spec de todos (mediana 0.886).
   reescalados por la volatilidad de cada empresa (`BAND_QUANTILES` en hybrid.py —
   regenerar si se re-corre el backtest con specs nuevos).
 
-Detalle completo de las corridas: `scratch/backtest_results.csv` y
-`scratch/backtest_ab.csv` (no versionados).
+## Ronda 3: anclaje dual EEE + EOF (jul-2026)
+
+Se añadieron los anclajes de la **Encuesta de Operadores Financieros** (EOF,
+quincenal, visión de mercado) a la senda: TPM (RPM/3m/6m/12m/24m), inflación
+(12m/13-24m) y TC (28d). Re-corrida completa del A/B: el veredicto se mantiene y
+los specs estructurales **mejoran levemente en todas las celdas** (Δ mediana hasta
+−0.015; `estr_last` a 4T queda en 0.773). `BAND_QUANTILES` de hybrid.py
+actualizados a esta corrida. Nota: `F089.EOF.TC.7MA` está descontinuada (2018) y
+no se usa.
+
+Detalle completo de las corridas: `scratch/backtest_results.csv`,
+`scratch/backtest_ab.csv` y `scratch/backtest_ab2.csv` (no versionados).
