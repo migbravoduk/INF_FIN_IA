@@ -52,7 +52,8 @@
   - [x] **Proyección EEFF** (`models/forecast.py`): SARIMAX(1,0,0)×(0,1,1,4) trimestral desacumulado con exógenas macro; ingresos + resultado neto, bandas 80/95%.
   - [x] **Vista `/proyecciones`**: fan charts + tabla de supuestos EEE + nota metodológica.
   - [x] **Backtest fuera de muestra** (`models/backtest.py`, ver [Backtest-Modelos](Backtest-Modelos)): rolling-origin con vintage EEE. Veredicto: las exógenas macro EMPEORAN el SARIMAX de flujos; el aporte del modelo es solo a 1-2 trimestres. Motiva el rediseño estructural.
-  - [ ] **Modelo estructural (próximo)**: proyectar los activos productivos en función de factores macro y derivar resultados manteniendo las relaciones de productividad de activos (rotación/márgenes). Comparar con el mismo arnés de backtest.
+  - [x] **Modelo estructural** (`models/structural.py`): activos operacionales ← macro (panel con shrinkage empresa→sector→global) → rotación → margen. A/B ganado desde 2T; robustez muy superior (medias 1.4-1.6 vs 1.8-3.4).
+  - [x] **Híbrido de producción** (`models/hybrid.py`): SARIMAX puro h=1 + estructural (ancla last) h≥2, bandas empíricas del backtest. Cableado en `/proyecciones` con tabla de trayectoria estructural.
 - [ ] Storytelling con LLM (Anthropic SDK + prompt caching) para explicar las proyecciones.
 
 ---

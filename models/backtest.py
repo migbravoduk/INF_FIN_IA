@@ -9,9 +9,11 @@ Para cada (empresa, partida) y cada origen T (trimestre de corte):
     y el analista contaba con la encuesta de ese mes). Sin fuga de información.
 
 Especificaciones comparadas:
-  eee     — SARIMAX(1,0,0)x(0,1,1,4) + exógenas macro (senda EEE vintage)
-  noexog  — mismo SARIMAX sin exógenas (¿aporta el macro?)
-  snaive  — naive estacional: y[T+h] = y[T+h-4] (benchmark mínimo)
+  eee       — SARIMAX(1,0,0)x(0,1,1,4) + exógenas macro (senda EEE vintage)
+  noexog    — mismo SARIMAX sin exógenas (¿aporta el macro?)
+  snaive    — naive estacional: y[T+h] = y[T+h-4] (benchmark mínimo)
+  estr_m4   — modelo ESTRUCTURAL (activos←macro, rotación→margen), ancla móvil 4T
+  estr_last — estructural con ancla en el último ratio observado ("mantener")
 
 Métricas (por partida, spec y horizonte):
   MASE  — |error| / escala, con escala = media|y_t - y_{t-4}| del tramo de
@@ -80,8 +82,29 @@ def _fit_and_forecast(endog_s, exog_hist, exog_fc, steps):
         return fitted.get_forecast(steps=steps, exog=exog_fc).predicted_mean
 
 
+class _StructuralCache:
+    """Panel cargado una vez; modelo de activos y senda macro cacheados por origen."""
+
+    def __init__(self, db):
+        from models.structural import load_panel
+        self.db = db
+        self.panel = load_panel(db)
+        self._models: dict = {}   # as_of_period -> AssetModel
+        self._macros: dict = {}   # as_of_period -> MacroPath
+
+    def get(self, as_of_period: str, as_of_ts, horizon: int):
+        from models.structural import estimate_asset_model, _quarterly_factors
+        if as_of_period not in self._models:
+            mp = build_macro_path(self.db, horizon_months=3 * horizon + 9, as_of=as_of_ts)
+            self._macros[as_of_period] = mp
+            self._models[as_of_period] = estimate_asset_model(
+                self.panel, _quarterly_factors(mp), as_of_period)
+        return self.panel, self._models[as_of_period], self._macros[as_of_period]
+
+
 def backtest_series(db, rut: str, nombre: str, account: str,
-                    origins: int = 8, horizon: int = 4) -> list[dict]:
+                    origins: int = 8, horizon: int = 4,
+                    structural: "_StructuralCache | None" = None) -> list[dict]:
     """Backtest rolling-origin de una (empresa, partida). Devuelve filas de resultados."""
     endog = get_quarterly_deaccumulated(db, rut, account)
     if endog.dropna().shape[0] < MIN_OBS + origins + horizon:
@@ -132,6 +155,22 @@ def backtest_series(db, rut: str, nombre: str, account: str,
         # Naive estacional: y[T+h] = y[T+h-4] (para h<=4 siempre cae dentro del train)
         preds["snaive"] = np.array([endog.iloc[i + 1 + h - 4] for h in range(horizon)])
 
+        # Modelo estructural (dos anclas de ratio), con panel/modelo/macro cacheados
+        if structural is not None:
+            from models.structural import forecast_structural
+            key = "ingresos" if account == "Ingresos de actividades ordinarias" else "ganancia"
+            panel, amodel, mp_s = structural.get(origin_p, as_of, horizon)
+            for spec, anchor in (("estr_m4", "mean4"), ("estr_last", "last")):
+                try:
+                    r = forecast_structural(db, rut, steps=horizon, panel=panel,
+                                            model=amodel, macro=mp_s,
+                                            as_of_period=origin_p, ratio_anchor=anchor)
+                    if r is not None and r.get(key) is not None:
+                        s = r[key]
+                        preds[spec] = np.array([s.get(p, np.nan) for p in targets])
+                except Exception:
+                    logger.exception("%s falló %s/%s @%s", spec, rut, account, origin_p)
+
         for h in range(horizon):
             target_p = targets[h]
             actual = endog.get(target_p, np.nan)
@@ -170,6 +209,8 @@ def main():
     ap.add_argument("--origins", type=int, default=8)
     ap.add_argument("--horizon", type=int, default=4)
     ap.add_argument("--out", default="scratch/backtest_results.csv")
+    ap.add_argument("--no-structural", action="store_true",
+                    help="Omitir los specs estructurales (solo SARIMAX/naive)")
     args = ap.parse_args()
 
     from db.database import Database
@@ -177,14 +218,17 @@ def main():
     db = Database(db_path=args.db, read_only=True)
 
     companies = select_companies(db, args.companies, args.origins, args.horizon)
+    structural = None if args.no_structural else _StructuralCache(db)
     print(f"Backtest: {len(companies)} empresas x {len(FORECASTABLE_ACCOUNTS)} partidas "
-          f"x {args.origins} orígenes x h1..h{args.horizon}")
+          f"x {args.origins} orígenes x h1..h{args.horizon} "
+          f"(estructural: {'sí' if structural else 'no'})")
 
     t0, all_rows = time.time(), []
     for k, (rut, nombre) in enumerate(companies, 1):
         for account in FORECASTABLE_ACCOUNTS:
             all_rows.extend(backtest_series(db, rut, nombre, account,
-                                            args.origins, args.horizon))
+                                            args.origins, args.horizon,
+                                            structural=structural))
         print(f"[{k}/{len(companies)}] {nombre[:50]:<50} filas acumuladas={len(all_rows)} "
               f"t={time.time()-t0:.0f}s", flush=True)
 

@@ -714,8 +714,9 @@ def proyecciones_chart(
     rut, cname = str(match.iloc[0]["rut"]), str(match.iloc[0]["company_name"])
     currency = str(match.iloc[0]["currency"])
 
-    from models.forecast import forecast_company
-    forecasts = forecast_company(db, rut, steps=min(max(steps, 4), 12))
+    from models.hybrid import forecast_company_hybrid
+    hybrid = forecast_company_hybrid(db, rut, steps=min(max(steps, 4), 12))
+    forecasts, structural = hybrid["results"], hybrid["structural"]
     if not forecasts:
         return templates.TemplateResponse(request, "partials/proyecciones_chart.html", {
             "results": [], "meta": {"company_name": cname, "rut": rut},
@@ -735,8 +736,20 @@ def proyecciones_chart(
             assumptions = [{"period": _period_label(p), **row.to_dict()}
                            for p, row in r.macro_assumptions.iterrows()]
 
+    # Narrativa estructural: activos, rotación y margen proyectados
+    structural_rows = None
+    if structural is not None:
+        structural_rows = [{
+            "period": _period_label(p),
+            "activos": float(structural["activos"][p]),
+            "rotacion": float(structural["rotacion"][p]),
+            "margen": (float(structural["margen"][p])
+                       if structural["margen"] is not None else None),
+        } for p in structural["periods"]]
+
     return templates.TemplateResponse(request, "partials/proyecciones_chart.html", {
         "results": results, "assumptions": assumptions,
+        "structural": structural_rows,
         "meta": {
             "company_name": cname, "rut": rut, "currency": currency,
             "survey": survey_month.strftime("%B %Y") if survey_month is not None else "",

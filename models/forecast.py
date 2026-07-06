@@ -90,8 +90,14 @@ def get_quarterly_deaccumulated(db, rut: str, account: str) -> pd.Series:
 
 
 def forecast_account(db, rut: str, account: str, steps: int = 8,
-                     macro: MacroPath | None = None) -> ForecastResult | None:
-    """Ajusta el SARIMAX macrofundado y proyecta `steps` trimestres. None si no hay datos."""
+                     macro: MacroPath | None = None,
+                     use_exog: bool = True) -> ForecastResult | None:
+    """
+    Ajusta el SARIMAX y proyecta `steps` trimestres. None si no hay datos.
+    `use_exog=False`: SARIMAX puro sin exógenas macro — el backtest (jul-2026)
+    mostró que las exógenas dañan la precisión en flujos trimestrales; el modo
+    puro es el mejor spec a horizonte de 1 trimestre.
+    """
     from statsmodels.tsa.statespace.sarimax import SARIMAX
 
     endog = get_quarterly_deaccumulated(db, rut, account)
@@ -133,12 +139,12 @@ def forecast_account(db, rut: str, account: str, steps: int = 8,
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         model = SARIMAX(
-            endog_s.values, exog=exog_hist_z.values,
+            endog_s.values, exog=exog_hist_z.values if use_exog else None,
             order=ORDER, seasonal_order=SEASONAL_ORDER,
             enforce_stationarity=False, enforce_invertibility=False,
         )
         fitted = model.fit(disp=False, maxiter=200)
-        fc = fitted.get_forecast(steps=steps, exog=exog_fc_z.values)
+        fc = fitted.get_forecast(steps=steps, exog=exog_fc_z.values if use_exog else None)
 
     mean = pd.Series(fc.predicted_mean * scale, index=fc_periods)
     ci80_raw = fc.conf_int(alpha=0.20) * scale
@@ -153,7 +159,8 @@ def forecast_account(db, rut: str, account: str, steps: int = 8,
         survey_month=macro.survey_month,
         model_info={
             "order": ORDER, "seasonal_order": SEASONAL_ORDER,
-            "exog": EXOG_VARS, "n_obs": int(endog.dropna().shape[0]),
+            "exog": EXOG_VARS if use_exog else [],
+            "n_obs": int(endog.dropna().shape[0]),
             "aic": round(float(fitted.aic), 1),
         },
     )

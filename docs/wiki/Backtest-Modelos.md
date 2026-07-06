@@ -50,12 +50,43 @@ en algunas empresas/trimestres el modelo explota.)
    estacional es mejor mediana.
 3. **La ganancia neta es casi impronosticable** con series de tiempo puras (todo ≈ 1).
 
-## Implicación de diseño (próximo paso)
+## Ronda 2: A/B contra el modelo ESTRUCTURAL (jul-2026)
 
-Redirigir el macrofundamento al **enfoque estructural**: proyectar los **activos
-productivos** en función de los factores macro (stocks: suaves, sin desacumular,
-relaciones más estables) y derivar los resultados manteniendo las **relaciones de
-productividad de activos** (rotación, márgenes). El arnés (`models/backtest.py`)
-queda listo para comparar ese enfoque contra estas mismas cifras.
+Implementado `models/structural.py` (activos operacionales ← macro con shrinkage
+empresa→sector→global; resultados ← rotación y margen con reversión suave). Dos
+anclas de ratio comparadas: `estr_m4` (móvil 4T) y `estr_last` (último valor).
 
-Detalle completo de la corrida: `scratch/backtest_results.csv` (no versionado).
+### Ingresos (MASE mediana)
+
+| h | eee | noexog | snaive | estr_last | estr_m4 |
+|---|------|--------|--------|-----------|---------|
+| 1 | 0.64 | **0.60** | 0.86 | 0.90 | 1.90 |
+| 2 | 0.98 | 0.78 | 0.86 | 0.84 | **0.79** |
+| 3 | 1.05 | 0.83 | 0.85 | 0.85 | **0.83** |
+| 4 | 1.09 | 0.86 | **0.77** | 0.79 | 0.84 |
+
+**Robustez (MASE media, h2-4)**: estructural 1.4–1.6 vs SARIMAX 1.8–3.4 — la cadena
+estructural acota los errores; no explota. En ganancia a 4T, `estr_m4` es el mejor
+spec de todos (mediana 0.886).
+
+### Conclusiones ronda 2
+
+1. El ancla `last` ("mantener la relación de productividad" literal) domina a `m4`
+   en h=1 (0.90 vs 1.90): el promedio móvil mezcla trimestres pre/post saltos de
+   activos (M&A — caso CMPC 202512, +25% de activos operacionales).
+2. División del trabajo por horizonte: momentum (SARIMAX puro) a 1T; estructura
+   desde 2T.
+3. El macrofundamento funciona EN LA ECUACIÓN DE ACTIVOS (estructural), no como
+   exógena de flujos (spec `eee`, el peor del cuadro).
+
+## Modelo de PRODUCCIÓN (decisión jul-2026)
+
+`/proyecciones` usa el **híbrido por horizonte** (`models/hybrid.py`):
+- h=1 → SARIMAX(1,0,0)×(0,1,1,4) sin exógenas.
+- h≥2 → estructural con ancla `last`.
+- **Bandas empíricas**: cuantiles 80/95 de |error|/escala medidos en este backtest,
+  reescalados por la volatilidad de cada empresa (`BAND_QUANTILES` en hybrid.py —
+  regenerar si se re-corre el backtest con specs nuevos).
+
+Detalle completo de las corridas: `scratch/backtest_results.csv` y
+`scratch/backtest_ab.csv` (no versionados).
