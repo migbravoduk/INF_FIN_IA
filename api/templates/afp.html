@@ -22,7 +22,7 @@
     </label>
 
     <label>Fondo
-        <select name="fund">
+        <select name="fund" id="main-fund-select">
             {% for f in funds %}
             <option value="{{ f }}">{{ f }}</option>
             {% endfor %}
@@ -50,8 +50,8 @@
 
 <section id="afp-comparativa"
          hx-get="/afp/comparativa"
-         hx-trigger="load, change from:select[name='fund']"
-         hx-include="[name='fund']">
+         hx-trigger="load, change from:#main-fund-select"
+         hx-include="#main-fund-select">
     <p class="loading">Cargando comparativa detallada…</p>
 </section>
 

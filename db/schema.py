@@ -142,6 +142,8 @@ CREATE TABLE IF NOT EXISTS sp_portfolio_holdings (
     afp_name        VARCHAR NOT NULL,
     fund_type       VARCHAR NOT NULL,
     instrument_glosa VARCHAR NOT NULL,
+    row_order       INTEGER,           -- orden original de la fila en el XML (atributo `numero`)
+    section         VARCHAR,           -- totalizador de sección que agrupa la fila (ej. 'TOTAL EXTRANJERO')
     monto_pesos     DOUBLE,
     monto_dolares   DOUBLE,
     porcentaje      DOUBLE,

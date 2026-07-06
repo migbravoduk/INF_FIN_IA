@@ -529,6 +529,8 @@ class Database:
                 str(rec['afp_name']).upper().strip(),
                 str(rec['fund_type']).upper().strip(),
                 str(rec['instrument_glosa']).strip(),
+                int(rec['row_order']) if rec.get('row_order') is not None else None,
+                str(rec['section']).strip() if rec.get('section') is not None else None,
                 float(rec['monto_pesos']) if rec.get('monto_pesos') is not None else None,
                 float(rec['monto_dolares']) if rec.get('monto_dolares') is not None else None,
                 float(rec['porcentaje']) if rec.get('porcentaje') is not None else None
@@ -540,8 +542,8 @@ class Database:
         try:
             self.conn.execute("DELETE FROM sp_portfolio_holdings WHERE period = ?", [period])
             self.conn.executemany("""
-                INSERT INTO sp_portfolio_holdings (period, afp_name, fund_type, instrument_glosa, monto_pesos, monto_dolares, porcentaje)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO sp_portfolio_holdings (period, afp_name, fund_type, instrument_glosa, row_order, section, monto_pesos, monto_dolares, porcentaje)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, tuples_data)
             self.conn.execute("COMMIT")
             return len(records)
@@ -789,16 +791,20 @@ class Database:
 
     def get_foreign_portfolio(self, period: str, fund: str, afp: str = "TOTAL", limit: int = 15):
         """
-        Detalle de la cartera extranjera (instrumentos que contienen 'EXTRANJER' pero no son 'TOTAL').
-        Devuelve DataFrame [instrument_glosa, porcentaje, monto_pesos].
+        Detalle de la cartera extranjera: los instrumentos individuales que cuelgan
+        de la sección 'TOTAL EXTRANJERO' del informe SP. La sección se resuelve por
+        posición en la ingesta (columna `section`), porque los códigos de instrumento
+        son ambiguos: el MISMO código (p. ej. CFID(6), CFIV(6)) aparece tanto en
+        secciones nacionales como en la extranjera. Devuelve DataFrame
+        [instrument_glosa, porcentaje, monto_pesos].
         """
         return self.conn.execute("""
             SELECT instrument_glosa, porcentaje, monto_pesos
             FROM sp_portfolio_holdings
             WHERE period = ? AND fund_type = ? AND UPPER(afp_name) = ?
               AND porcentaje IS NOT NULL AND porcentaje > 0
-              AND UPPER(instrument_glosa) LIKE '%EXTRANJER%'
-              AND UPPER(instrument_glosa) NOT LIKE 'TOTAL%'
+              AND section = 'TOTAL EXTRANJERO'
+              AND instrument_glosa NOT LIKE 'TOTAL%'
             ORDER BY porcentaje DESC
             LIMIT ?
         """, [period, fund, afp.upper(), limit]).fetchdf()

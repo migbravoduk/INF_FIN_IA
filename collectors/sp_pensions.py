@@ -348,17 +348,40 @@ class SPPensionCollector:
 
         records = []
         tipofondos = find_all_tags(listado_1, "tipofondo")
-        
+
         for tf in tipofondos:
             fund_type = tf.get("codigo", "A").upper()
             filas = find_all_tags(tf, "fila")
-            
+
+            # Resolver la SECCIÓN de cada fila. El XML preserva el orden vía el
+            # atributo `numero` y delimita las secciones con filas totalizadoras
+            # en MAYÚSCULAS ("TOTAL EXTRANJERO", "TOTAL EMPRESAS", ...). Los
+            # instrumentos crípticos (CMEV, ETFA, ...) no traen la sección, y el
+            # MISMO código puede aparecer bajo secciones distintas (nacional vs
+            # extranjero), así que la sección solo se puede recuperar por posición.
+            # Recorremos en orden inverso arrastrando el último totalizador visto.
+            fila_meta = []  # (fila_el, glosa, row_order, section)
             for fila in filas:
                 glosa_el = find_tag(fila, "glosa")
                 if glosa_el is None or not glosa_el.text:
                     continue
                 glosa = glosa_el.text.strip()
-                
+                try:
+                    row_order = int(fila.get("numero"))
+                except (TypeError, ValueError):
+                    row_order = None
+                fila_meta.append([fila, glosa, row_order, None])
+
+            current_section = None
+            for meta in reversed(fila_meta):
+                glosa = meta[1]
+                # Totalizador de sección: "TOTAL ..." en mayúsculas (los subtotales
+                # vienen en formato "Total ..." y NO abren sección).
+                if glosa.startswith("TOTAL "):
+                    current_section = glosa
+                meta[3] = current_section
+
+            for fila, glosa, row_order, section in fila_meta:
                 columnas = find_tag(fila, "columnas")
                 if columnas is None:
                     continue
@@ -370,15 +393,17 @@ class SPPensionCollector:
                     if afp_name_el is None or not afp_name_el.text:
                         continue
                     afp_name = afp_name_el.text.upper().strip()
-                    
+
                     pct_el = find_tag(afp, "porcentaje")
                     porcentaje = self._parse_amount(pct_el.text) if pct_el is not None else None
-                    
+
                     records.append({
                         "period": period_val,
                         "afp_name": afp_name,
                         "fund_type": fund_type,
                         "instrument_glosa": glosa,
+                        "row_order": row_order,
+                        "section": section,
                         "monto_pesos": None,
                         "monto_dolares": None,
                         "porcentaje": porcentaje
@@ -390,7 +415,7 @@ class SPPensionCollector:
                     monto_pesos_el = find_tag(total, "monto_pesos")
                     monto_dolares_el = find_tag(total, "monto_dolares")
                     pct_el = find_tag(total, "porcentaje")
-                    
+
                     monto_pesos = self._parse_amount(monto_pesos_el.text) if monto_pesos_el is not None else None
                     monto_dolares = self._parse_amount(monto_dolares_el.text) if monto_dolares_el is not None else None
                     porcentaje = self._parse_amount(pct_el.text) if pct_el is not None else None
@@ -400,6 +425,8 @@ class SPPensionCollector:
                         "afp_name": "TOTAL",
                         "fund_type": fund_type,
                         "instrument_glosa": glosa,
+                        "row_order": row_order,
+                        "section": section,
                         "monto_pesos": monto_pesos,
                         "monto_dolares": monto_dolares,
                         "porcentaje": porcentaje
