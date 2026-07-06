@@ -999,7 +999,13 @@ class Database:
         """Evolución de una cuenta bancaria (val_total) por período, como DataFrame."""
         clean = str(bank_code).strip().zfill(3)
         return self.conn.execute("""
-            SELECT period, SUM(val_total) AS value
+            SELECT
+                period,
+                SUM(val_total) AS value,
+                SUM(val_clp_no_reaj) AS clp_no_reaj,
+                SUM(val_clp_reaj_ipc) AS clp_reaj_ipc,
+                SUM(val_clp_reaj_tc) AS clp_reaj_tc,
+                SUM(val_extranjera) AS extranjera
             FROM cmf_bank_statements
             WHERE bank_code = ? AND account_name = ? AND report_type = ?
             GROUP BY period

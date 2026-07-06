@@ -399,9 +399,17 @@ def banca_serie(
         return templates.TemplateResponse(request, "partials/eeff_serie.html",
                                           {"series": [], "account": None})
     df = db.get_bank_account_series(bank, account, report_type)
-    series = [{"period": str(int(r["period"])), "value": r["value"]}
-              for _, r in df.iterrows()]
-    return templates.TemplateResponse(request, "partials/eeff_serie.html", {
+    series = []
+    for _, r in df.iterrows():
+        series.append({
+            "period": str(int(r["period"])),
+            "value": r["value"],
+            "clp_no_reaj": r["clp_no_reaj"],
+            "clp_reaj_ipc": r["clp_reaj_ipc"],
+            "clp_reaj_tc": r["clp_reaj_tc"],
+            "extranjera": r["extranjera"]
+        })
+    return templates.TemplateResponse(request, "partials/banca_evolutiva.html", {
         "series": series, "account": account,
     })
 
