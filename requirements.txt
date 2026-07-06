@@ -11,6 +11,9 @@ lxml>=5.0.0
 # Database
 duckdb>=0.10.0
 
+# Modelos predictivos macrofundados (Fase 6) — SARIMAX con senda EEE
+statsmodels>=0.14.0
+
 # Scheduler
 APScheduler>=3.10.4
 

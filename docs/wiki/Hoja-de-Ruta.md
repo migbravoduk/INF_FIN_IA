@@ -39,21 +39,26 @@
 - [x] **Ranking**: más indicadores y vistas combinadas (agregado filtrado sectorial en la vista actual).
 
 ### Banca
-- [ ] **Vista evolutiva de bancos** (otra pestaña): cuentas × meses. Conservar el **desglose por moneda de la CMF**; a futuro, balances en moneda extranjera para inversionistas FX.
+- [x] **Vista evolutiva de bancos** (otra pestaña): cuentas × meses. Conservar el **desglose por moneda de la CMF** mediante un panel de evolución con gráfico interactivo y tabla temporal cruzada.
 
 ### AFP
 - [x] **Comparar indicadores por AFP y fondo** (no solo cuota/patrimonio).
 - [x] **Cartera**: evaluar **desagregar la porción extranjera** (¿el dato SP lo permite a futuro?).
 
 ### Fases mayores (6–8)
-- [ ] Proyecciones macro (ARIMA/VAR), detección de anomalías.
-- [ ] Storytelling con LLM (Anthropic SDK + prompt caching) para reportes narrativos.
+- [x] **Modelos Predictivos Macrofundados** (primer vertical, jul-2026):
+  - [x] **EEE integradas**: 18 series F089 (medianas de IPC/TPM/TC/PIB/IMACEC, horizontes móviles + LP) en `series_catalog.yaml` → `observations`.
+  - [x] **Senda macro** (`models/macro_path.py`): historia efectiva + futuro interpolando anclajes EEE (1→36 meses), consistentes como exógenas.
+  - [x] **Proyección EEFF** (`models/forecast.py`): SARIMAX(1,0,0)×(0,1,1,4) trimestral desacumulado con exógenas macro; ingresos + resultado neto, bandas 80/95%.
+  - [x] **Vista `/proyecciones`**: fan charts + tabla de supuestos EEE + nota metodológica.
+  - [ ] Ampliar partidas (márgenes intermedios), backtesting fuera de muestra, y evaluar VARX/ML.
+- [ ] Storytelling con LLM (Anthropic SDK + prompt caching) para explicar las proyecciones.
 
 ---
 
 ## 3. Backfills/datos pendientes
 - [ ] Cartera SP: solo 2026-01 cargado → backfill de meses para series de cartera.
 - [ ] Precios SP: nivelado hasta ~2026-06 (tope de 10 días hábiles por corrida del catch-up).
-- [ ] Bancos: historia mensual completa para el evolutivo.
+- [x] Bancos: historia mensual completa ingestada y disponible para las vistas evolutivas.
 
 Ver **[Issues-Resueltos](Issues-Resueltos)** para el registro histórico.

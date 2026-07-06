@@ -677,3 +677,69 @@ def salud_chart(
         })
         
     return templates.TemplateResponse(request, "partials/salud_chart.html", {"data": data})
+
+
+# ----------------------------------------------------------
+# Proyecciones macrofundadas (Fase 6 — SARIMAX + senda EEE)
+# ----------------------------------------------------------
+
+def _period_label(period: str) -> str:
+    """'202606' → '2026 T2'."""
+    return f"{period[:4]} T{int(period[4:]) // 3}"
+
+
+@router.get("/proyecciones")
+def proyecciones(request: Request, db: Database = Depends(get_db)):
+    """Vista de proyecciones: selector de empresa."""
+    return templates.TemplateResponse(request, "proyecciones.html", {
+        "companies": records(db.get_cmf_companies()),
+    })
+
+
+@router.get("/proyecciones/chart")
+def proyecciones_chart(
+    request: Request,
+    company: str = Query(""),
+    steps: int = Query(8),
+    db: Database = Depends(get_db),
+):
+    """Fragmento HTMX: fan charts de ingresos y resultado + supuestos macro EEE."""
+    empty = templates.TemplateResponse(request, "partials/proyecciones_chart.html",
+                                       {"results": [], "meta": None})
+    if not company.strip():
+        return empty
+    match = db.query_cmf_statements(company=company, limit=1)
+    if match.empty:
+        return empty
+    rut, cname = str(match.iloc[0]["rut"]), str(match.iloc[0]["company_name"])
+    currency = str(match.iloc[0]["currency"])
+
+    from models.forecast import forecast_company
+    forecasts = forecast_company(db, rut, steps=min(max(steps, 4), 12))
+    if not forecasts:
+        return templates.TemplateResponse(request, "partials/proyecciones_chart.html", {
+            "results": [], "meta": {"company_name": cname, "rut": rut},
+        })
+
+    results, assumptions, survey_month, model_info = [], None, None, None
+    for account, r in forecasts.items():
+        hist = [{"period": _period_label(p), "value": v}
+                for p, v in r.history.dropna().items()]
+        fc = [{"period": _period_label(p), "mean": r.mean[p],
+               "lo80": r.ci80.loc[p, "low"], "hi80": r.ci80.loc[p, "high"],
+               "lo95": r.ci95.loc[p, "low"], "hi95": r.ci95.loc[p, "high"]}
+              for p in r.mean.index]
+        results.append({"account": account, "history": hist, "forecast": fc})
+        survey_month, model_info = r.survey_month, r.model_info
+        if assumptions is None:
+            assumptions = [{"period": _period_label(p), **row.to_dict()}
+                           for p, row in r.macro_assumptions.iterrows()]
+
+    return templates.TemplateResponse(request, "partials/proyecciones_chart.html", {
+        "results": results, "assumptions": assumptions,
+        "meta": {
+            "company_name": cname, "rut": rut, "currency": currency,
+            "survey": survey_month.strftime("%B %Y") if survey_month is not None else "",
+            "model": model_info,
+        },
+    })

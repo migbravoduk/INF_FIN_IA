@@ -124,3 +124,156 @@ bcentral:
     frequency: monthly
     unit: indice
     description: Imacec a costo de factores, serie empalmada (índice 2018=100)
+
+  # ============================================================
+  # Fase 6 — Encuesta de Expectativas Económicas (EEE, medianas)
+  # Anclajes de horizonte móvil para la senda macro de los modelos
+  # predictivos (models/macro_path.py). Publicación ~día 10 de cada mes.
+  # ============================================================
+  # --- Inflación esperada (variación IPC, mediana) ---
+  - id: F089.IPC.VAR.11.M
+    name: EEE Inflación en el mes (var. mensual)
+    category: expectativas
+    frequency: monthly
+    unit: porcentaje
+    publish_lag_days: 12
+    description: Expectativa de inflación del mes en curso (variación mensual, mediana EEE)
+
+  - id: F089.IPC.V12.14.M
+    name: EEE Inflación en 11 meses (var. 12m)
+    category: expectativas
+    frequency: monthly
+    unit: porcentaje
+    publish_lag_days: 12
+    description: Expectativa de inflación a 11 meses (variación 12 meses, mediana EEE)
+
+  - id: F089.IPC.V12.15.M
+    name: EEE Inflación en 23 meses (var. 12m)
+    category: expectativas
+    frequency: monthly
+    unit: porcentaje
+    publish_lag_days: 12
+    description: Expectativa de inflación a 23 meses (variación 12 meses, mediana EEE)
+
+  - id: F089.IPC.V12.LP.M
+    name: EEE Inflación largo plazo (var. 12m)
+    category: expectativas
+    frequency: monthly
+    unit: porcentaje
+    publish_lag_days: 12
+    description: Expectativa de inflación promedio de largo plazo (mediana EEE)
+
+  # --- TPM esperada (mediana) ---
+  - id: F089.TPM.TAS.11.M
+    name: EEE TPM en el mes
+    category: expectativas
+    frequency: monthly
+    unit: porcentaje_anual
+    publish_lag_days: 12
+    description: Expectativa de TPM en el mes de la encuesta (mediana EEE)
+
+  - id: F089.TPM.TAS.13.M
+    name: EEE TPM dentro de 2 meses
+    category: expectativas
+    frequency: monthly
+    unit: porcentaje_anual
+    publish_lag_days: 12
+    description: Expectativa de TPM dentro de 2 meses (mediana EEE)
+
+  - id: F089.TPM.TAS.26.M
+    name: EEE TPM dentro de 5 meses
+    category: expectativas
+    frequency: monthly
+    unit: porcentaje_anual
+    publish_lag_days: 12
+    description: Expectativa de TPM dentro de 5 meses (mediana EEE)
+
+  - id: F089.TPM.TAS.14.M
+    name: EEE TPM dentro de 11 meses
+    category: expectativas
+    frequency: monthly
+    unit: porcentaje_anual
+    publish_lag_days: 12
+    description: Expectativa de TPM dentro de 11 meses (mediana EEE)
+
+  - id: F089.TPM.TAS.30.M
+    name: EEE TPM dentro de 17 meses
+    category: expectativas
+    frequency: monthly
+    unit: porcentaje_anual
+    publish_lag_days: 12
+    description: Expectativa de TPM dentro de 17 meses (mediana EEE)
+
+  - id: F089.TPM.TAS.15.M
+    name: EEE TPM dentro de 23 meses
+    category: expectativas
+    frequency: monthly
+    unit: porcentaje_anual
+    publish_lag_days: 12
+    description: Expectativa de TPM dentro de 23 meses (mediana EEE)
+
+  - id: F089.TPM.TAS.LP.M
+    name: EEE TPM largo plazo
+    category: expectativas
+    frequency: monthly
+    unit: porcentaje_anual
+    publish_lag_days: 12
+    description: Expectativa de TPM promedio de largo plazo (mediana EEE)
+
+  # --- Tipo de cambio esperado (mediana) ---
+  - id: F089.TCN.PRE.13.M
+    name: EEE Tipo de cambio dentro de 2 meses
+    category: expectativas
+    frequency: monthly
+    unit: CLP_por_USD
+    publish_lag_days: 12
+    description: Expectativa del tipo de cambio dentro de 2 meses (mediana EEE)
+
+  - id: F089.TCN.PRE.14.M
+    name: EEE Tipo de cambio dentro de 11 meses
+    category: expectativas
+    frequency: monthly
+    unit: CLP_por_USD
+    publish_lag_days: 12
+    description: Expectativa del tipo de cambio dentro de 11 meses (mediana EEE)
+
+  - id: F089.TCN.PRE.15.M
+    name: EEE Tipo de cambio dentro de 23 meses
+    category: expectativas
+    frequency: monthly
+    unit: CLP_por_USD
+    publish_lag_days: 12
+    description: Expectativa del tipo de cambio dentro de 23 meses (mediana EEE)
+
+  - id: F089.TCN.V12.LP.M
+    name: EEE Tipo de cambio largo plazo
+    category: expectativas
+    frequency: monthly
+    unit: CLP_por_USD
+    publish_lag_days: 12
+    description: Expectativa del tipo de cambio promedio de largo plazo (mediana EEE)
+
+  # --- Actividad esperada (mediana) ---
+  - id: F089.PIB.V12.33.M
+    name: EEE PIB trimestre de la encuesta (var. 12m)
+    category: expectativas
+    frequency: monthly
+    unit: porcentaje
+    publish_lag_days: 12
+    description: Expectativa de crecimiento del PIB del trimestre calendario en curso (mediana EEE)
+
+  - id: F089.PIB.V12.LP.M
+    name: EEE PIB largo plazo (var. 12m)
+    category: expectativas
+    frequency: monthly
+    unit: porcentaje
+    publish_lag_days: 12
+    description: Expectativa de crecimiento del PIB promedio de largo plazo (mediana EEE)
+
+  - id: F089.IMC.V12.10.M
+    name: EEE IMACEC un mes atrás (var. 12m)
+    category: expectativas
+    frequency: monthly
+    unit: porcentaje
+    publish_lag_days: 12
+    description: Expectativa de variación del IMACEC del mes anterior (nowcast, mediana EEE)

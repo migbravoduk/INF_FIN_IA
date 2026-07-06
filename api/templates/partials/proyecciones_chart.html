@@ -1,0 +1,111 @@
+{#
+  partials/proyecciones_chart.html — Fan charts de proyección macrofundada.
+  results = [{account, history: [{period, value}], forecast: [{period, mean, lo80, hi80, lo95, hi95}]}]
+  assumptions = [{period, act_yoy, ipc_yoy, tc}], meta = {company_name, rut, currency, survey, model}
+#}
+{% if results %}
+<div class="proy-meta" style="margin-bottom:1rem">
+    <h2>{{ meta.company_name }}</h2>
+    <p class="subtitle">
+        Moneda del reporte: {{ meta.currency or "—" }} (miles) ·
+        Encuesta EEE: {{ meta.survey }} ·
+        Modelo: SARIMAX{{ meta.model.order }}×{{ meta.model.seasonal_order }} ·
+        {{ meta.model.n_obs }} trimestres de historia
+    </p>
+</div>
+
+{% for r in results %}
+<div class="chart-block" style="margin-top:1.5rem">
+    <h4>{{ r.account }} — trimestral (desacumulado) y proyección</h4>
+    <div id="proy-chart-{{ loop.index }}" class="chart"></div>
+</div>
+{% endfor %}
+
+<div class="eeff-group table-scroll" style="margin-top:2rem">
+    <h4>Supuestos macro (senda EEE — medianas de la encuesta)</h4>
+    <table class="bank-table">
+        <thead>
+            <tr>
+                <th class="acct">Trimestre</th>
+                <th>Actividad (var. 12m %)</th>
+                <th>Inflación (var. 12m %)</th>
+                <th>Tipo de cambio (CLP/USD)</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for a in assumptions %}
+            <tr>
+                <td class="acct">{{ a.period }}</td>
+                <td class="num">{{ "%.2f"|format(a.act_yoy) }}</td>
+                <td class="num">{{ "%.2f"|format(a.ipc_yoy) }}</td>
+                <td class="num">{{ "%.1f"|format(a.tc) }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<details style="margin-top:1.5rem">
+    <summary>Nota metodológica</summary>
+    <p style="color:#94a3b8; font-size:.9rem; line-height:1.5">
+        Cada partida se modela con un SARIMAX trimestral parsimonioso sobre la serie
+        desacumulada (valores del trimestre, no acumulados del año). Como regresores
+        exógenos se usan la actividad (var. 12m del IMACEC/PIB), la inflación 12 meses y
+        el tipo de cambio: historia efectiva del BCCh para ajustar, y la senda esperada de
+        la <strong>Encuesta de Expectativas Económicas</strong> (medianas, interpoladas
+        entre horizontes de 1 a 36 meses) para proyectar. Las bandas corresponden a los
+        intervalos de confianza del 80% (banda interna) y 95% (banda externa) del modelo.
+        Las proyecciones son un ejercicio estadístico, no una recomendación de inversión.
+    </p>
+</details>
+
+<script>
+(function () {
+    var results = {{ results | tojson }};
+    function draw() {
+        if (!window.Plotly) { return setTimeout(draw, 100); }
+        results.forEach(function (r, i) {
+            var el = "proy-chart-" + (i + 1);
+            var hx = r.history.map(function (d) { return d.period; });
+            var hy = r.history.map(function (d) { return d.value; });
+            var fx = r.forecast.map(function (d) { return d.period; });
+            // Conectar historia y proyección: anteponer el último punto histórico
+            var lastP = hx[hx.length - 1], lastV = hy[hy.length - 1];
+            var fxc = [lastP].concat(fx);
+            var mean = [lastV].concat(r.forecast.map(function (d) { return d.mean; }));
+            var lo80 = [lastV].concat(r.forecast.map(function (d) { return d.lo80; }));
+            var hi80 = [lastV].concat(r.forecast.map(function (d) { return d.hi80; }));
+            var lo95 = [lastV].concat(r.forecast.map(function (d) { return d.lo95; }));
+            var hi95 = [lastV].concat(r.forecast.map(function (d) { return d.hi95; }));
+
+            var traces = [
+                { x: fxc, y: hi95, mode: "lines", line: { width: 0 },
+                  showlegend: false, hoverinfo: "skip" },
+                { x: fxc, y: lo95, mode: "lines", line: { width: 0 }, fill: "tonexty",
+                  fillcolor: "rgba(56,189,248,0.10)", name: "IC 95%", hoverinfo: "skip" },
+                { x: fxc, y: hi80, mode: "lines", line: { width: 0 },
+                  showlegend: false, hoverinfo: "skip" },
+                { x: fxc, y: lo80, mode: "lines", line: { width: 0 }, fill: "tonexty",
+                  fillcolor: "rgba(56,189,248,0.22)", name: "IC 80%", hoverinfo: "skip" },
+                { x: hx, y: hy, mode: "lines+markers", name: "Historia",
+                  line: { color: "#38bdf8", width: 2 }, marker: { size: 4 } },
+                { x: fxc, y: mean, mode: "lines+markers", name: "Proyección",
+                  line: { color: "#f472b6", width: 2, dash: "dash" }, marker: { size: 4 } }
+            ];
+
+            Plotly.newPlot(el, traces, {
+                margin: { t: 10, r: 10, b: 60, l: 80 }, height: 360,
+                paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)",
+                font: { color: "#94a3b8" },
+                xaxis: { type: "category", gridcolor: "#334155", tickangle: -45 },
+                yaxis: { gridcolor: "#334155" },
+                legend: { orientation: "h", y: -0.3 }
+            }, { displayModeBar: false, responsive: true });
+        });
+    }
+    draw();
+})();
+</script>
+{% elif meta %}
+<p class="loading">No hay serie trimestral suficiente para proyectar {{ meta.company_name }} (se requieren ≥16 trimestres de ERFG).</p>
+{% endif %}
