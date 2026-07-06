@@ -878,10 +878,22 @@ class Database:
             if rate is None:
                 continue
             quotas = float((aporte / sub["quota_value"]).sum())
-            saldo = quotas * float(last.loc[afp, "quota"])
+            last_q = float(last.loc[afp, "quota"])
+            first_q = float(sub["quota_value"].iloc[0])
+            saldo = quotas * last_q
             aportes = aporte * months
             comisiones = salary * rate / 100.0 * months
             desembolso = aportes + comisiones
+            
+            # Umbral de fondo inicial para tener rentabilidad neta positiva en 12 meses
+            r_fondo = (last_q - first_q) / first_q
+            ganancia_aportes = saldo - aportes
+            if r_fondo > 0:
+                umbral = (comisiones - ganancia_aportes) / r_fondo
+                umbral = max(0.0, umbral)
+            else:
+                umbral = None
+
             rows.append({
                 "afp": str(afp), "comision_pct": rate,
                 "aportes": aportes, "comisiones": comisiones, "desembolso": desembolso,
@@ -889,6 +901,7 @@ class Database:
                 "rent_fondo_pct": (saldo - aportes) / aportes * 100.0,
                 "rent_neta_pct": (saldo - desembolso) / desembolso * 100.0,
                 "ganancia_neta": saldo - desembolso,
+                "umbral_inicial": umbral,
             })
             window = {"desde": str(sub["ym"].iloc[0]), "hasta": str(sub["ym"].iloc[-1]),
                       "valuacion": str(last.loc[afp, "date"])[:10]}

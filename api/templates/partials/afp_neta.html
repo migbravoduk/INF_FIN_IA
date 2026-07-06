@@ -24,6 +24,7 @@
                 <th>Saldo final</th>
                 <th>Rent. del fondo</th>
                 <th>Rent. NETA</th>
+                <th>Fondo Mín. para Rent. (+)</th>
             </tr>
         </thead>
         <tbody>
@@ -31,12 +32,23 @@
             <tr class="{{ 'total-row' if loop.first else '' }}">
                 <td class="acct">{{ r.afp }}{{ " 🏆" if loop.first else "" }}</td>
                 <td class="num">{{ "%.2f%%"|format(r.comision_pct) }}</td>
-                <td class="num">{{ "{:,.0f}".format(r.aportes) }}</td>
-                <td class="num">{{ "{:,.0f}".format(r.comisiones) }}</td>
-                <td class="num">{{ "{:,.0f}".format(r.desembolso) }}</td>
-                <td class="num">{{ "{:,.0f}".format(r.saldo) }}</td>
+                <td class="num">{{ "{:,.0f}".format(r.aportes).replace(",", ".") }}</td>
+                <td class="num">{{ "{:,.0f}".format(r.comisiones).replace(",", ".") }}</td>
+                <td class="num">{{ "{:,.0f}".format(r.desembolso).replace(",", ".") }}</td>
+                <td class="num">{{ "{:,.0f}".format(r.saldo).replace(",", ".") }}</td>
                 <td class="num">{{ "%.2f%%"|format(r.rent_fondo_pct) }}</td>
                 <td class="num strong">{{ "%.2f%%"|format(r.rent_neta_pct) }}</td>
+                <td class="num">
+                    {% if r.umbral_inicial != None %}
+                        {% if r.umbral_inicial == 0 %}
+                            $0
+                        {% else %}
+                            ${{ "{:,.0f}".format(r.umbral_inicial).replace(",", ".") }}
+                        {% endif %}
+                    {% else %}
+                        N/A
+                    {% endif %}
+                </td>
             </tr>
         {% endfor %}
         </tbody>
@@ -48,9 +60,8 @@
     primer día hábil del mes) y se paga además la comisión de la AFP sobre la remuneración
     (vigencia {{ sim.vigencia_comisiones }}, aplicada retroactivamente a los 12 meses).
     <b>Rent. NETA</b> = (saldo final − desembolso total) / desembolso total, donde el
-    desembolso incluye las comisiones. Ventana corta: en 12 meses la comisión pesa mucho
-    (se paga sobre el flujo); en horizontes largos la rentabilidad del fondo compuesta gana
-    relevancia. No constituye recomendación.
+    desembolso incluye las comisiones. <b>Fondo Mín. para Rent. (+)</b> es el saldo inicial mínimo necesario
+    al inicio del período para que la rentabilidad cubra las comisiones y el retorno neto resulte positivo (si es $0, significa que la rentabilidad de las cotizaciones mensuales del periodo fue suficiente para cubrir las comisiones por sí sola). No constituye recomendación.
 </p>
 
 <script>
