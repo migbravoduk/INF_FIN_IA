@@ -519,9 +519,11 @@ def query_cmf(rut, company, period, limit, output_format):
 @click.option("--year", "-y", type=int, default=None, help="Año de consulta (ej. 2025)")
 @click.option("--month", "-m", type=int, default=None, help="Mes de consulta (1 a 12)")
 @click.option("--bank", "-b", default=None, help="Código SBIF de un banco específico (ej. '001')")
-@click.option("--history", is_flag=True, help="Realiza una carga histórica mensual completa (2024-2026) para los bancos principales")
+@click.option("--history", is_flag=True, help="Carga histórica mensual completa para los bancos principales")
+@click.option("--year-start", type=int, default=2024, help="Primer año del backfill con --history (default 2024)")
+@click.option("--year-end", type=int, default=None, help="Último año del backfill con --history (default: año actual)")
 @click.option("--force", "-f", is_flag=True, help="Fuerza la descarga desde la API ignorando la caché local")
-def fetch_banks(year, month, bank, history, force):
+def fetch_banks(year, month, bank, history, year_start, year_end, force):
     """Descarga e ingesta estados financieros mensuales de bancos de la CMF."""
 
     if not history and (not year or not month):
@@ -539,14 +541,17 @@ def fetch_banks(year, month, bank, history, force):
 
     # Definir períodos a descargar
     if history:
-        # Backfill histórico mensual: 2024 (todos los meses) + 2025 (todos los meses) + 2026 (meses 1 a 3)
+        # Backfill histórico mensual [year_start, year_end]; el año final se
+        # trunca al mes anterior al actual (el mes en curso aún no publica).
+        from datetime import date as _date
+        today = _date.today()
+        y1 = year_end or today.year
         periods = []
-        for y in (2024, 2025):
-            for m in range(1, 13):
+        for y in range(year_start, y1 + 1):
+            last_m = (today.month - 1) if y == today.year else 12
+            for m in range(1, last_m + 1):
                 periods.append((y, m))
-        for m in range(1, 4):
-            periods.append((2026, m))
-        info_msg = "Carga histórica mensual (2024-2026) para bancos"
+        info_msg = f"Carga histórica mensual ({year_start}-{y1}) para bancos"
     else:
         periods = [(year, month)]
         info_msg = f"Período específico: {year}-{month:02d}"

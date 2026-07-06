@@ -47,7 +47,13 @@
     </label>
 </form>
 
-<section id="banca-evolucion"
+<h2 style="font-size:1rem;color:var(--muted);margin-top:1.2rem">Detalle por moneda (período seleccionado)</h2>
+<section id="banca-results">
+    <p class="loading">Cargando detalle por moneda…</p>
+</section>
+
+<h2 style="font-size:1rem;color:var(--muted);margin-top:2rem">Serie de tiempo — total consolidado</h2>
+<section id="banca-evolucion" class="evol-scroll"
          hx-get="/banca/evolucion"
          hx-trigger="load, change from:#banca-bank-sel, change from:#banca-type-sel, change from:#banca-serie-sel"
          hx-include="#banca-bank-sel, #banca-type-sel, #banca-serie-sel"
@@ -55,7 +61,10 @@
     <p class="loading">Cargando evolución del total…</p>
 </section>
 
-<section id="banca-results">
-    <p class="loading">Cargando detalle por moneda…</p>
-</section>
+<style>
+/* La matriz evolutiva bancaria (400+ cuentas) va en caja scrolleable con encabezado fijo,
+   para que no sepulte el detalle por moneda. */
+#banca-evolucion .table-scroll { max-height: 65vh; overflow-y: auto; }
+#banca-evolucion .evol-table thead th { position: sticky; top: 0; background: var(--bg, #0f172a); z-index: 2; }
+</style>
 {% endblock %}
