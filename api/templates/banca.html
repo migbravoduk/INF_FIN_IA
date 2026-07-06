@@ -6,21 +6,21 @@
 <h1>Estados financieros de bancos</h1>
 <p class="subtitle">CMF · Bancos e Instituciones Financieras — desglose por tipo de moneda (SBIF)</p>
 
-<form class="eeff-form"
+<form class="eeff-form" id="banca-form"
       hx-get="/banca/table"
       hx-target="#banca-results"
-      hx-trigger="load, change from:select"
+      hx-trigger="load, change"
       hx-swap="innerHTML">
 
     <label>Banco
-        <select name="bank">
+        <select name="bank" id="banca-bank-sel">
             {% for b in banks %}
             <option value="{{ b.bank_code }}">{{ b.bank_name }}</option>
             {% endfor %}
         </select>
     </label>
 
-    <label>Período
+    <label>Período (detalle)
         <select name="period">
             {% for p in periods %}
             <option value="{{ p }}">{{ p }}</option>
@@ -29,14 +29,33 @@
     </label>
 
     <label>Reporte
-        <select name="type">
+        <select name="type" id="banca-type-sel">
             <option value="balance">Balance</option>
             <option value="resultado">Estado de resultados</option>
         </select>
     </label>
+
+    <label>Serie evolutiva
+        <select name="serie" id="banca-serie-sel">
+            <option value="cons12" selected>Meses consecutivos — últimos 12</option>
+            <option value="cons24">Meses consecutivos — últimos 24</option>
+            <option value="anual5">Cierres anuales (dic) — últimos 5</option>
+            <option value="anual10">Cierres anuales (dic) — últimos 10</option>
+            <option value="mismomes5">Mismo mes — últimos 5 años</option>
+            <option value="mismomes10">Mismo mes — últimos 10 años</option>
+        </select>
+    </label>
 </form>
 
+<section id="banca-evolucion"
+         hx-get="/banca/evolucion"
+         hx-trigger="load, change from:#banca-bank-sel, change from:#banca-type-sel, change from:#banca-serie-sel"
+         hx-include="#banca-bank-sel, #banca-type-sel, #banca-serie-sel"
+         hx-swap="innerHTML">
+    <p class="loading">Cargando evolución del total…</p>
+</section>
+
 <section id="banca-results">
-    <p class="loading">Cargando estados bancarios…</p>
+    <p class="loading">Cargando detalle por moneda…</p>
 </section>
 {% endblock %}

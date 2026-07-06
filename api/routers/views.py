@@ -218,6 +218,46 @@ def banca_table(
     })
 
 
+def _select_bank_periods(allp: list, serie: str) -> list:
+    """Selecciona períodos mensuales bancarios según el tipo de serie evolutiva."""
+    allp = sorted(int(p) for p in allp)
+    if not allp:
+        return []
+    if serie.startswith("anual"):          # cierres anuales (diciembre)
+        n = 10 if "10" in serie else 5
+        return [p for p in allp if p % 100 == 12][-n:]
+    if serie.startswith("mismomes"):       # mismo mes del año, varios años atrás
+        n = 10 if "10" in serie else 5
+        m = max(allp) % 100
+        return [p for p in allp if p % 100 == m][-n:]
+    if serie.startswith("cons"):           # meses consecutivos
+        n = 24 if "24" in serie else 12
+        return allp[-n:]
+    return allp[-12:]
+
+
+@router.get("/banca/evolucion")
+def banca_evolucion(
+    request: Request,
+    bank: Optional[str] = Query(None),
+    report_type: str = Query("balance", alias="type"),
+    serie: str = Query("cons12"),
+    db: Database = Depends(get_db),
+):
+    """Fragmento HTMX: matriz evolutiva del TOTAL bancario (cuentas × períodos)."""
+    empty = templates.TemplateResponse(request, "partials/statement_matrix.html", {"st": {"ev": {"accounts": []}}})
+    if not bank:
+        return empty
+    periods = _select_bank_periods(db.get_bank_periods(bank_code=bank), serie)
+    if not periods:
+        return empty
+    ev = db.get_bank_statement_evolution(bank, periods, report_type)
+    label = "Balance" if report_type == "balance" else "Estado de resultados"
+    st = {"label": f"{label} — evolución del total (miles de CLP)",
+          "code": "TOTAL", "ev": ev}
+    return templates.TemplateResponse(request, "partials/statement_matrix.html", {"st": st})
+
+
 @router.get("/comparar")
 def comparar(request: Request, db: Database = Depends(get_db)):
     """Vista de comparación: misma partida en varias empresas (base 100)."""

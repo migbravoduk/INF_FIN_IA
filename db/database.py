@@ -324,11 +324,19 @@ class Database:
             ORDER BY bank_name ASC
         """).fetchdf()
 
-    def get_bank_periods(self) -> list[int]:
-        """Períodos (YYYYMM) disponibles en estados bancarios, más reciente primero."""
-        rows = self.conn.execute("""
-            SELECT DISTINCT period FROM cmf_bank_statements ORDER BY period DESC
-        """).fetchall()
+    def get_bank_periods(self, bank_code: Optional[str] = None) -> list[int]:
+        """Períodos (YYYYMM) disponibles en estados bancarios, más reciente primero.
+        Si se pasa `bank_code`, solo los de ese banco."""
+        if bank_code:
+            clean = str(bank_code).strip().zfill(3)
+            rows = self.conn.execute("""
+                SELECT DISTINCT period FROM cmf_bank_statements
+                WHERE bank_code = ? ORDER BY period DESC
+            """, [clean]).fetchall()
+        else:
+            rows = self.conn.execute("""
+                SELECT DISTINCT period FROM cmf_bank_statements ORDER BY period DESC
+            """).fetchall()
         return [int(r[0]) for r in rows]
 
     def get_afp_list(self) -> list[str]:
@@ -987,6 +995,47 @@ class Database:
             "SELECT MAX(period) FROM cmf_financial_statements WHERE rut = ?", [clean]
         ).fetchone()
         return int(row[0]) if row and row[0] is not None else None
+
+    def get_bank_statement_evolution(self, bank_code: str, periods: list[int],
+                                     report_type: str) -> dict:
+        """
+        Matriz de evolución del TOTAL (val_total, no por moneda) de un banco a través de
+        varios períodos. Devuelve {"periods": [asc], "accounts": [{account_name, vals[por
+        período], is_total}]}. Orden de cuentas = account_code oficial de la ficha SBIF.
+        """
+        clean = str(bank_code).strip().zfill(3)
+        periods = [int(p) for p in periods]
+        if not periods:
+            return {"periods": [], "accounts": []}
+        ph = ",".join(["?"] * len(periods))
+        df = self.conn.execute(f"""
+            SELECT period, account_code, account_name, val_total
+            FROM cmf_bank_statements
+            WHERE bank_code = ? AND report_type = ? AND period IN ({ph})
+            ORDER BY account_code ASC, period ASC
+        """, [clean, report_type] + periods).fetchdf()
+        if df.empty:
+            return {"periods": [], "accounts": []}
+
+        order, seen = [], set()
+        for _, r in df.iterrows():
+            a = str(r["account_name"])
+            if a not in seen:
+                order.append(a)
+                seen.add(a)
+
+        pivot = {}  # account -> {period: val_total} (primera ocurrencia por período)
+        for _, r in df.iterrows():
+            a, p = str(r["account_name"]), int(r["period"])
+            pivot.setdefault(a, {})
+            if p not in pivot[a]:
+                pivot[a][p] = r["val_total"]
+
+        periods_asc = sorted(set(int(p) for p in df["period"]))
+        accounts = [{"account_name": a, "vals": [pivot[a].get(p) for p in periods_asc],
+                     "is_total": is_total_account(a)}
+                    for a in order]
+        return {"periods": periods_asc, "accounts": accounts}
 
     def get_bank_graphable_accounts(self, bank_code: str, report_type: str) -> list[str]:
         """Cuentas de un banco/reporte presentes en ≥2 períodos (para graficar)."""
