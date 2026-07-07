@@ -9,7 +9,7 @@
 ### Datos (DuckDB, ~3,06M filas, ~168 MB)
 - **BCCh macro** (`observations`): 1975–2026, ~59k filas (PIB, IPC, TPM, UF, IVP, UTM, IMACEC, USD/CLP, cobre, etc.) + **expectativas F089** (EEE mensual + EOF quincenal). Parser decimal corregido; datos validados.
 - **CMF empresas** (`cmf_financial_statements`): ~1,5M filas, **45 períodos (201503→202603)** = 10 cierres anuales + trimestres. Orden IFRS verificado.
-- **CMF bancos** (`cmf_bank_statements`): ~857k filas, balances/resultados mensuales con desglose por moneda.
+- **CMF bancos** (`cmf_bank_statements`): ~1,8M filas, balances/resultados mensuales con desglose por moneda, **2019→hoy** (el plan de cuentas CMF cambió en 2022: la serie evolutiva empalma por nombre y homologa unidades millones→pesos).
 - **SP pensiones**: cuotas (~207k, 2008+), precios (~96k), **cartera (~341k, 133 meses 2015-01→2026-01)** con `section`/`row_order`.
 
 ### Capa web (FastAPI + Jinja2 + HTMX + Plotly) — `iniciar_web.bat` / `main.py serve`
@@ -62,6 +62,6 @@
 ## 3. Backfills/datos pendientes
 - [x] Cartera SP: backfill completo 2015-01 → 2026-01 (133 meses, ~341k filas, 132/132 disponibles en la SP, `section` resuelta en todos los años; el esquema pasó de 8 a 9 secciones en 2018 con los activos alternativos).
 - [ ] Precios SP: nivelado hasta ~2026-06 (tope de 10 días hábiles por corrida del catch-up).
-- [x] Bancos: historia mensual completa ingestada y disponible para las vistas evolutivas.
+- [x] Bancos: historia mensual **2019 → hoy** (backfill jul-2026: 1.920 reportes, 0 fallas, ~977k filas nuevas; 16 bancos × 12 meses/año). La serie evolutiva empalma el cambio de plan de cuentas 2022 (nombres + unidades millones→pesos). Extensible con `fetch-banks --history --year-start N`.
 
 Ver **[Issues-Resueltos](Issues-Resueltos)** para el registro histórico.

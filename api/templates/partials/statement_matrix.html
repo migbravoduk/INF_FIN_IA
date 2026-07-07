@@ -4,6 +4,7 @@
 #}
 <div class="eeff-group">
     <h4>{{ st.label }} <span class="code-tag">{{ st.code }}</span></h4>
+    {% if st.ev.note %}<p style="color:#eab308; font-size:.8rem; margin:.2rem 0 .5rem">⚠ {{ st.ev.note }}</p>{% endif %}
     {% if st.ev.accounts %}
     <div class="table-scroll">
         <table class="evol-table">

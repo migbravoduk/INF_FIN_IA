@@ -41,7 +41,7 @@ Fuentes (BCCh BDE API · CMF XBRL plano · CMF/SBIF API · SP scraping)
 |---|---|---|
 | `observations` (+ `series`) | BCCh | series macro; **1975–hoy**; incluye expectativas `F089` (EEE+EOF, Fase 6) |
 | `cmf_financial_statements` | CMF (archivo plano `.txt` trimestral) | EEFF corporativos; ~1,5M filas, 45 períodos |
-| `cmf_bank_statements` | CMF/SBIFv3 (API JSON) | balances/resultados con desglose por moneda; ~857k filas |
+| `cmf_bank_statements` | CMF/SBIFv3 (API JSON) | balances/resultados con desglose por moneda; ~1,8M filas, 2019+ (plan de cuentas cambió en 2022, ver gotchas) |
 | `sp_quota_values` | SP (scraping) | valor cuota + patrimonio diario por AFP/fondo |
 | `sp_instrument_prices` | SP | cinta de precios diaria |
 | `sp_portfolio_holdings` | SP (XML) | cartera mensual; backfill 2015-01→2026-01 (133 meses); cols `row_order`/`section` |
@@ -93,6 +93,13 @@ Fuentes (BCCh BDE API · CMF XBRL plano · CMF/SBIF API · SP scraping)
   del modelo estructural — usarlo como exógena de flujos trimestrales EMPEORA el backtest.
 - **Series EEE/EOF (`F089`)**: `F089.TPM.TAS.13` y `F089.EOF.TC.7MA` están descontinuadas;
   `F089.TCN.V12.LP` es una variación (%) no un nivel. Ver `Backtest-Modelos.md` y el catálogo.
+- **Bancos: la CMF cambió el plan de cuentas en 2022** — códigos de 7→9 dígitos, nombres
+  distintos ('ACTIVOS'→'TOTAL ACTIVOS') y UNIDADES: el plan antiguo reporta en MILLONES de
+  pesos, el vigente en PESOS (verificado contra cifras públicas del Banco de Chile; la
+  etiqueta histórica "miles de CLP" era incorrecta). `get_bank_statement_evolution` empalma
+  las series largas por nombre normalizado y homologa pre-2022 ×1e6; el detalle fino entre
+  regímenes NO es comparable. Historia backfilleada desde 2019 (`fetch-banks --history
+  --year-start N`).
 
 ## Cómo hacer tareas comunes
 

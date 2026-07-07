@@ -1087,41 +1087,77 @@ class Database:
         """
         Matriz de evolución del TOTAL (val_total, no por moneda) de un banco a través de
         varios períodos. Devuelve {"periods": [asc], "accounts": [{account_name, vals[por
-        período], is_total}]}. Orden de cuentas = account_code oficial de la ficha SBIF.
+        período], is_total}], "note"}.
+
+        En 2022 la CMF cambió el plan de cuentas bancario (códigos de 7 → 9 dígitos,
+        nombres distintos: 'ACTIVOS' → 'TOTAL ACTIVOS', y UNIDADES: el plan antiguo
+        reporta en MILLONES de pesos y el vigente en PESOS — verificado contra cifras
+        públicas del Banco de Chile). Para que las series largas no queden partidas,
+        las cuentas se EMPALMAN por nombre normalizado (mayúsculas, sin acentos, sin
+        prefijo 'TOTAL') y los valores pre-2022 se homologan a pesos (×1.000.000); se
+        muestra el nombre moderno. Las cuentas propias de un solo régimen quedan al
+        final, sin fusiones forzadas.
         """
+        import unicodedata
+
+        def norm(name: str) -> str:
+            s = unicodedata.normalize("NFKD", str(name))
+            s = "".join(c for c in s if not unicodedata.combining(c)).upper().strip()
+            if s.startswith("TOTAL "):
+                s = s[6:]
+            return " ".join(s.split())
+
         clean = str(bank_code).strip().zfill(3)
         periods = [int(p) for p in periods]
         if not periods:
-            return {"periods": [], "accounts": []}
+            return {"periods": [], "accounts": [], "note": None}
         ph = ",".join(["?"] * len(periods))
         df = self.conn.execute(f"""
             SELECT period, account_code, account_name, val_total
             FROM cmf_bank_statements
             WHERE bank_code = ? AND report_type = ? AND period IN ({ph})
-            ORDER BY account_code ASC, period ASC
+            ORDER BY period ASC, account_code ASC
         """, [clean, report_type] + periods).fetchdf()
         if df.empty:
-            return {"periods": [], "accounts": []}
+            return {"periods": [], "accounts": [], "note": None}
 
-        order, seen = [], set()
+        NEW_PLAN = 202201       # primer período del plan de cuentas vigente
+        OLD_PLAN_UNIT = 1e6     # plan antiguo en millones de pesos → homologar a pesos
+        pivot: dict[str, dict[int, float]] = {}   # key -> {period: val en pesos}
+        label: dict[str, tuple[int, str]] = {}    # key -> (period, nombre) más reciente
+        code: dict[str, tuple[int, str]] = {}     # key -> (period, código) más reciente
         for _, r in df.iterrows():
-            a = str(r["account_name"])
-            if a not in seen:
-                order.append(a)
-                seen.add(a)
-
-        pivot = {}  # account -> {period: val_total} (primera ocurrencia por período)
-        for _, r in df.iterrows():
-            a, p = str(r["account_name"]), int(r["period"])
-            pivot.setdefault(a, {})
-            if p not in pivot[a]:
-                pivot[a][p] = r["val_total"]
+            k, p = norm(r["account_name"]), int(r["period"])
+            pivot.setdefault(k, {})
+            if p not in pivot[k]:
+                v = r["val_total"]
+                pivot[k][p] = v * OLD_PLAN_UNIT if (v is not None and p < NEW_PLAN) else v
+            if k not in label or p >= label[k][0]:
+                label[k] = (p, str(r["account_name"]))
+                code[k] = (p, str(r["account_code"]))
 
         periods_asc = sorted(set(int(p) for p in df["period"]))
-        accounts = [{"account_name": a, "vals": [pivot[a].get(p) for p in periods_asc],
-                     "is_total": is_total_account(a)}
-                    for a in order]
-        return {"periods": periods_asc, "accounts": accounts}
+        has_old = any(p < NEW_PLAN for p in periods_asc)
+        has_new = any(p >= NEW_PLAN for p in periods_asc)
+
+        # Orden: estructura del plan vigente primero (por código moderno), luego las
+        # cuentas que solo existen en el plan antiguo (por su código), al final.
+        def sort_key(k):
+            in_new = any(p >= NEW_PLAN for p in pivot[k])
+            c = code[k][1]
+            return (0 if in_new else 1, len(c), c)
+
+        accounts = []
+        for k in sorted(pivot, key=sort_key):
+            name = label[k][1]
+            accounts.append({"account_name": name,
+                             "vals": [pivot[k].get(p) for p in periods_asc],
+                             "is_total": is_total_account(name)})
+        note = ("La CMF cambió el plan de cuentas bancario en 2022: los totales se "
+                "empalman por nombre y los valores pre-2022 se homologan de millones a "
+                "pesos; el detalle fino puede no ser comparable entre ambos regímenes."
+                ) if (has_old and has_new) else None
+        return {"periods": periods_asc, "accounts": accounts, "note": note}
 
     def get_bank_graphable_accounts(self, bank_code: str, report_type: str) -> list[str]:
         """Cuentas de un banco/reporte presentes en ≥2 períodos (para graficar)."""

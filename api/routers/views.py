@@ -253,7 +253,7 @@ def banca_evolucion(
         return empty
     ev = db.get_bank_statement_evolution(bank, periods, report_type)
     label = "Balance" if report_type == "balance" else "Estado de resultados"
-    st = {"label": f"{label} — evolución del total (miles de CLP)",
+    st = {"label": f"{label} — evolución del total (pesos)",
           "code": "TOTAL", "ev": ev}
     return templates.TemplateResponse(request, "partials/statement_matrix.html", {"st": st})
 

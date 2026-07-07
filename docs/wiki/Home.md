@@ -26,7 +26,7 @@ Este sistema acumula datos financieros y macroeconómicos chilenos de forma cont
 |--------|--------|------------------------|
 | Banco Central de Chile (BCCh) | ✅ Activo | 1975 |
 | CMF — Empresas y Mercados | ✅ Activo | 2015 |
-| CMF — Bancos e Instituciones Financieras | ✅ Activo | 2020 |
+| CMF — Bancos e Instituciones Financieras | ✅ Activo | 2019 |
 | Superintendencia de Pensiones (SP) | ✅ Activo | 2002 (cuotas) · 2015 (cartera) |
 | Expectativas macro (EEE + EOF, BCCh) | ✅ Activo | 2001 |
 | Bolsa de Santiago | ⏳ Planificado | — |
