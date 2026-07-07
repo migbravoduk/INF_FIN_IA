@@ -604,6 +604,24 @@ def afp_cartera(request: Request, fund: str = Query("A"), db: Database = Depends
     })
 
 
+@router.get("/fondos")
+def fondos(request: Request, db: Database = Depends(get_db)):
+    """Vista de fondos de pensiones: retornos por horizonte y composición por AFP."""
+    return templates.TemplateResponse(request, "fondos.html", {
+        "funds": db.get_sp_fund_types(),
+    })
+
+
+@router.get("/fondos/panel")
+def fondos_panel(request: Request, fund: str = Query("A"), db: Database = Depends(get_db)):
+    """Fragmento HTMX: retornos multi-horizonte + composición vigente de un fondo."""
+    returns = db.get_fund_horizon_returns(fund)
+    composition = db.get_fund_composition_by_afp(fund)
+    return templates.TemplateResponse(request, "partials/fondos_panel.html", {
+        "fund": fund, "ret": returns, "comp": composition,
+    })
+
+
 @router.get("/afp/neta")
 def afp_neta(
     request: Request,

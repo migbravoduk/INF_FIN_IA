@@ -824,6 +824,93 @@ class Database:
         ).fetchall()
         return [str(r[0]) for r in rows]
 
+    def get_sp_fund_types(self) -> list[str]:
+        """Tipos de fondo con cuotas (A-E hoy; los generacionales aparecerán solos)."""
+        rows = self.conn.execute(
+            "SELECT DISTINCT fund_type FROM sp_quota_values ORDER BY fund_type"
+        ).fetchall()
+        return [str(r[0]) for r in rows]
+
+    # Horizontes de retorno: (etiqueta, días aprox., anualizar)
+    FUND_HORIZONS = [("1M", 30, False), ("3M", 91, False), ("6M", 182, False),
+                     ("12M", 365, False), ("3A", 3 * 365, True),
+                     ("5A", 5 * 365, True), ("10A", 10 * 365, True)]
+
+    def get_fund_horizon_returns(self, fund: str) -> dict:
+        """
+        Retornos nominales del valor cuota por AFP para un fondo, en varios horizontes.
+        <=12M: retorno acumulado; >12M: anualizado (marcado en la etiqueta). La cuota
+        base es la última disponible a la fecha objetivo (tolerancia 20 días; si la AFP
+        no existía, el horizonte queda en None — ej. UNO antes de 2019).
+        Devuelve {"horizons": [labels], "afps": [{afp, values: [...]}], "as_of": date}.
+        """
+        df = self.conn.execute("""
+            SELECT afp_name, date, quota_value FROM sp_quota_values
+            WHERE fund_type = ? AND afp_name <> 'TOTAL'
+            ORDER BY afp_name, date
+        """, [fund]).fetchdf()
+        if df.empty:
+            return {"horizons": [], "afps": [], "as_of": None}
+        import pandas as pd
+
+        df["date"] = pd.to_datetime(df["date"])
+        as_of = df["date"].max()
+        labels = [f"{lab} (anual)" if ann else lab for lab, _, ann in self.FUND_HORIZONS]
+        out = []
+        for afp, sub in df.groupby("afp_name"):
+            sub = sub.set_index("date")["quota_value"].sort_index()
+            q_now = float(sub.iloc[-1])
+            vals = []
+            for _, days, annualize in self.FUND_HORIZONS:
+                target = as_of - pd.Timedelta(days=days)
+                base = sub.loc[:target]
+                if base.empty or (target - base.index[-1]).days > 20:
+                    vals.append(None)
+                    continue
+                r = q_now / float(base.iloc[-1])
+                years = days / 365.0
+                vals.append(round(((r ** (1 / years)) - 1) * 100, 2) if annualize
+                            else round((r - 1) * 100, 2))
+            out.append({"afp": str(afp), "values": vals})
+        out.sort(key=lambda a: (a["values"][3] is None, -(a["values"][3] or 0)))  # por 12M
+        return {"horizons": labels, "afps": out, "as_of": str(as_of.date())}
+
+    def get_fund_composition_by_afp(self, fund: str) -> dict:
+        """
+        Composición vigente de la cartera de un fondo, por AFP, agregada a las secciones
+        del informe SP (totalizadores 'TOTAL <sección>'; se excluyen las filas de control
+        en MM$). Devuelve {"period", "sections": [orden], "afps": [{afp, pcts: {sección: %}}]}.
+        """
+        period = self.conn.execute(
+            "SELECT MAX(period) FROM sp_portfolio_holdings").fetchone()[0]
+        if period is None:
+            return {"period": None, "sections": [], "afps": []}
+        df = self.conn.execute("""
+            SELECT afp_name, instrument_glosa, porcentaje, row_order
+            FROM sp_portfolio_holdings
+            WHERE period = ? AND fund_type = ? AND afp_name <> 'TOTAL'
+              AND instrument_glosa LIKE 'TOTAL %'
+              AND instrument_glosa NOT LIKE '%MM$%' AND instrument_glosa NOT LIKE '%MMU$%'
+              AND porcentaje IS NOT NULL
+            ORDER BY afp_name, row_order
+        """, [str(period), fund]).fetchdf()
+        if df.empty:
+            return {"period": str(period), "sections": [], "afps": []}
+
+        # Orden de secciones = orden oficial del informe (row_order de la primera AFP)
+        sections, seen = [], set()
+        for _, r in df.iterrows():
+            s = str(r["instrument_glosa"]).replace("TOTAL ", "").title()
+            if s not in seen:
+                sections.append(s)
+                seen.add(s)
+        afps = []
+        for afp, sub in df.groupby("afp_name"):
+            pcts = {str(r["instrument_glosa"]).replace("TOTAL ", "").title():
+                    float(r["porcentaje"]) for _, r in sub.iterrows()}
+            afps.append({"afp": str(afp), "pcts": pcts})
+        return {"period": str(period), "sections": sections, "afps": afps}
+
     def get_afp_net_simulation(self, fund: str = "C", salary: float = 1_000_000,
                                months: int = 12) -> dict:
         """

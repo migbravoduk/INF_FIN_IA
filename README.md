@@ -253,7 +253,8 @@ Vistas disponibles:
 | `/salud` | Radar de Salud Financiera: gráfico de dispersión cruzando Riesgo (Deuda) vs Rentabilidad (ROE) y Liquidez, identificando unicornios y empresas en riesgo por sector |
 | `/proyecciones` | **Proyecciones de EEFF a 1–3 años** (ingresos y resultado neto): fan charts con bandas empíricas 80/95%, supuestos macro anclados a las encuestas EEE+EOF del BCCh y trayectoria estructural (activos → rotación → margen). Modelo híbrido validado por backtest |
 | `/banca` | Estados bancarios con desglose por moneda; gráfico de evolución de cualquier cuenta |
-| `/afp` | Evolución de fondos de pensiones: una AFP/un fondo, comparar fondos, comparar AFP; métrica valor cuota / patrimonio / participación de mercado; rentabilidad nominal vs real; composición de cartera |
+| `/afp` | Evolución de fondos de pensiones: una AFP/un fondo, comparar fondos, comparar AFP; métrica valor cuota / patrimonio / participación de mercado; rentabilidad nominal vs real; composición de cartera (glosario oficial SP); **rentabilidad neta de comisiones** (simulación sueldo configurable) |
+| `/fondos` | **Comparativo por fondo entre AFP**: retornos del valor cuota en horizontes 1M/3M/6M/12M/3A/5A/10A (anualizados desde 3A) + composición vigente de cartera por AFP (secciones del informe SP apiladas). Selector dinámico — escala solo a los fondos generacionales |
 | `/docs` | Swagger de la API REST (`/api/...`) |
 
 Export estático navegable de EEFF (sin servidor): `main.py eeff-export` → `preview/eeff/index.html`

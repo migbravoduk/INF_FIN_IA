@@ -20,7 +20,8 @@
 - **Ranking** `/ranking`: top empresas por indicador.
 - **Proyecciones** `/proyecciones`: ingresos y resultado a 1–3 años (modelo híbrido estructural+SARIMAX), fan charts con bandas empíricas, supuestos macro EEE+EOF y trayectoria estructural.
 - **Banca** `/banca`: estados con desglose por moneda + gráfico de cuenta + evolución por moneda.
-- **AFP** `/afp`: evolución cuota/patrimonio/participación, comparar fondos/AFP, nominal vs real, cartera por categoría.
+- **AFP** `/afp`: evolución cuota/patrimonio/participación, comparar fondos/AFP, nominal vs real, cartera por categoría (nemotécnicos traducidos con glosario oficial SP), rentabilidad neta de comisiones (con umbral de fondo mínimo).
+- **Fondos** `/fondos`: por fondo — retornos del valor cuota multi-horizonte (1M→10A) por AFP + composición de cartera por AFP (secciones apiladas). Selector dinámico desde la BD, preparado para los fondos generacionales.
 - **Reseñas de empresas**: `config/company_profiles.yaml` (101 curadas) + inferencia por tipo (520) = 70% cobertura; sin info → nombre como placeholder.
 - Export estático (`web-preview`, `eeff-export`) en `preview/`.
 

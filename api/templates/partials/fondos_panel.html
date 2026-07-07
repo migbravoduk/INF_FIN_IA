@@ -1,0 +1,95 @@
+{#
+  partials/fondos_panel.html — Panel de un fondo: retornos multi-horizonte + composición.
+  ret = {horizons:[], afps:[{afp, values:[]}], as_of}
+  comp = {period, sections:[], afps:[{afp, pcts:{sección: %}}]}
+#}
+{% if ret.afps %}
+<div class="chart-block" style="margin-top:1rem">
+    <h4>Retorno nominal del valor cuota — Fondo {{ fund }}
+        <span class="lead">(al {{ ret.as_of }} · hasta 12M acumulado, desde 3A anualizado)</span></h4>
+    <div id="fondos-ret-chart" class="chart"></div>
+</div>
+
+<div class="eeff-group table-scroll" style="margin-top:1rem">
+    <table class="bank-table">
+        <thead>
+            <tr>
+                <th class="acct">AFP</th>
+                {% for h in ret.horizons %}<th>{{ h }}</th>{% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+        {% for a in ret.afps %}
+            <tr class="{{ 'total-row' if loop.first else '' }}">
+                <td class="acct">{{ a.afp }}</td>
+                {% for v in a["values"] %}
+                <td class="num">{{ "%.2f%%"|format(v) if v is not none else "—" }}</td>
+                {% endfor %}
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    <p style="color:#64748b; font-size:.78rem; margin-top:.3rem">
+        Ordenado por retorno a 12M. "—" = la AFP no existía en ese horizonte.
+        Retornos nominales sobre valor cuota (no descuentan comisiones — para el neto ver la pestaña AFP).
+    </p>
+</div>
+
+{% if comp.afps %}
+<div class="chart-block" style="margin-top:1.5rem">
+    <h4>Composición de cartera por AFP — Fondo {{ fund }}
+        <span class="lead">(período {{ comp.period }} · % del fondo por sección del informe SP)</span></h4>
+    <div id="fondos-comp-chart" class="chart"></div>
+</div>
+{% endif %}
+
+<script>
+(function () {
+    var ret = {{ ret | tojson }};
+    var comp = {{ comp | tojson }};
+    var SECTION_COLORS = ["#38bdf8", "#a78bfa", "#34d399", "#fbbf24", "#f87171", "#818cf8", "#64748b"];
+
+    function draw() {
+        if (!window.Plotly) { return setTimeout(draw, 100); }
+
+        // 1) Retornos: barras agrupadas — x = horizonte, un trace por AFP
+        Plotly.newPlot("fondos-ret-chart",
+            ret.afps.map(function (a) {
+                return { x: ret.horizons, y: a.values, name: a.afp, type: "bar" };
+            }), {
+            margin: { t: 10, r: 10, b: 40, l: 50 }, height: 360,
+            paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)",
+            font: { color: "#94a3b8" }, barmode: "group",
+            xaxis: { gridcolor: "#334155" },
+            yaxis: { gridcolor: "#334155", ticksuffix: "%", zerolinecolor: "#94a3b8" },
+            legend: { orientation: "h", y: -0.15 }
+        }, { displayModeBar: false, responsive: true });
+
+        // 2) Composición: barras horizontales apiladas — y = AFP, un trace por sección
+        if (comp.afps.length > 0) {
+            var afps = comp.afps.map(function (a) { return a.afp; });
+            Plotly.newPlot("fondos-comp-chart",
+                comp.sections.map(function (s, i) {
+                    return {
+                        y: afps,
+                        x: comp.afps.map(function (a) { return a.pcts[s] || 0; }),
+                        name: s, type: "bar", orientation: "h",
+                        marker: { color: SECTION_COLORS[i % SECTION_COLORS.length] },
+                        hovertemplate: "<b>%{y}</b> · " + s + ": %{x:.2f}%<extra></extra>"
+                    };
+                }), {
+                margin: { t: 10, r: 10, b: 40, l: 90 }, height: 340,
+                paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)",
+                font: { color: "#94a3b8" }, barmode: "stack",
+                xaxis: { gridcolor: "#334155", ticksuffix: "%", range: [0, 100] },
+                yaxis: { gridcolor: "#334155" },
+                legend: { orientation: "h", y: -0.2, font: { size: 10 } }
+            }, { displayModeBar: false, responsive: true });
+        }
+    }
+    draw();
+})();
+</script>
+{% else %}
+<p class="loading">Sin datos de cuotas para ese fondo.</p>
+{% endif %}
