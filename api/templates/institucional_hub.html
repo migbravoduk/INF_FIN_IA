@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block title %}Inversión institucional · INF_FIN_IA{% endblock %}
+
+{% block content %}
+<h1>Inversión institucional</h1>
+<p class="subtitle">
+    Los grandes administradores de activos del mercado local: fondos de pensiones y compañías
+    de seguros. Cada uno con su fuente y su periodicidad, pero la misma pregunta de fondo —
+    en qué están invertidos y cómo se mueve esa cartera.
+</p>
+
+<div class="hub-grid">
+    {% for c in classes %}
+    <a class="hub-card" href="{{ c.url }}">
+        <span class="hub-icon">{{ c.icon }}</span>
+        <h3>{{ c.title }}</h3>
+        <p>{{ c.desc }}</p>
+        <span class="hub-meta">{{ c.meta }}</span>
+    </a>
+    {% endfor %}
+</div>
+
+{# Estilos de .hub-grid / .hub-card: compartidos en api/static/app.css #}
+{% endblock %}

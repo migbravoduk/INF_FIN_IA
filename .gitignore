@@ -11,6 +11,7 @@ venv.bak/
 data/
 logs/
 scratch/
+preview/
 __pycache__/
 *.pyc
 *.pyo
@@ -27,3 +28,4 @@ dist/
 # IDEs
 .vscode/
 .idea/
+.claude/

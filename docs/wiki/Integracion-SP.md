@@ -142,6 +142,15 @@ CREATE TABLE IF NOT EXISTS sp_instrument_prices (
 
 **Solución:** Se reemplazó la clave primaria compuesta por un `id` autoincremental con secuencia DuckDB (`sp_portfolio_seq`) y se adoptó una estrategia **Delete-then-Insert** por período para mantener idempotencia.
 
+> **Ampliación (jul-2026):** la misma ambigüedad de glosas impide clasificar un instrumento
+> como nacional o extranjero por su código (el mismo `CFID(6)` aparece en la sección de fondos
+> mutuos nacionales y en la extranjera). El parser ahora preserva el orden del XML en
+> `row_order` (atributo `<fila numero>`) y asigna `section` = el totalizador `TOTAL …` que
+> cierra cada bloque. Así `get_foreign_portfolio` filtra por `section = 'TOTAL EXTRANJERO'`
+> de forma exacta. **Nunca clasificar la cartera por lista de códigos de instrumento.** El
+> backfill 2015–2026 confirmó `section` en todos los años (el esquema pasó de 8 a 9 secciones
+> en 2018 al aparecer los activos alternativos).
+
 ### 2. Bloqueo de DuckDB en inserciones masivas
 **Problema:** Al ejecutar el backfill completo (todos los fondos A–E desde 2002 en un único proceso), la conexión DuckDB quedaba bloqueada durante el `executemany` del Fondo B (~41.000 filas con `ON CONFLICT DO UPDATE`), posiblemente por la presión de memoria del proceso previo que mantenía la conexión abierta.
 

@@ -1,0 +1,75 @@
+{#
+  proyecciones_simple.html — Vista de proyecciones para las clasificaciones con SARIMAX
+  univariante (bancos, seguros, intermediarios). Selector de entidad + horizonte.
+#}
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }} · INF_FIN_IA{% endblock %}
+
+{% block content %}
+<p class="crumb"><a href="/proyecciones">← Proyecciones</a></p>
+<h1>{{ page_title }}</h1>
+<p class="subtitle">{{ page_subtitle }}</p>
+
+<form class="eeff-form" id="proys-form"
+      hx-get="{{ endpoint }}"
+      hx-target="#proys-results"
+      hx-trigger="load, change"
+      hx-swap="innerHTML"
+      hx-indicator="#proys-loading">
+
+    {% if kinds %}
+    <label>{{ kind_label }}
+        <select name="kind" id="proys-kind">
+            {% for k in kinds %}<option value="{{ k.value }}">{{ k.label }}</option>{% endfor %}
+        </select>
+    </label>
+    {% endif %}
+
+    <label>Entidad
+        <select name="entity" id="proys-entity">
+            {% for e in entities %}
+            <option value="{{ e.id }}" data-kind="{{ e.kind }}">{{ e.name }}</option>
+            {% endfor %}
+        </select>
+    </label>
+
+    <label>Horizonte
+        <select name="steps">
+            {% for h in horizons %}
+            <option value="{{ h.value }}" {% if h.default %}selected{% endif %}>{{ h.label }}</option>
+            {% endfor %}
+        </select>
+    </label>
+</form>
+
+<p id="proys-loading" class="loading htmx-indicator">Ajustando modelo y proyectando…</p>
+
+<section id="proys-results"></section>
+
+<script>
+// Filtra el selector de entidades según el subtipo (ramo / tipo de intermediario).
+(function () {
+    var kindSel = document.getElementById('proys-kind');
+    var entSel  = document.getElementById('proys-entity');
+    if (!kindSel || !entSel) return;
+    var all = Array.prototype.slice.call(entSel.options).map(function (o) {
+        return { value: o.value, text: o.text, kind: o.getAttribute('data-kind') };
+    });
+    function applyFilter() {
+        var k = kindSel.value, prev = entSel.value;
+        entSel.innerHTML = '';
+        all.filter(function (o) { return k === '' || o.kind === k; })
+           .forEach(function (o) {
+               var opt = document.createElement('option');
+               opt.value = o.value; opt.textContent = o.text;
+               opt.setAttribute('data-kind', o.kind);
+               entSel.appendChild(opt);
+           });
+        if (entSel.querySelector('option[value="' + prev + '"]')) entSel.value = prev;
+    }
+    kindSel.addEventListener('change', applyFilter);
+    applyFilter();
+})();
+</script>
+{% endblock %}

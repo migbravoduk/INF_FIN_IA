@@ -1,0 +1,24 @@
+{#
+  partials/ranking_table.html — Top empresas por un ratio.
+  rows = [{company_name, rut, value, currency}], metric_label, period, is_pct.
+#}
+{% if rows %}
+<div class="eeff-group">
+    <h4>{{ metric_label }} · período {{ period }} <span class="lead">(top 15 · "del período")</span></h4>
+    <table class="rank-table">
+        <tbody>
+        {% for r in rows %}
+            <tr>
+                <td class="pos-n">{{ loop.index }}</td>
+                <td class="acct">{{ r.company_name }}</td>
+                <td class="num {{ 'pos' if r.value >= 0 else 'neg' }}">
+                    {{ "{:+,.1f}%".format(r.value) if is_pct else "{:,.2f}x".format(r.value) }}
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<p class="loading">Sin datos para ese período.</p>
+{% endif %}

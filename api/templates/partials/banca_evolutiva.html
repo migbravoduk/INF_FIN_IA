@@ -1,0 +1,94 @@
+{#
+  partials/banca_evolutiva.html — Evolución por período de una cuenta bancaria con desglose por moneda.
+  series = [{period, value, clp_no_reaj, clp_reaj_ipc, clp_reaj_tc, extranjera}], account = nombre de la partida.
+#}
+{% macro fmt(v) %}{{ "{:,.0f}".format(v) if v not in (none, 0, 0.0) else "—" }}{% endmacro %}
+
+{% if series %}
+<div class="chart-block" style="margin-top:1rem">
+    <h4>{{ account }} — evolución por moneda</h4>
+    <div id="banca-evolutiva-chart" class="chart"></div>
+</div>
+
+<div class="eeff-group table-scroll" style="margin-top: 2rem;">
+    <table class="bank-table">
+        <thead>
+            <tr>
+                <th class="acct">Período</th>
+                <th>CLP no reaj.</th>
+                <th>Reaj. UF</th>
+                <th>Reaj. USD</th>
+                <th>M. extranjera</th>
+                <th>Total</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for r in series %}
+            <tr>
+                <td class="acct">{{ r.period }}</td>
+                <td class="num">{{ fmt(r.clp_no_reaj) }}</td>
+                <td class="num">{{ fmt(r.clp_reaj_ipc) }}</td>
+                <td class="num">{{ fmt(r.clp_reaj_tc) }}</td>
+                <td class="num">{{ fmt(r.extranjera) }}</td>
+                <td class="num strong">{{ fmt(r.value) }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<script>
+(function () {
+    var data = {{ series | tojson }};
+    function draw() {
+        if (!window.Plotly) { return setTimeout(draw, 100); }
+        
+        var periods = data.map(function(d) { return d.period; });
+        
+        var traces = [
+            {
+                x: periods,
+                y: data.map(function(d) { return d.clp_no_reaj; }),
+                name: 'CLP no reaj.',
+                type: 'bar',
+                marker: { color: '#38bdf8' }
+            },
+            {
+                x: periods,
+                y: data.map(function(d) { return d.clp_reaj_ipc; }),
+                name: 'Reaj. UF',
+                type: 'bar',
+                marker: { color: '#818cf8' }
+            },
+            {
+                x: periods,
+                y: data.map(function(d) { return d.clp_reaj_tc; }),
+                name: 'Reaj. USD',
+                type: 'bar',
+                marker: { color: '#c084fc' }
+            },
+            {
+                x: periods,
+                y: data.map(function(d) { return d.extranjera; }),
+                name: 'M. Extranjera',
+                type: 'bar',
+                marker: { color: '#f472b6' }
+            }
+        ];
+
+        Plotly.newPlot("banca-evolutiva-chart", traces, {
+            margin: { t: 10, r: 10, b: 40, l: 80 }, height: 350,
+            paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)",
+            font: { color: "#94a3b8" },
+            barmode: 'stack',
+            xaxis: { type: "category", gridcolor: "#334155" },
+            yaxis: { gridcolor: "#334155" },
+            legend: { orientation: "h", y: -0.2 }
+        }, { displayModeBar: false, responsive: true });
+    }
+    draw();
+})();
+</script>
+{% elif account %}
+<p class="loading">Sin serie para esa partida.</p>
+{% endif %}

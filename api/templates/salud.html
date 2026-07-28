@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Salud Financiera · INF_FIN_IA{% endblock %}
+
+{% block content %}
+<h1>Salud Financiera (Mix de Indicadores)</h1>
+<p class="subtitle">Gráfico de dispersión para detectar unicornios y empresas en riesgo.</p>
+
+<form class="eeff-form"
+      hx-get="/salud/chart"
+      hx-target="#salud-result"
+      hx-trigger="load, change"
+      hx-swap="innerHTML">
+
+    <label>Período
+        <select name="period">
+            {% for p in periods %}
+            <option value="{{ p }}">{{ p }}</option>
+            {% endfor %}
+        </select>
+    </label>
+
+    <label>Sector / Actividad
+        <select name="sector">
+            <option value="" selected>— Todos los sectores —</option>
+            {% for s in sectors %}
+            <option value="{{ s }}">{{ s }}</option>
+            {% endfor %}
+        </select>
+    </label>
+</form>
+
+<section id="salud-result" style="margin-top: 2rem;">
+    <p class="loading">Cargando matriz de riesgo vs rentabilidad…</p>
+</section>
+{% endblock %}

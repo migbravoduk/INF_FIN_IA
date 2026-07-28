@@ -1,0 +1,48 @@
+{#
+  partials/seguros_cartera_companias.html — Comparación entre compañías del ramo.
+  rows = [{rut, name, total(MMM$), share, pct_extranjero, pct_rf, pct_cui, pct_repr}]
+#}
+{% macro pct(v) %}{% if v is none %}—{% else %}{{ "{:,.1f}".format(v) }}%{% endif %}{% endmacro %}
+
+{% if rows %}
+<div class="eeff-meta" style="margin:.6rem 0 1rem">
+    {{ ramo_label }} · período {{ period }} · {{ rows|length }} compañías ·
+    mercado <strong>{{ "{:,.0f}".format(total_mercado) }} MMM$</strong> ·
+    HHI <strong>{{ "{:,.0f}".format(hhi) }}</strong>
+    <span class="lead">(bajo 1.500 = desconcentrado; sobre 2.500 = concentrado)</span>
+</div>
+
+<table class="eeff-table">
+    <thead>
+        <tr>
+            <th>Compañía</th>
+            <th style="text-align:right">Cartera (MMM$)</th>
+            <th style="text-align:right">Cuota</th>
+            <th style="text-align:right">Extranjero</th>
+            <th style="text-align:right">Renta fija</th>
+            <th style="text-align:right">CUI/APV</th>
+            <th style="text-align:right">Respalda reservas</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for r in rows %}
+        <tr>
+            <td>{{ r.name }} <span class="lead">{{ r.rut }}</span></td>
+            <td style="text-align:right">{{ "{:,.0f}".format(r.total) }}</td>
+            <td style="text-align:right">{{ pct(r.share) }}</td>
+            <td style="text-align:right">{{ pct(r.pct_extranjero) }}</td>
+            <td style="text-align:right">{{ pct(r.pct_rf) }}</td>
+            <td style="text-align:right">{{ pct(r.pct_cui) }}</td>
+            <td style="text-align:right">{{ pct(r.pct_repr) }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+<p class="lead" style="margin-top:.5rem">
+    «Renta fija» agrupa las clases estatal, bancaria, corporativa e hipotecaria.
+    «Respalda reservas» es la porción representativa de reservas técnicas y patrimonio de
+    riesgo (DFL 251).
+</p>
+{% else %}
+<p class="loading">Sin compañías para ese período.</p>
+{% endif %}

@@ -14,15 +14,17 @@ Uso:
 
 import logging
 import sys
-import io
 from datetime import datetime
 from pathlib import Path
 
-# Forzar UTF-8 en la consola de Windows (evita UnicodeEncodeError con emojis)
-if sys.stdout.encoding and sys.stdout.encoding.lower() not in ("utf-8", "utf8"):
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
-if sys.stderr.encoding and sys.stderr.encoding.lower() not in ("utf-8", "utf8"):
-    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
+# Forzar UTF-8 en la salida (evita UnicodeEncodeError con emojis en la consola de Windows).
+# Se usa reconfigure() y NO reasignar sys.stdout a un TextIOWrapper nuevo: al redirigir la
+# salida a un pipe/archivo, el wrapper nuevo quedaba con su buffer sin vaciar al terminar el
+# proceso (Python solo hace flush de los streams ORIGINALES), y toda la salida se perdía.
+for _stream in (sys.stdout, sys.stderr):
+    enc = getattr(_stream, "encoding", None)
+    if enc and enc.lower() not in ("utf-8", "utf8") and hasattr(_stream, "reconfigure"):
+        _stream.reconfigure(encoding="utf-8", errors="replace")
 
 import click
 import yaml
@@ -44,9 +46,11 @@ from db.database import Database
 from collectors.bcentral import BCentralCollector
 from collectors.cmf import CMFCollector
 from collectors.cmf_banks import CMFBankCollector
+from collectors.cmf_insurers import CMFInsurerCollector
+from collectors.cmf_brokers import CMFBrokerCollector
 from collectors.sp_pensions import SPPensionCollector
 from processors.normalizer import normalize_observations
-from scheduler.jobs import run_all_series, run_fetch_by_frequency, create_scheduler
+from scheduler.jobs import run_all_series, run_fetch_by_frequency, create_scheduler, run_catchup
 
 console = Console()
 
@@ -519,9 +523,11 @@ def query_cmf(rut, company, period, limit, output_format):
 @click.option("--year", "-y", type=int, default=None, help="Año de consulta (ej. 2025)")
 @click.option("--month", "-m", type=int, default=None, help="Mes de consulta (1 a 12)")
 @click.option("--bank", "-b", default=None, help="Código SBIF de un banco específico (ej. '001')")
-@click.option("--history", is_flag=True, help="Realiza una carga histórica mensual completa (2024-2026) para los bancos principales")
+@click.option("--history", is_flag=True, help="Carga histórica mensual completa para los bancos principales")
+@click.option("--year-start", type=int, default=2024, help="Primer año del backfill con --history (default 2024)")
+@click.option("--year-end", type=int, default=None, help="Último año del backfill con --history (default: año actual)")
 @click.option("--force", "-f", is_flag=True, help="Fuerza la descarga desde la API ignorando la caché local")
-def fetch_banks(year, month, bank, history, force):
+def fetch_banks(year, month, bank, history, year_start, year_end, force):
     """Descarga e ingesta estados financieros mensuales de bancos de la CMF."""
 
     if not history and (not year or not month):
@@ -539,14 +545,17 @@ def fetch_banks(year, month, bank, history, force):
 
     # Definir períodos a descargar
     if history:
-        # Backfill histórico mensual: 2024 (todos los meses) + 2025 (todos los meses) + 2026 (meses 1 a 3)
+        # Backfill histórico mensual [year_start, year_end]; el año final se
+        # trunca al mes anterior al actual (el mes en curso aún no publica).
+        from datetime import date as _date
+        today = _date.today()
+        y1 = year_end or today.year
         periods = []
-        for y in (2024, 2025):
-            for m in range(1, 13):
+        for y in range(year_start, y1 + 1):
+            last_m = (today.month - 1) if y == today.year else 12
+            for m in range(1, last_m + 1):
                 periods.append((y, m))
-        for m in range(1, 4):
-            periods.append((2026, m))
-        info_msg = "Carga histórica mensual (2024-2026) para bancos"
+        info_msg = f"Carga histórica mensual ({year_start}-{y1}) para bancos"
     else:
         periods = [(year, month)]
         info_msg = f"Período específico: {year}-{month:02d}"
@@ -591,6 +600,296 @@ def fetch_banks(year, month, bank, history, force):
 
     except Exception as e:
         console.print(f"\n[bold red]❌ Error durante la ingesta bancaria:[/] {e}")
+        sys.exit(1)
+
+
+# ----------------------------------------------------------
+# fetch-seguros
+# ----------------------------------------------------------
+
+@cli.command(name="fetch-seguros")
+@click.option("--ramo", type=click.Choice(["vida", "generales", "ambos"]), default="ambos",
+              help="Ramo de seguros a cargar (default: ambos)")
+@click.option("--year", "-y", type=int, default=None, help="Año de consulta (ej. 2026)")
+@click.option("--month", "-m", type=int, default=None, help="Mes de cierre trimestral (3, 6, 9 o 12)")
+@click.option("--freq", type=click.Choice(["trimestral", "anual"]), default="trimestral",
+              help="Versión de la FECU (default trimestral)")
+@click.option("--history", is_flag=True, help="Carga histórica trimestral completa de todas las compañías")
+@click.option("--year-start", type=int, default=2015, help="Primer año del backfill con --history (default 2015)")
+@click.option("--year-end", type=int, default=None, help="Último año del backfill con --history (default: año actual)")
+@click.option("--force", "-f", is_flag=True, help="Fuerza la descarga ignorando la caché local")
+def fetch_seguros(ramo, year, month, freq, history, year_start, year_end, force):
+    """Descarga e ingesta EEFF de compañías de seguros de la CMF (FECU, todas de una vez)."""
+
+    if not history and (not year or not month):
+        console.print("[bold red]Error: Debes especificar año (--year) y mes (--month) o activar --history.[/]")
+        sys.exit(1)
+
+    ramos = ["vida", "generales"] if ramo == "ambos" else [ramo]
+
+    # Períodos trimestrales (03, 06, 09, 12) hasta el último cierre ya publicado.
+    if history:
+        from datetime import date as _date
+        today = _date.today()
+        y1 = year_end or today.year
+        last_q_month = ((today.month - 1) // 3) * 3  # último cierre trimestral posible
+        periods = []
+        for y in range(year_start, y1 + 1):
+            for mm in (3, 6, 9, 12):
+                if y == today.year and mm > last_q_month:
+                    continue
+                periods.append((y, mm))
+        info_msg = f"Carga histórica trimestral ({year_start}-{y1})"
+    else:
+        periods = [(year, month)]
+        info_msg = f"Período específico: {year}-{month:02d} ({freq})"
+
+    console.print(Panel(
+        f"[bold green]🚀 Ingesta de EEFF de Compañías de Seguros (FECU CMF)[/]\n\n"
+        f"  • Ramo(s): [cyan]{', '.join(ramos)}[/]\n"
+        f"  • Modo: [cyan]{info_msg}[/]\n"
+        f"  • Frecuencia: [yellow]{freq}[/]\n"
+        f"  • Forzar descarga: [yellow]{force}[/]",
+        title="📥 Ingestador de Seguros CMF", border_style="green",
+    ))
+
+    try:
+        total_inserted = 0
+        with Database() as db:
+            for ins_type in ramos:
+                collector = CMFInsurerCollector(insurance_type=ins_type)
+                for y, mm in periods:
+                    console.print(f"\n[bold cyan]⏳ Procesando seguros {ins_type} {y}-{mm:02d} ({freq})...[/]")
+                    recs = collector.fetch_period(y, mm, freq=freq, force_download=force)
+                    if recs:
+                        n = db.insert_insurer_records(int(f"{y}{mm:02d}"), freq, recs, insurance_type=ins_type)
+                        comps = len({r["rut"] for r in recs})
+                        console.print(f"    [green]✓ {n:,} registros · {comps} compañías.[/]")
+                        total_inserted += n
+                    else:
+                        console.print(f"    [yellow]⚠ Sin datos para {ins_type} {y}-{mm:02d}.[/]")
+
+        console.print(f"\n[bold green]✅ Ingesta de seguros finalizada![/]")
+        console.print(f"  • Total registros insertados en DuckDB: [bold]{total_inserted:,}[/]")
+    except Exception as e:
+        console.print(f"\n[bold red]❌ Error durante la ingesta de seguros:[/] {e}")
+        sys.exit(1)
+
+
+# ----------------------------------------------------------
+# import-cartera-seguros
+# ----------------------------------------------------------
+
+def _ingest_cartera_zip(db, zp):
+    """Parsea e ingesta un ZIP de cartera (B.8 Control + B.1 Renta Fija). Devuelve (n_ctrl, n_fi)."""
+    from collectors.seguros_cartera import parse_zip_control, parse_zip_fixed_income
+
+    n_ctrl = n_fi = 0
+    recs = parse_zip_control(zp)
+    if recs:
+        per, itype = recs[0]["period"], recs[0]["insurance_type"]
+        n_ctrl = db.insert_insurer_portfolio_control(per, itype, recs)
+        cias = len({r["rut"] for r in recs})
+        codes = len({r["investment_code"] for r in recs})
+        console.print(f"    [green]✓ Control: {n_ctrl:,} filas · {cias} compañías · "
+                      f"{codes} tipos de inversión.[/]")
+    else:
+        console.print(f"    [yellow]⚠ Sin registros de control.[/]")
+    fi = parse_zip_fixed_income(zp)
+    if fi:
+        per, itype = fi[0]["period"], fi[0]["insurance_type"]
+        n_fi = db.insert_insurer_portfolio_fixed_income(per, itype, fi)
+        emis = len({r["rut_emisor"] for r in fi if r["rut_emisor"]})
+        console.print(f"    [green]✓ Renta fija: {n_fi:,} instrumentos · "
+                      f"{emis} emisores distintos.[/]")
+    return n_ctrl, n_fi
+
+
+@cli.command(name="fetch-cartera-seguros")
+@click.option("--period", "-p", type=int, default=None,
+              help="Descargar e ingestar un período YYYYMM (ej. 202606)")
+@click.option("--latest", is_flag=True, help="Solo el período más reciente publicado en la CMF")
+@click.option("--history", is_flag=True, help="Todos los períodos disponibles (2016-01 en adelante)")
+@click.option("--since", type=int, default=None,
+              help="Con --history, limita al rango desde este período YYYYMM (ej. 202001)")
+@click.option("--ramo", type=click.Choice(["vida", "generales", "ambos"]), default="ambos",
+              help="Ramo de seguros a cargar (default: ambos)")
+@click.option("--raw-dir", default="data/seguros_cartera_raw",
+              help="Carpeta donde se guardan los ZIP descargados")
+@click.option("--force", "-f", is_flag=True, help="Fuerza la descarga ignorando la caché local")
+def fetch_cartera_seguros(period, latest, history, since, ramo, raw_dir, force):
+    """Descarga e ingesta la cartera de inversiones de seguros (Circular 1.835) desde la CMF.
+
+    El CAPTCHA de la página de descarga no se valida del lado servidor, así que la baja es
+    automática. Usa --period YYYYMM, --latest o --history (acotable con --since). Cubre
+    ambos ramos (--ramo).
+    """
+    from collectors.seguros_cartera import (download_cartera, list_remote_periods)
+
+    if not (period or latest or history):
+        console.print("[bold red]Error: indica --period YYYYMM, --latest o --history.[/]")
+        sys.exit(1)
+
+    ramos = ["vida", "generales"] if ramo == "ambos" else [ramo]
+    modo = "histórico" + (f" desde {since}" if since else "") if history \
+        else ("último" if latest else f"período {period}")
+
+    console.print(Panel(
+        f"[bold green]🚀 Cartera de inversiones de seguros (Circular 1.835) — descarga + ingesta[/]\n\n"
+        f"  • Ramos: [cyan]{', '.join(ramos)}[/]\n"
+        f"  • Modo: [cyan]{modo}[/]\n"
+        f"  • Forzar descarga: [yellow]{force}[/]",
+        title="📥 Colector de Cartera de Seguros", border_style="green",
+    ))
+
+    try:
+        total_ctrl = total_fi = ok = attempted = 0
+        with Database() as db:
+            for r in ramos:
+                if history:
+                    periods = list_remote_periods(r)
+                    if since:
+                        periods = [p for p in periods if p >= since]
+                elif latest:
+                    periods = list_remote_periods(r)[:1]
+                else:
+                    periods = [period]
+                console.print(f"\n[bold]— Ramo {r}: {len(periods)} período(s) —[/]")
+                for per in periods:
+                    attempted += 1
+                    console.print(f"[bold cyan]⏳ {r} {per}: descargando...[/]")
+                    zp = download_cartera(per, r, raw_dir, force=force)
+                    if not zp:
+                        console.print(f"    [yellow]⚠ {r} {per} no disponible en la CMF, se omite.[/]")
+                        continue
+                    n_ctrl, n_fi = _ingest_cartera_zip(db, zp)
+                    total_ctrl += n_ctrl
+                    total_fi += n_fi
+                    ok += 1
+
+        console.print(f"\n[bold green]✅ Colección finalizada![/] "
+                      f"{ok}/{attempted} períodos.")
+        console.print(f"  • Control: [bold]{total_ctrl:,}[/] filas · "
+                      f"Renta fija: [bold]{total_fi:,}[/] instrumentos "
+                      f"[dim](valores en miles de pesos / unidad del instrumento)[/]")
+    except Exception as e:
+        console.print(f"\n[bold red]❌ Error durante la colección:[/] {e}")
+        sys.exit(1)
+
+
+@cli.command(name="import-cartera-seguros")
+@click.option("--raw-dir", default="data/seguros_cartera_raw",
+              help="Carpeta con los ZIP mensuales ya presentes localmente")
+@click.option("--period", "-p", type=int, default=None,
+              help="Importar solo un período YYYYMM (por defecto: todos los ZIP presentes)")
+def import_cartera_seguros(raw_dir, period):
+    """Importa la cartera de seguros (Circular 1.835) desde ZIP YA presentes en la carpeta.
+
+    Fallback offline de `fetch-cartera-seguros`: no descarga nada, solo lee lo que ya está
+    en `raw_dir` (útil si se bajó un ZIP a mano o para reingestar sin volver a la red).
+    """
+    from collectors.seguros_cartera import list_available_zips
+
+    zips = list_available_zips(raw_dir)
+    if period:
+        zips = [z for z in zips if z.name.startswith(str(period))]
+    if not zips:
+        console.print(f"[bold red]No hay ZIP válidos en '{raw_dir}'[/] "
+                      f"(se esperan archivos tipo 202605v.zip).")
+        sys.exit(1)
+
+    console.print(Panel(
+        f"[bold green]🚀 Importando cartera de inversiones de seguros (Circular 1.835)[/]\n\n"
+        f"  • Carpeta: [cyan]{raw_dir}[/]\n"
+        f"  • ZIP a procesar: [yellow]{', '.join(z.name for z in zips)}[/]\n"
+        f"  • Archivos: [cyan]B.8 Control[/] (composición) + [cyan]B.1 Renta Fija[/] "
+        f"(detalle reconciliado)",
+        title="📥 Importador de Cartera de Seguros", border_style="green",
+    ))
+
+    try:
+        total_ctrl = total_fi = 0
+        with Database() as db:
+            for zp in zips:
+                console.print(f"\n[bold cyan]⏳ Procesando {zp.name}...[/]")
+                n_ctrl, n_fi = _ingest_cartera_zip(db, zp)
+                total_ctrl += n_ctrl
+                total_fi += n_fi
+
+        console.print(f"\n[bold green]✅ Importación finalizada![/]")
+        console.print(f"  • Control: [bold]{total_ctrl:,}[/] filas · "
+                      f"Renta fija: [bold]{total_fi:,}[/] instrumentos "
+                      f"[dim](valores en miles de pesos / unidad del instrumento)[/]")
+    except Exception as e:
+        console.print(f"\n[bold red]❌ Error durante la importación:[/] {e}")
+        sys.exit(1)
+
+
+# ----------------------------------------------------------
+# fetch-intermediarios
+# ----------------------------------------------------------
+
+@cli.command(name="fetch-intermediarios")
+@click.option("--year", "-y", type=int, default=None, help="Año de consulta (ej. 2026)")
+@click.option("--month", "-m", type=int, default=None, help="Mes de cierre trimestral (3, 6, 9 o 12)")
+@click.option("--history", is_flag=True, help="Carga histórica trimestral completa")
+@click.option("--year-start", type=int, default=2015, help="Primer año del backfill con --history (default 2015)")
+@click.option("--year-end", type=int, default=None, help="Último año del backfill con --history (default: año actual)")
+@click.option("--force", "-f", is_flag=True, help="Fuerza la descarga ignorando la caché local")
+def fetch_intermediarios(year, month, history, year_start, year_end, force):
+    """Descarga e ingesta EEFF de corredores de bolsa y agentes de valores (FECU IFRS CMF)."""
+
+    if not history and (not year or not month):
+        console.print("[bold red]Error: Debes especificar año (--year) y mes (--month) o activar --history.[/]")
+        sys.exit(1)
+
+    collector = CMFBrokerCollector()
+
+    if history:
+        from datetime import date as _date
+        today = _date.today()
+        y1 = year_end or today.year
+        last_q_month = ((today.month - 1) // 3) * 3
+        periods = []
+        for y in range(year_start, y1 + 1):
+            for mm in (3, 6, 9, 12):
+                if y == today.year and mm > last_q_month:
+                    continue
+                periods.append((y, mm))
+        info_msg = f"Carga histórica trimestral ({year_start}-{y1})"
+    else:
+        periods = [(year, month)]
+        info_msg = f"Período específico: {year}-{month:02d}"
+
+    console.print(Panel(
+        f"[bold green]🚀 Ingesta de EEFF de Intermediarios de Valores (FECU IFRS CMF)[/]\n\n"
+        f"  • Alcance: [cyan]corredores de bolsa + agentes de valores[/]\n"
+        f"  • Modo: [cyan]{info_msg}[/]\n"
+        f"  • Forzar descarga: [yellow]{force}[/]",
+        title="📥 Ingestador de Intermediarios CMF", border_style="green",
+    ))
+
+    try:
+        total_inserted = 0
+        with Database() as db:
+            for y, mm in periods:
+                console.print(f"\n[bold cyan]⏳ Procesando intermediarios {y}-{mm:02d}...[/]")
+                recs = collector.fetch_period(y, mm, force_download=force)
+                if recs:
+                    n = db.insert_broker_records(int(f"{y}{mm:02d}"), recs)
+                    ents = len({r["rut"] for r in recs})
+                    tipos = {}
+                    for r in recs:
+                        tipos[r["broker_type"]] = tipos.get(r["broker_type"], 0) + 1
+                    console.print(f"    [green]✓ {n:,} registros · {ents} entidades · {list(tipos)}[/]")
+                    total_inserted += n
+                else:
+                    console.print(f"    [yellow]⚠ Sin datos para {y}-{mm:02d}.[/]")
+
+        console.print(f"\n[bold green]✅ Ingesta de intermediarios finalizada![/]")
+        console.print(f"  • Total registros insertados en DuckDB: [bold]{total_inserted:,}[/]")
+    except Exception as e:
+        console.print(f"\n[bold red]❌ Error durante la ingesta de intermediarios:[/] {e}")
         sys.exit(1)
 
 
@@ -941,6 +1240,140 @@ def query_sp_precios(instrument, date, limit, output_format):
 
     console.print(table)
     console.print(f"\n[dim]Mostrando últimos {len(df)} registros[/]")
+
+
+# ----------------------------------------------------------
+# catchup
+# ----------------------------------------------------------
+
+@cli.command(name="catchup")
+@click.option("--dry-run", is_flag=True, help="Solo muestra el estado de frescura; no descarga nada.")
+def catchup(dry_run):
+    """Ingesta dirigida por frescura: descarga datos nuevos en cuanto se publican."""
+
+    console.print(Panel(
+        "[bold green]🩺 Catch-up por frescura[/]\n\n"
+        + ("[yellow]Modo dry-run: solo diagnóstico, sin descargas.[/]" if dry_run
+           else "[cyan]Descargando lo que falte dentro de su ventana de publicación...[/]"),
+        title="📡 Ingesta al publicarse",
+        border_style="green",
+    ))
+
+    statuses = run_catchup(dry_run=dry_run)
+
+    t = Table(title="Estado de frescura por fuente", box=box.ROUNDED, border_style="blue")
+    t.add_column("Fuente")
+    t.add_column("Freq.", justify="center", style="dim")
+    t.add_column("Último que tengo", justify="center")
+    t.add_column("Esperado", justify="center")
+    t.add_column("Estado", justify="center")
+
+    for s in statuses:
+        estado = "[yellow]pendiente[/]" if s.due else "[green]al día[/]"
+        t.add_row(s.source, s.frequency, s.latest_have or "—", s.expected or "—", estado)
+
+    console.print(t)
+
+    pend = sum(1 for s in statuses if s.due)
+    if dry_run:
+        console.print(f"\n[dim]{pend} objetivo(s) pendiente(s). Ejecuta sin --dry-run para descargar.[/]")
+    else:
+        console.print(f"\n[green]✓ Catch-up finalizado.[/] [dim]{pend} objetivo(s) estaban pendientes y se procesaron.[/]")
+
+
+# ----------------------------------------------------------
+# web-preview
+# ----------------------------------------------------------
+
+@cli.command(name="web-preview")
+@click.option("--output", "-o", default="preview/overview.html", help="Ruta de salida del HTML")
+def web_preview(output):
+    """Genera un HTML local autocontenido del panel para examinar las vistas sin servidor."""
+    from api.preview import render_static
+    try:
+        path = render_static(output)
+    except Exception as e:
+        console.print(f"[bold red]❌ No se pudo generar la vista:[/] {e}")
+        console.print("[dim]¿Está la BD abierta por otro proceso (escritor)? El preview usa read_only.[/]")
+        sys.exit(1)
+
+    console.print(Panel(
+        f"[bold green]✓ Vista generada[/]\n\n[cyan]{path}[/]\n\n"
+        "[dim]Ábrela con doble clic. Requiere internet (Plotly/HTMX por CDN).[/]",
+        title="🖼️  Preview del dashboard",
+        border_style="green",
+    ))
+
+
+# ----------------------------------------------------------
+# eeff-export
+# ----------------------------------------------------------
+
+@cli.command(name="eeff-export")
+@click.option("--period", "-p", type=int, default=None, help="Período YYYYMM (default: el más reciente)")
+@click.option("--output", "-o", default="preview/eeff", help="Carpeta de salida")
+def eeff_export(period, output):
+    """Exporta los estados financieros de empresas a HTML navegable (índice + página por empresa)."""
+    from api.preview import render_eeff_static
+    try:
+        res = render_eeff_static(period, output)
+    except Exception as e:
+        console.print(f"[bold red]❌ No se pudo exportar:[/] {e}")
+        console.print("[dim]¿Está la BD abierta por otro proceso (escritor)? El export usa read_only.[/]")
+        sys.exit(1)
+
+    if not res.get("companies"):
+        console.print("[yellow]No hay estados financieros para exportar (¿período sin datos?).[/]")
+        return
+
+    console.print(Panel(
+        f"[bold green]✓ EEFF exportados[/]\n\n"
+        f"  • Período: [cyan]{res['period']}[/]\n"
+        f"  • Empresas: [cyan]{res['companies']}[/]\n"
+        f"  • Índice: [cyan]{res['dir']}\\index.html[/]\n\n"
+        "[dim]Abre index.html con doble clic; busca y entra a cada empresa.[/]",
+        title="🗂️  Export EEFF navegable",
+        border_style="green",
+    ))
+
+
+# ----------------------------------------------------------
+# serve
+# ----------------------------------------------------------
+
+@cli.command(name="serve")
+@click.option("--host", default="127.0.0.1", help="Host de escucha")
+@click.option("--port", "-p", default=8000, type=int, help="Puerto (default 8000)")
+@click.option("--with-scheduler", is_flag=True,
+              help="Arranca el scheduler embebido (proceso único; abre la BD en lectura/escritura).")
+@click.option("--open/--no-open", "open_browser", default=True,
+              help="Abrir el navegador automáticamente (default: sí).")
+def serve(host, port, with_scheduler, open_browser):
+    """Levanta la API REST + dashboard web (opcionalmente con el scheduler embebido)."""
+    import uvicorn
+
+    if with_scheduler:
+        settings.RUN_SCHEDULER_IN_APP = True
+        console.print("[cyan]Modo proceso único:[/] scheduler embebido + API en R/W.")
+
+    url = f"http://{host}:{port}/"
+    console.print(Panel(
+        f"[bold green]🌐 Entorno web local iniciado[/]\n\n"
+        f"  • Panel:    [cyan]{url}[/]\n"
+        f"  • API docs: [cyan]{url}docs[/]\n"
+        f"  • Vistas:   panel · EEFF · evolución · comparar · ranking · banca · AFP\n"
+        f"  • Scheduler embebido: [yellow]{'sí' if with_scheduler else 'no'}[/]\n\n"
+        "[dim]Ctrl+C para detener.[/]",
+        title="🚀 INF_FIN_IA Web",
+        border_style="green",
+    ))
+
+    if open_browser:
+        import webbrowser, threading
+        threading.Timer(1.5, lambda: webbrowser.open(url)).start()
+
+    from api.main import app
+    uvicorn.run(app, host=host, port=port)
 
 
 # ----------------------------------------------------------

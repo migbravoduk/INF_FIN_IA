@@ -119,6 +119,142 @@ CREATE INDEX IF NOT EXISTS idx_bank_code_period ON cmf_bank_statements(bank_code
 CREATE INDEX IF NOT EXISTS idx_bank_account_code ON cmf_bank_statements(account_code);
 
 -- ============================================================
+-- Estados Financieros de Compañías de Seguros (FECU CMF) — vida y generales
+-- Fuente: cmfchile.cl (descarga Excel de la consulta "TODOS"). Plan de cuentas de
+-- seguros (Circulares N°2022 y N°2050), distinto al IFRS corporativo y al bancario.
+-- Frecuencia trimestral (03,06,09,12); December tiene además versión anual auditada.
+-- UNIDADES: cifras en MILES de pesos (según la nota al pie del propio reporte).
+-- `insurance_type` distingue el ramo: 'vida' | 'generales'.
+-- ============================================================
+CREATE SEQUENCE IF NOT EXISTS insurer_seq START 1;
+
+CREATE TABLE IF NOT EXISTS cmf_insurer_statements (
+    id              BIGINT PRIMARY KEY DEFAULT nextval('insurer_seq'),
+    insurance_type  VARCHAR NOT NULL DEFAULT 'vida', -- 'vida' | 'generales'
+    year            INTEGER NOT NULL,
+    month           INTEGER NOT NULL,
+    period          INTEGER NOT NULL,             -- Formato YYYYMM (ej. 202603)
+    report_freq     VARCHAR NOT NULL,             -- 'trimestral' | 'anual'
+    rut             VARCHAR NOT NULL,             -- RUT sin dígito verificador (ej. '96656410')
+    company_name    VARCHAR NOT NULL,             -- Razón social (glosa corta del reporte)
+    statement_group VARCHAR NOT NULL,             -- 'ESF' | 'ERI' | 'EFE'
+    account_code    VARCHAR NOT NULL,             -- Código FECU (ej. '5.10.00.00')
+    account_name    VARCHAR NOT NULL,             -- Glosa de la cuenta
+    value           DOUBLE,                       -- Saldo en MILES de CLP (NULL si la cuenta viene vacía)
+    fetched_at      TIMESTAMP DEFAULT now()
+);
+
+-- Migración idempotente: DBs creadas antes de sumar generales no tienen la columna;
+-- ADD COLUMN IF NOT EXISTS la agrega y rellena las filas existentes (vida) con el default.
+ALTER TABLE cmf_insurer_statements ADD COLUMN IF NOT EXISTS insurance_type VARCHAR DEFAULT 'vida';
+
+CREATE INDEX IF NOT EXISTS idx_insurer_rut_period ON cmf_insurer_statements(rut, period);
+CREATE INDEX IF NOT EXISTS idx_insurer_account_code ON cmf_insurer_statements(account_code);
+CREATE INDEX IF NOT EXISTS idx_insurer_type_period ON cmf_insurer_statements(insurance_type, period);
+
+-- ============================================================
+-- Cartera de inversiones de Compañías de Seguros (Circular 1.835 — archivos SGSCI)
+-- Fuente: ZIP mensual de la CMF, descargado A MANO (la descarga tiene CAPTCHA) y dejado
+-- en data/seguros_cartera_raw/. Cada ZIP trae 12 tipos de archivo × compañía, de ancho
+-- fijo y UTF-8. Esta tabla corresponde al archivo B.8 "Información de Control": los
+-- TOTALES por tipo de inversión de cada compañía (composición de cartera).
+-- Layout validado contra los datos: el registro de detalle suma exactamente 138 chars.
+-- UNIDADES: miles de pesos (M$), igual que el resto de la información de seguros.
+-- ============================================================
+CREATE SEQUENCE IF NOT EXISTS insurer_portfolio_seq START 1;
+
+CREATE TABLE IF NOT EXISTS cmf_insurer_portfolio_control (
+    id                BIGINT PRIMARY KEY DEFAULT nextval('insurer_portfolio_seq'),
+    insurance_type    VARCHAR NOT NULL,        -- 'vida' | 'generales'
+    period            INTEGER NOT NULL,        -- YYYYMM
+    rut               VARCHAR NOT NULL,        -- RUT sin dígito verificador
+    company_name      VARCHAR NOT NULL,
+    investment_code   VARCHAR NOT NULL,        -- Tipo de inversión (codificación SEIL, ej. 'A00')
+    valor_final       DOUBLE,                  -- Valor de los instrumentos al cierre (M$)
+    repr_rt_pr        DOUBLE,                  -- Inversiones representativas de (RT + PR)
+    no_repr_rt_pr     DOUBLE,                  -- Inversiones NO representativas
+    costo_amortizado  DOUBLE,                  -- Clasificados 'CA'
+    valor_razonable   DOUBLE,                  -- Clasificados 'VR'
+    efectivo_equiv    DOUBLE,                  -- Clasificados 'EE'
+    cui_apv           DOUBLE,                  -- Instrumentos CUI / APV
+    otras_clasif      DOUBLE,                  -- Clasificados 'OTRCLA'
+    soc_filiales      DOUBLE,                  -- Participaciones en sociedades filiales
+    coligadas         DOUBLE,                  -- Participaciones en sociedades coligadas
+    fetched_at        TIMESTAMP DEFAULT now()
+);
+
+-- NOTA: sin índices secundarios (period / rut) a propósito. En DuckDB 1.5.1 estos índices ART
+-- rompen el patrón Delete-then-Insert de la reingesta por período ("Failed to delete all rows
+-- from index. Only deleted N out of M rows", que además invalida la base): las claves están
+-- muy duplicadas (574 filas comparten el mismo period). El filtrado por period/rut se resuelve
+-- por scan con zonemaps, más que suficiente para el tamaño de estas tablas.
+
+-- Detalle B.1 = Instrumentos de Renta Fija. Solo los campos RECONCILIADOS campo a campo
+-- contra los datos (validación al 100% sobre 205K registros de ambos meses): identificación
+-- del instrumento + valor nominal. Los montos de valoración de mercado (costo amortizado /
+-- valor razonable, al final del registro) NO se cargan aún: el spec publicado no cuadra ahí
+-- (declara 878 chars vs 970 reales) y no hay total interno que los valide; requieren el
+-- catálogo de descriptores (B.9). Ver informe de inconsistencias y CONTEXTO.md.
+CREATE SEQUENCE IF NOT EXISTS insurer_fixinc_seq START 1;
+
+CREATE TABLE IF NOT EXISTS cmf_insurer_portfolio_fixed_income (
+    id                 BIGINT PRIMARY KEY DEFAULT nextval('insurer_fixinc_seq'),
+    insurance_type     VARCHAR NOT NULL,     -- 'vida' | 'generales'
+    period             INTEGER NOT NULL,     -- YYYYMM
+    rut                VARCHAR NOT NULL,     -- RUT de la compañía informante (sin DV)
+    codigo_operacion   VARCHAR,              -- CDT, CRV, … (compra definitiva / retroventa)
+    folio_operacion    VARCHAR,
+    item_operacion     VARCHAR,
+    fecha_compra       VARCHAR,              -- AAAAMMDD
+    fecha_pago         VARCHAR,              -- AAAAMMDD
+    rut_emisor         VARCHAR,              -- RUT del emisor del instrumento (sin DV)
+    tipo_instrumento   VARCHAR,              -- codificación SEIL (ej. 'BB', 'BE')
+    nemotecnico        VARCHAR,              -- nemotécnico / ISIN
+    fecha_emision      VARCHAR,              -- AAAAMMDD
+    num_inscripcion    VARCHAR,
+    fecha_inscripcion  VARCHAR,
+    serie              VARCHAR,
+    pais               VARCHAR,              -- código de país (ej. 'CL')
+    valor_nominal      DOUBLE,               -- 4 decimales implícitos, en la unidad monetaria
+    valor_nominal_vig  DOUBLE,               -- valor nominal vigente
+    unidad_monetaria   VARCHAR,              -- UF, $$, EUR, PROM, …
+    fetched_at         TIMESTAMP DEFAULT now()
+);
+
+-- Sin índices secundarios, por el mismo bug de DuckDB 1.5.1 que en la tabla de control (ver
+-- arriba). Aquí la duplicación de period es aún mayor (~100K filas por período).
+
+-- ============================================================
+-- Estados Financieros de Intermediarios de Valores (FECU IFRS CMF)
+-- Corredores de bolsa y agentes de valores (`broker_type`), una sola descarga por período.
+-- Plan de cuentas propio de intermediarios (códigos tipo '11.01.00'), con 14 secciones que
+-- se preservan en `section` además del grupo normalizado `statement_group` (ESF/ERI/EFE).
+-- Solo trimestral y solo estándar IFRS (desde dic-2010).
+-- UNIDADES: cifras en MILES de pesos.
+-- ============================================================
+CREATE SEQUENCE IF NOT EXISTS broker_seq START 1;
+
+CREATE TABLE IF NOT EXISTS cmf_broker_statements (
+    id              BIGINT PRIMARY KEY DEFAULT nextval('broker_seq'),
+    broker_type     VARCHAR NOT NULL,             -- 'CORREDORES' | 'AGENTES'
+    year            INTEGER NOT NULL,
+    month           INTEGER NOT NULL,
+    period          INTEGER NOT NULL,             -- Formato YYYYMM (ej. 202603)
+    rut             VARCHAR NOT NULL,             -- RUT sin dígito verificador
+    company_name    VARCHAR NOT NULL,
+    statement_group VARCHAR NOT NULL,             -- 'ESF' | 'ERI' | 'EFE'
+    section         VARCHAR,                      -- Rótulo original (ej. 'Resultado por intermediación')
+    account_code    VARCHAR NOT NULL,             -- Código FECU (ej. '11.01.00')
+    account_name    VARCHAR NOT NULL,
+    value           DOUBLE,                       -- Saldo en MILES de CLP (NULL si viene vacía)
+    fetched_at      TIMESTAMP DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_broker_rut_period ON cmf_broker_statements(rut, period);
+CREATE INDEX IF NOT EXISTS idx_broker_type_period ON cmf_broker_statements(broker_type, period);
+CREATE INDEX IF NOT EXISTS idx_broker_account_code ON cmf_broker_statements(account_code);
+
+-- ============================================================
 -- ** Superintendencia de Pensiones (SP)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS sp_quota_values (
@@ -142,6 +278,8 @@ CREATE TABLE IF NOT EXISTS sp_portfolio_holdings (
     afp_name        VARCHAR NOT NULL,
     fund_type       VARCHAR NOT NULL,
     instrument_glosa VARCHAR NOT NULL,
+    row_order       INTEGER,           -- orden original de la fila en el XML (atributo `numero`)
+    section         VARCHAR,           -- totalizador de sección que agrupa la fila (ej. 'TOTAL EXTRANJERO')
     monto_pesos     DOUBLE,
     monto_dolares   DOUBLE,
     porcentaje      DOUBLE,

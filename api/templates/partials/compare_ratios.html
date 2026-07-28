@@ -1,0 +1,33 @@
+{#
+  partials/compare_ratios.html — Tabla comparativa de ratios entre empresas.
+  cols = [{name, period, ratios}]. Ratios "del período" (último de cada empresa).
+#}
+{% if cols %}
+{% macro cell(v, suf="%") %}{% if v is none %}<td>—</td>{% else %}<td class="{{ 'pos' if v >= 0 else 'neg' }}">{{ "{:+,.1f}".format(v) if suf == "%" else "{:,.2f}".format(v) }}{{ suf }}</td>{% endif %}{% endmacro %}
+<div class="chart-block" style="margin-top:1.5rem">
+    <h4>Comparación de indicadores financieros <span class="lead">(último período de cada empresa)</span></h4>
+    <div class="table-scroll">
+        <table class="cmp-ratios">
+            <thead>
+                <tr>
+                    <th class="acct">Indicador</th>
+                    {% for c in cols %}<th>{{ c.name }}<br><span class="lead">{{ c.period }}</span></th>{% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td class="acct">ROE</td>{% for c in cols %}{{ cell(c.ratios.roe) }}{% endfor %}</tr>
+                <tr><td class="acct">ROA</td>{% for c in cols %}{{ cell(c.ratios.roa) }}{% endfor %}</tr>
+                <tr><td class="acct">Margen neto</td>{% for c in cols %}{{ cell(c.ratios.margen_neto) }}{% endfor %}</tr>
+                <tr><td class="acct">Margen bruto</td>{% for c in cols %}{{ cell(c.ratios.margen_bruto) }}{% endfor %}</tr>
+                <tr><td class="acct">Margen EBIT</td>{% for c in cols %}{{ cell(c.ratios.margen_ebit) }}{% endfor %}</tr>
+                <tr><td class="acct">Margen EBITDA</td>{% for c in cols %}{{ cell(c.ratios.margen_ebitda) }}{% endfor %}</tr>
+                <tr><td class="acct">Liquidez corriente</td>{% for c in cols %}{{ cell(c.ratios.liquidez, "x") }}{% endfor %}</tr>
+                <tr><td class="acct">Test Ácido</td>{% for c in cols %}{{ cell(c.ratios.test_acido, "x") }}{% endfor %}</tr>
+                <tr><td class="acct">Deuda / Patrimonio</td>{% for c in cols %}{{ cell(c.ratios.endeudamiento, "x") }}{% endfor %}</tr>
+                <tr><td class="acct">Cobertura de Intereses</td>{% for c in cols %}{{ cell(c.ratios.cobertura_intereses, "x") }}{% endfor %}</tr>
+            </tbody>
+        </table>
+    </div>
+    <p class="afp-hint">Comparar ratios entre empresas de distinta moneda es indicativo (ROE/márgenes son adimensionales).</p>
+</div>
+{% endif %}

@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }} · INF_FIN_IA{% endblock %}
+
+{% block content %}
+<p class="crumb"><a href="/proyecciones">← Proyecciones</a></p>
+<h1>{{ page_title }}</h1>
+<p class="subtitle">{{ page_subtitle }}</p>
+
+<form class="eeff-form"
+      hx-get="/proyecciones/chart"
+      hx-target="#proyecciones-results"
+      hx-trigger="load, change"
+      hx-swap="innerHTML"
+      hx-indicator="#proy-loading">
+
+    <label>Empresa
+        <input list="companies-list" name="company" autocomplete="off"
+               placeholder="Escribe para buscar… ({{ companies|length }} empresas)"
+               value="{{ companies[0].company_name if companies else '' }}">
+        <datalist id="companies-list">
+            {% for c in companies %}
+            <option value="{{ c.company_name }}"></option>
+            {% endfor %}
+        </datalist>
+    </label>
+
+    <label>Horizonte
+        <select name="steps">
+            <option value="8" selected>8 trimestres (2 años)</option>
+            <option value="4">4 trimestres (1 año)</option>
+            <option value="12">12 trimestres (3 años)</option>
+        </select>
+    </label>
+</form>
+
+<p id="proy-loading" class="loading htmx-indicator">Ajustando modelos y proyectando…</p>
+
+<section id="proyecciones-results">
+    <p class="loading">Cargando proyecciones…</p>
+</section>
+{% endblock %}

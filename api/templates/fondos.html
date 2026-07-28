@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}Fondos · INF_FIN_IA{% endblock %}
+
+{% block content %}
+<h1>Fondos de pensiones — retornos y composición</h1>
+<p class="subtitle">
+    Comparativo por fondo entre administradoras: retorno del valor cuota en varios
+    horizontes y composición vigente de cartera. El selector se alimenta de los datos
+    (los fondos generacionales aparecerán aquí cuando la SP los publique).
+</p>
+
+<form class="eeff-form"
+      hx-get="/fondos/panel"
+      hx-target="#fondos-panel"
+      hx-trigger="load, change"
+      hx-swap="innerHTML">
+    <label>Fondo
+        <select name="fund">
+            {% for f in funds %}<option value="{{ f }}">{{ f }}</option>{% endfor %}
+        </select>
+    </label>
+</form>
+
+<section id="fondos-panel">
+    <p class="loading">Cargando panel del fondo…</p>
+</section>
+{% endblock %}

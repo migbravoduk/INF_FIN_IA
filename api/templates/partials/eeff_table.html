@@ -1,0 +1,117 @@
+{#
+  partials/eeff_table.html — Vista de empresa (EEFF + Evolución fusionados).
+  Recibe: meta (con profile), ratios (último período), graph_accounts,
+  statements = [{label, code, ev:{periods, accounts}}].
+#}
+{% if meta %}
+<div class="eeff-head">
+    <h3>{{ meta.company_name }}</h3>
+    {% if meta.profile %}
+    <p class="resena">{{ meta.profile.text }}{% if meta.profile.source == "inferida" %} <span class="lead">· reseña inferida por tipo</span>{% endif %}</p>
+    {% endif %}
+    <span class="eeff-meta">
+        RUT {{ meta.rut }} ·
+        {{ "Individual" if meta.report_type == "I" else "Consolidado" if meta.report_type == "C" else meta.report_type }} ·
+        cifras en {{ meta.currency }} (moneda de reporte) ·
+        {{ meta.periods|length }} períodos
+    </span>
+</div>
+
+{% if ratios %}
+{% macro rr(v, suf="%") %}{% if v is none %}—{% else %}<b class="{{ 'pos' if v >= 0 else 'neg' }}">{{ "{:+,.1f}".format(v) if suf == "%" else "{:,.2f}".format(v) if suf in ("x", "") else v }}{{ suf }}</b>{% endif %}{% endmacro %}
+{% macro r_curr(v, currency) %}{% if v is none %}—{% else %}<b class="{{ 'pos' if v >= 0 else 'neg' }}">{{ "{:,.0f}".format(v) }} {{ currency }}</b>{% endif %}{% endmacro %}
+<div class="ratios">
+    <h4>Indicadores financieros <span class="lead">(último período: {{ meta.latest }})</span></h4>
+    <div class="ratio-grid">
+        <div class="ratio"><span>ROE</span>{{ rr(ratios.roe) }}</div>
+        <div class="ratio"><span>ROA</span>{{ rr(ratios.roa) }}</div>
+        <div class="ratio"><span>Margen neto</span>{{ rr(ratios.margen_neto) }}</div>
+        <div class="ratio"><span>Margen bruto</span>{{ rr(ratios.margen_bruto) }}</div>
+        <div class="ratio"><span>Margen EBIT</span>{{ rr(ratios.margen_ebit) }}</div>
+        <div class="ratio"><span>Margen EBITDA</span>{{ rr(ratios.margen_ebitda) }}</div>
+        <div class="ratio"><span>Liquidez corriente</span>{{ rr(ratios.liquidez, "x") }}</div>
+        <div class="ratio"><span>Test Ácido</span>{{ rr(ratios.test_acido, "x") }}</div>
+        <div class="ratio"><span>Deuda / Patrimonio</span>{{ rr(ratios.endeudamiento, "x") }}</div>
+        <div class="ratio"><span>Cobertura de Intereses</span>{{ rr(ratios.cobertura_intereses, "x") }}</div>
+        <div class="ratio"><span>Capital de Trabajo</span>{{ r_curr(ratios.capital_trabajo, meta.currency) }}</div>
+    </div>
+</div>
+
+<div class="ratios" style="margin-top: 1rem; margin-bottom: 1.5rem;">
+    <h4>Descomposición Dupont <span class="lead">(ROE = Margen Neto &times; Rotación Activos &times; Apalancamiento)</span></h4>
+    <div class="dupont-container" style="display: flex; gap: 1rem; align-items: center; background: #1e293b; padding: 1rem; border-radius: 8px; justify-content: space-around; flex-wrap: wrap; border: 1px solid #334155;">
+        <div style="text-align: center;">
+            <div style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.25rem;">Margen Neto</div>
+            <div style="font-size: 1.25rem; font-weight: bold; color: #e2e8f0;">
+                {% if ratios.margen_neto is not none %}{{ "{:,.2f}%".format(ratios.margen_neto) }}{% else %}—{% endif %}
+            </div>
+        </div>
+        <div style="font-size: 1.25rem; color: #64748b; font-weight: bold;">&times;</div>
+        <div style="text-align: center;">
+            <div style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.25rem;">Rotación Activos</div>
+            <div style="font-size: 1.25rem; font-weight: bold; color: #e2e8f0;">
+                {% if ratios.rotacion_activos is not none %}{{ "{:,.2f}x".format(ratios.rotacion_activos) }}{% else %}—{% endif %}
+            </div>
+        </div>
+        <div style="font-size: 1.25rem; color: #64748b; font-weight: bold;">&times;</div>
+        <div style="text-align: center;">
+            <div style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.25rem;">Apalancamiento</div>
+            <div style="font-size: 1.25rem; font-weight: bold; color: #e2e8f0;">
+                {% if ratios.apalancamiento is not none %}{{ "{:,.2f}x".format(ratios.apalancamiento) }}{% else %}—{% endif %}
+            </div>
+        </div>
+        <div style="font-size: 1.25rem; color: #64748b; font-weight: bold;">=</div>
+        <div style="text-align: center; background: #334155; padding: 0.5rem 1rem; border-radius: 6px; border: 1px solid #475569;">
+            <div style="font-size: 0.85rem; color: #38bdf8; font-weight: bold; margin-bottom: 0.25rem;">ROE</div>
+            <div style="font-size: 1.35rem; font-weight: bold; color: #38bdf8;">
+                {% if ratios.roe is not none %}{{ "{:,.2f}%".format(ratios.roe) }}{% else %}—{% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if graph_accounts %}
+<div class="graf-row">
+    <form class="eeff-graf" hx-get="/eeff/serie" hx-target="#eeff-serie" hx-trigger="change" hx-swap="innerHTML">
+        <input type="hidden" name="rut" value="{{ meta.rut }}">
+        <label>Graficar partida
+            <select name="account">
+                <option value="" selected>— elegir partida —</option>
+                {% for a in graph_accounts %}<option value="{{ a }}">{{ a }}</option>{% endfor %}
+            </select>
+        </label>
+        <label class="chk" title="Para partidas de flujo (acumuladas en el año): variación intra-anual">
+            <input type="checkbox" name="delta" value="1"> Desacumular
+        </label>
+    </form>
+    <form class="eeff-graf" hx-get="/eeff/ratios-serie" hx-target="#ratios-serie" hx-trigger="change" hx-swap="innerHTML">
+        <input type="hidden" name="rut" value="{{ meta.rut }}">
+        <label>Graficar indicador
+            <select name="metric">
+                <option value="" selected>— elegir —</option>
+                <option value="roe">ROE</option>
+                <option value="roa">ROA</option>
+                <option value="margen_neto">Margen neto</option>
+                <option value="margen_bruto">Margen bruto</option>
+                <option value="margen_ebit">Margen EBIT</option>
+                <option value="margen_ebitda">Margen EBITDA</option>
+                <option value="liquidez">Liquidez corriente</option>
+                <option value="test_acido">Test Ácido</option>
+                <option value="endeudamiento">Deuda / Patrimonio</option>
+                <option value="cobertura_intereses">Cobertura de Intereses</option>
+                <option value="capital_trabajo">Capital de Trabajo</option>
+            </select>
+        </label>
+    </form>
+</div>
+<div id="eeff-serie"></div>
+<div id="ratios-serie"></div>
+{% endif %}
+
+{% for st in statements %}
+    {% include "partials/statement_matrix.html" %}
+{% endfor %}
+{% else %}
+<p class="loading">No hay estados financieros para esa empresa.</p>
+{% endif %}

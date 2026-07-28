@@ -1,0 +1,94 @@
+{#
+  partials/eeff_static.html — Estados financieros de UNA empresa/período (export estático).
+  Recibe `meta` (con profile) y `groups` (de build_statement_groups) + `ratios`.
+#}
+{% if meta %}
+<div class="eeff-head">
+    <h3>{{ meta.company_name }}</h3>
+    {% if meta.profile %}
+    <p class="resena">{{ meta.profile.text }}{% if meta.profile.source == "inferida" %} <span class="lead">· reseña inferida por tipo</span>{% endif %}</p>
+    {% endif %}
+    <span class="eeff-meta">
+        RUT {{ meta.rut }} · período {{ meta.period }} ·
+        {{ "Individual" if meta.report_type == "I" else "Consolidado" if meta.report_type == "C" else meta.report_type }} ·
+        cifras en {{ meta.currency }} (moneda de reporte, no en miles)
+    </span>
+</div>
+
+{% if ratios %}
+{% macro rr(v, suf="%") %}{% if v is none %}—{% else %}<b class="{{ 'pos' if v >= 0 else 'neg' }}">{{ "{:+,.1f}".format(v) if suf == "%" else "{:,.2f}".format(v) if suf in ("x", "") else v }}{{ suf }}</b>{% endif %}{% endmacro %}
+{% macro r_curr(v, currency) %}{% if v is none %}—{% else %}<b class="{{ 'pos' if v >= 0 else 'neg' }}">{{ "{:,.0f}".format(v) }} {{ currency }}</b>{% endif %}{% endmacro %}
+<div class="ratios">
+    <h4>Indicadores financieros <span class="lead">(del período)</span></h4>
+    <div class="ratio-grid">
+        <div class="ratio"><span>ROE</span>{{ rr(ratios.roe) }}</div>
+        <div class="ratio"><span>ROA</span>{{ rr(ratios.roa) }}</div>
+        <div class="ratio"><span>Margen neto</span>{{ rr(ratios.margen_neto) }}</div>
+        <div class="ratio"><span>Margen bruto</span>{{ rr(ratios.margen_bruto) }}</div>
+        <div class="ratio"><span>Margen EBIT</span>{{ rr(ratios.margen_ebit) }}</div>
+        <div class="ratio"><span>Margen EBITDA</span>{{ rr(ratios.margen_ebitda) }}</div>
+        <div class="ratio"><span>Liquidez corriente</span>{{ rr(ratios.liquidez, "x") }}</div>
+        <div class="ratio"><span>Test Ácido</span>{{ rr(ratios.test_acido, "x") }}</div>
+        <div class="ratio"><span>Deuda / Patrimonio</span>{{ rr(ratios.endeudamiento, "x") }}</div>
+        <div class="ratio"><span>Cobertura de Intereses</span>{{ rr(ratios.cobertura_intereses, "x") }}</div>
+        <div class="ratio"><span>Capital de Trabajo</span>{{ r_curr(ratios.capital_trabajo, meta.currency) }}</div>
+    </div>
+</div>
+
+<div class="ratios" style="margin-top: 1rem; margin-bottom: 1.5rem;">
+    <h4>Descomposición Dupont <span class="lead">(ROE = Margen Neto &times; Rotación Activos &times; Apalancamiento)</span></h4>
+    <div class="dupont-container" style="display: flex; gap: 1rem; align-items: center; background: #1e293b; padding: 1rem; border-radius: 8px; justify-content: space-around; flex-wrap: wrap; border: 1px solid #334155;">
+        <div style="text-align: center;">
+            <div style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.25rem;">Margen Neto</div>
+            <div style="font-size: 1.25rem; font-weight: bold; color: #e2e8f0;">
+                {% if ratios.margen_neto is not none %}{{ "{:,.2f}%".format(ratios.margen_neto) }}{% else %}—{% endif %}
+            </div>
+        </div>
+        <div style="font-size: 1.25rem; color: #64748b; font-weight: bold;">&times;</div>
+        <div style="text-align: center;">
+            <div style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.25rem;">Rotación Activos</div>
+            <div style="font-size: 1.25rem; font-weight: bold; color: #e2e8f0;">
+                {% if ratios.rotacion_activos is not none %}{{ "{:,.2f}x".format(ratios.rotacion_activos) }}{% else %}—{% endif %}
+            </div>
+        </div>
+        <div style="font-size: 1.25rem; color: #64748b; font-weight: bold;">&times;</div>
+        <div style="text-align: center;">
+            <div style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.25rem;">Apalancamiento</div>
+            <div style="font-size: 1.25rem; font-weight: bold; color: #e2e8f0;">
+                {% if ratios.apalancamiento is not none %}{{ "{:,.2f}x".format(ratios.apalancamiento) }}{% else %}—{% endif %}
+            </div>
+        </div>
+        <div style="font-size: 1.25rem; color: #64748b; font-weight: bold;">=</div>
+        <div style="text-align: center; background: #334155; padding: 0.5rem 1rem; border-radius: 6px; border: 1px solid #475569;">
+            <div style="font-size: 0.85rem; color: #38bdf8; font-weight: bold; margin-bottom: 0.25rem;">ROE</div>
+            <div style="font-size: 1.35rem; font-weight: bold; color: #38bdf8;">
+                {% if ratios.roe is not none %}{{ "{:,.2f}%".format(ratios.roe) }}{% else %}—{% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% for grp in groups %}
+<div class="eeff-group">
+    <h4>{{ grp.group }} <span class="code-tag">{{ grp.code }}</span></h4>
+    <table class="eeff-table">
+        <tbody>
+        {% set ns = namespace(sec=None) %}
+        {% for row in grp.rows %}
+            {% if row.section and row.section != ns.sec %}
+            <tr class="section-head"><td colspan="2">{{ row.section }}</td></tr>
+            {% set ns.sec = row.section %}
+            {% endif %}
+            <tr class="{{ 'total-row' if row.is_total else '' }}">
+                <td class="acct">{{ row.account_name }}</td>
+                <td class="num">{{ "{:,.0f}".format(row.value) if row.value is not none else "—" }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endfor %}
+{% else %}
+<p class="loading">No hay estados financieros para esa combinación.</p>
+{% endif %}

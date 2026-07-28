@@ -1,0 +1,83 @@
+{% if not data %}
+<p class="loading">No hay datos suficientes para generar el gráfico en este período/sector.</p>
+{% else %}
+<div id="salud-chart-container" style="width: 100%; height: 600px;"></div>
+<script>
+    (function() {
+        var cid = "salud-chart-" + Math.random().toString(36).substring(2, 9);
+        var el = document.getElementById("salud-chart-container");
+        if (el) el.id = cid;
+
+        var rawData = {{ data | tojson }};
+        
+        var xData = rawData.map(d => d.deuda);
+        var yData = rawData.map(d => d.roe);
+        var textData = rawData.map(d => d.name + "<br>Liquidez: " + d.liquidez.toFixed(2));
+        var sizeData = rawData.map(d => Math.max(5, Math.min(d.liquidez * 10, 40)));
+
+        var trace = {
+            x: xData,
+            y: yData,
+            mode: 'markers',
+            type: 'scatter',
+            text: textData,
+            hoverinfo: 'text+x+y',
+            marker: {
+                size: sizeData,
+                color: yData,
+                colorscale: 'RdYlGn',
+                showscale: true,
+                colorbar: { title: 'ROE (%)' },
+                line: { color: 'white', width: 1 }
+            }
+        };
+
+        var layout = {
+            title: 'Riesgo vs Rentabilidad (Tamaño = Liquidez)',
+            xaxis: { title: 'Deuda / Patrimonio (Veces)', gridcolor: '#334155' },
+            yaxis: { title: 'ROE (%)', gridcolor: '#334155' },
+            paper_bgcolor: 'rgba(0,0,0,0)',
+            plot_bgcolor: 'rgba(0,0,0,0)',
+            font: { color: '#94a3b8' },
+            hovermode: 'closest',
+            shapes: [
+                // Cuadrante de unicornios (Baja deuda, Alto ROE)
+                {
+                    type: 'rect',
+                    xref: 'x', yref: 'y',
+                    x0: 0, x1: 1,
+                    y0: 15, y1: Math.max(...yData, 30),
+                    fillcolor: 'rgba(34, 197, 94, 0.1)',
+                    line: { width: 0 }
+                },
+                // Cuadrante de riesgo (Alta deuda, Bajo/Negativo ROE)
+                {
+                    type: 'rect',
+                    xref: 'x', yref: 'y',
+                    x0: 2.5, x1: Math.max(...xData, 5),
+                    y0: Math.min(...yData, -10), y1: 0,
+                    fillcolor: 'rgba(239, 68, 68, 0.1)',
+                    line: { width: 0 }
+                }
+            ]
+        };
+
+        function draw() {
+            if (!window.Plotly) { return setTimeout(draw, 100); }
+            Plotly.newPlot(cid, [trace], layout, { responsive: true, displayModeBar: false });
+        }
+        draw();
+    })();
+</script>
+
+<div class="kpi-grid" style="margin-top: 2rem;">
+    <div class="kpi-card" style="border-left: 4px solid var(--success);">
+        <span class="label">Cuadrante Verde (Unicornios)</span>
+        <span class="value">Deuda < 1x y ROE > 15%</span>
+    </div>
+    <div class="kpi-card" style="border-left: 4px solid var(--danger);">
+        <span class="label">Cuadrante Rojo (Riesgo)</span>
+        <span class="value">Deuda > 2.5x y ROE negativo</span>
+    </div>
+</div>
+{% endif %}

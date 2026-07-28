@@ -32,6 +32,15 @@ class Settings(BaseSettings):
     DAILY_FETCH_TIME: str = "08:00"
     TIMEZONE: str = "America/Santiago"
 
+    # Si True, la app FastAPI arranca el scheduler embebido (BackgroundScheduler) en su
+    # propio proceso y la API abre la BD en lectura/escritura (DuckDB no permite lector +
+    # escritor en procesos distintos, así que el modo embebido evita ese conflicto).
+    RUN_SCHEDULER_IN_APP: bool = False
+
+    # CMF Bancos — apikey pública de la API SBIFv3 (registro gratuito en api.sbif.cl).
+    # Override opcional vía .env; el valor por defecto es la clave pública ya usada.
+    CMF_SBIF_APIKEY: str = "3a440ec14ceec35463beaf361631829c0ed9dc8d"
+
     # Logging
     LOG_LEVEL: str = "INFO"
     LOG_FILE: str = "logs/app.log"

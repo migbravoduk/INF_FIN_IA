@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}Comparar empresas · INF_FIN_IA{% endblock %}
+
+{% block content %}
+<h1>Comparar empresas</h1>
+<p class="subtitle">Misma partida en varias empresas, normalizada a base 100 (primer período de cada una)</p>
+
+<form class="eeff-form"
+      hx-get="/comparar/chart"
+      hx-target="#compare-result"
+      hx-trigger="change"
+      hx-swap="innerHTML">
+
+    <label>Partida
+        <select name="account">
+            <option value="" selected>— elegir partida —</option>
+            {% for p in partidas %}
+            <option value="{{ p }}">{{ p }}</option>
+            {% endfor %}
+        </select>
+    </label>
+
+    <div style="display:flex; gap:2rem; align-items:flex-start; margin-top:1rem; flex-wrap:wrap;">
+        <div style="border-right: 1px solid var(--border); padding-right: 2rem;">
+            <strong>Opción A: Libre (hasta 3)</strong>
+            <div style="margin-top:0.5rem; display:flex; gap:1rem;">
+                {% for slot in ["c1", "c2", "c3"] %}
+                <label>Empresa {{ loop.index }}
+                    <input list="cmp-companies" name="{{ slot }}" autocomplete="off" placeholder="Buscar…">
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div>
+            <strong>Opción B: Sectorial (Top 5)</strong>
+            <div style="margin-top:0.5rem;">
+                <label>Sector / Actividad
+                    <select name="sector">
+                        <option value="" selected>— No usar —</option>
+                        {% for s in sectors %}
+                        <option value="{{ s }}">{{ s }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <datalist id="cmp-companies">
+        {% for c in companies %}<option value="{{ c.company_name }}"></option>{% endfor %}
+    </datalist>
+</form>
+
+<section id="compare-result">
+    <p class="loading">Elige una partida y 2–3 empresas para comparar.</p>
+</section>
+
+<section id="compare-ratios"
+         hx-get="/comparar/ratios"
+         hx-trigger="change from:.eeff-form"
+         hx-include=".eeff-form"
+         hx-swap="innerHTML"></section>
+{% endblock %}

@@ -1,0 +1,33 @@
+{#
+  partials/eeff_serie.html — Evolución por período de una partida de empresa.
+  series = [{period, value}], account = nombre de la partida.
+  El <script> se ejecuta al insertarse vía HTMX (Plotly global de base.html).
+#}
+{% if series %}
+<div class="chart-block" style="margin-top:1rem">
+    <h4>{{ account }} — evolución por período</h4>
+    <div id="serie-chart" class="chart"></div>
+</div>
+<script>
+(function () {
+    var data = {{ series | tojson }};
+    function draw() {
+        if (!window.Plotly) { return setTimeout(draw, 100); }
+        Plotly.newPlot("serie-chart", [{
+            x: data.map(function (d) { return d.period; }),
+            y: data.map(function (d) { return d.value; }),
+            type: "bar", marker: { color: "#38bdf8" }
+        }], {
+            margin: { t: 10, r: 10, b: 40, l: 80 }, height: 300,
+            paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)",
+            font: { color: "#94a3b8" },
+            xaxis: { type: "category", gridcolor: "#334155" },
+            yaxis: { gridcolor: "#334155" }
+        }, { displayModeBar: false, responsive: true });
+    }
+    draw();
+})();
+</script>
+{% elif account %}
+<p class="loading">Sin serie para esa partida.</p>
+{% endif %}

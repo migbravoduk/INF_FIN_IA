@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title %}Panel multi-fuente · INF_FIN_IA{% endblock %}
+
+{% block content %}
+<h1>Panel multi-fuente</h1>
+<p class="subtitle">BCCh · CMF Bancos · CMF Empresas · Superintendencia de Pensiones</p>
+
+<!--
+  Las tarjetas se renderizan server-side (datos reales) en la carga inicial.
+  El botón refresca el fragmento vía HTMX sin recargar la página.
+  Un futuro panel de storytelling se añade como otro fragmento hx-get sin tocar esto.
+-->
+<div class="toolbar">
+    <button class="btn" hx-get="/api/kpi/overview/cards" hx-target="#kpi-cards" hx-swap="innerHTML">
+        ↻ Refrescar indicadores
+    </button>
+</div>
+
+<section id="kpi-cards">
+    {% include "partials/kpi_cards.html" %}
+</section>
+
+<div class="chart-grid">
+    <section class="chart-block">
+        <h4>Unidad de Fomento — últimos 12 meses</h4>
+        <div id="chart-uf" class="chart"></div>
+    </section>
+    <section class="chart-block">
+        <h4>Tasa de Política Monetaria (TPM) — últimos 12 meses</h4>
+        <div id="chart-tpm" class="chart"></div>
+    </section>
+</div>
+
+<script>
+    var ufSeries = {{ uf_series | tojson }};
+    var tpmSeries = {{ tpm_series | tojson }};
+
+    function lineChart(divId, series, color, fill) {
+        if (!series || !series.length) {
+            document.getElementById(divId).innerHTML = "<p class='loading'>Sin datos en el rango.</p>";
+            return;
+        }
+        Plotly.newPlot(divId, [{
+            x: series.map(function (r) { return r.date; }),
+            y: series.map(function (r) { return r.value; }),
+            type: "scatter", mode: "lines",
+            line: { color: color, width: 2, shape: fill ? "hv" : "linear" }
+        }], {
+            margin: { t: 10, r: 10, b: 30, l: 55 }, height: 280,
+            paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)",
+            font: { color: "#94a3b8" },
+            xaxis: { gridcolor: "#334155" }, yaxis: { gridcolor: "#334155" }
+        }, { displayModeBar: false, responsive: true });
+    }
+
+    lineChart("chart-uf", ufSeries, "#38bdf8", false);
+    lineChart("chart-tpm", tpmSeries, "#fbbf24", true);
+</script>
+{% endblock %}

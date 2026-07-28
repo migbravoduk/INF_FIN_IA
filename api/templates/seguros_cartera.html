@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% block title %}Cartera de seguros · INF_FIN_IA{% endblock %}
+
+{% block content %}
+<h1>Cartera de compañías de seguros</h1>
+<p class="subtitle">
+    Asset allocation bajo la <strong>Circular 1.835</strong> (archivo B.8 de control, mensual).
+    Las glosas de cada tipo de inversión son las oficiales de la CMF; la agrupación por clase
+    de activo y geografía es propia y vive en <code>config/insurer_investment_codes.yaml</code>.
+    Montos en <strong>MMM$</strong> (miles de millones de pesos).
+</p>
+
+<form class="eeff-form"
+      hx-get="/seguros/cartera/panel"
+      hx-target="#cartera-panel"
+      hx-trigger="load, change"
+      hx-swap="innerHTML"
+      hx-include="this">
+    <label>Ramo
+        <select name="ramo" hx-get="/seguros/cartera" hx-target="body" hx-push-url="true">
+            {% for key, label in ramos.items() %}
+            <option value="{{ key }}" {% if key == ramo %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </label>
+    <label>Período
+        <select name="period">
+            {% for p in periods %}<option value="{{ p }}">{{ p }}</option>{% endfor %}
+        </select>
+    </label>
+    <label>Alcance
+        <select name="rut">
+            <option value="">Mercado (todas las compañías)</option>
+            {% for c in companies %}
+            <option value="{{ c.rut }}">{{ c.name }}</option>
+            {% endfor %}
+        </select>
+    </label>
+</form>
+
+<section id="cartera-panel">
+    <p class="loading">Cargando cartera…</p>
+</section>
+
+<hr style="margin:2.2rem 0; border:0; border-top:1px solid var(--border)">
+
+<h2 style="margin-bottom:.3rem">Deriva del asset allocation</h2>
+<p class="subtitle" style="margin-top:0">
+    Peso de cada clase de activo, mes a mes. Es la vista que muestra un cambio de política de
+    inversión: el nivel importa menos que la pendiente.
+</p>
+<form class="eeff-form"
+      hx-get="/seguros/cartera/evolucion"
+      hx-target="#cartera-evolucion"
+      hx-trigger="load, change"
+      hx-swap="innerHTML"
+      hx-include="this">
+    <input type="hidden" name="ramo" value="{{ ramo }}">
+    <label>Compañía
+        <select name="rut">
+            <option value="">Mercado (todas)</option>
+            {% for c in companies %}<option value="{{ c.rut }}">{{ c.name }}</option>{% endfor %}
+        </select>
+    </label>
+    <label>Desde
+        <select name="since">
+            <option value="202001">2020</option>
+            <option value="202201">2022</option>
+            <option value="202401">2024</option>
+        </select>
+    </label>
+</form>
+<section id="cartera-evolucion">
+    <p class="loading">Cargando evolución…</p>
+</section>
+
+<hr style="margin:2.2rem 0; border:0; border-top:1px solid var(--border)">
+
+<h2 style="margin-bottom:.3rem">Comparación entre compañías</h2>
+<p class="subtitle" style="margin-top:0">
+    Quién es grande y quién invierte distinto, en el período más reciente del ramo.
+</p>
+<section id="cartera-companias"
+         hx-get="/seguros/cartera/companias?ramo={{ ramo }}"
+         hx-trigger="load"
+         hx-swap="innerHTML">
+    <p class="loading">Cargando comparación…</p>
+</section>
+
+<hr style="margin:2.2rem 0; border:0; border-top:1px solid var(--border)">
+
+<h2 style="margin-bottom:.3rem">Concentración por emisor · renta fija</h2>
+<p class="subtitle" style="margin-top:0">
+    Del detalle instrumento a instrumento (archivo B.1). Se cuenta el número de posiciones y el
+    nominal <em>abierto por moneda</em>.
+</p>
+<section id="cartera-emisores"
+         hx-get="/seguros/cartera/emisores?ramo={{ ramo }}"
+         hx-trigger="load"
+         hx-swap="innerHTML">
+    <p class="loading">Cargando emisores…</p>
+</section>
+{% endblock %}

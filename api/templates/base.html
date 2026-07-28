@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}INF_FIN_IA — Dashboard Financiero Chile{% endblock %}</title>
+
+    <!-- HTMX y Plotly por CDN (sin build step, sin Node) -->
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+    <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
+
+    <link rel="stylesheet" href="/static/app.css?v={{ asset_version }}">
+</head>
+<body>
+    <header class="topbar">
+        <span class="brand">🇨🇱 INF_FIN_IA</span>
+        <nav>
+            <a href="/">Panel</a>
+            <a href="/eeff">EEFF</a>
+            <a href="/comparar">Comparar</a>
+            <a href="/ranking">Ranking</a>
+            <a href="/salud">Salud</a>
+            <a href="/proyecciones">Proyecciones</a>
+            <a href="/inversion-institucional">Inv. institucional</a>
+            <a href="/docs" target="_blank">API</a>
+        </nav>
+    </header>
+
+    <main class="container">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="footer">
+        <span>Fase web · datos reales desde DuckDB · v0.1.0</span>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,94 @@
+{#
+  partials/proyecciones_simple.html — Fan charts SARIMAX para las clasificaciones sin
+  modelo estructural calibrado (bancos, seguros, intermediarios).
+  results = [{account, unit_note, history:[{period,value}], forecast:[{period,mean,lo80,hi80,lo95,hi95}]}]
+  meta = {entity_name, rut, kind, unit, cadence, spec, n_obs}
+#}
+{% if results %}
+<div class="eeff-head">
+    <h2>{{ meta.entity_name }}</h2>
+    <span class="eeff-meta">
+        {{ meta.rut }}{% if meta.kind %} · {{ meta.kind }}{% endif %} ·
+        cifras en {{ meta.unit }} · serie {{ meta.cadence }}
+    </span>
+</div>
+
+<p class="warn-box">
+    ⚠ <strong>Bandas no calibradas.</strong> Los intervalos vienen del propio SARIMAX
+    (gaussianos), no de un backtest de esta clasificación. A diferencia de la vista
+    corporativa —cuyas bandas son cuantiles del error real fuera de muestra— aquí no se ha
+    medido el desempeño histórico, así que trátalos como referencia y no como probabilidad
+    calibrada. Tampoco se usa el ancla macro (EEE/EOF): el modelo es univariante.
+    <br>
+    <strong>Quiebres estructurales no modelados.</strong> Fusiones y adquisiciones aparecen
+    como saltos de nivel en la historia (ej. BICE absorbe a Security en nov-2025, con los
+    activos pasando de 11,9 a 21,5 billones) e inflan la tendencia estimada. Revisa la serie
+    histórica antes de leer la proyección de una entidad que haya cambiado de perímetro.
+</p>
+
+{% for r in results %}
+<div class="chart-block" style="margin-top:1.5rem">
+    <h4>{{ r.account }}
+        <span class="lead">— {{ r.unit_note }} · {{ r.spec }} · {{ r.n_obs }} obs.</span></h4>
+    <div id="proys-chart-{{ loop.index }}" class="chart"></div>
+</div>
+{% endfor %}
+
+<script>
+(function () {
+    var results = {{ results | tojson }};
+    function draw() {
+        if (!window.Plotly) { return setTimeout(draw, 100); }
+        results.forEach(function (r, i) {
+            var el = "proys-chart-" + (i + 1);
+            var hx = r.history.map(function (d) { return d.period; });
+            var hy = r.history.map(function (d) { return d.value; });
+            var fx = r.forecast.map(function (d) { return d.period; });
+            // Conectar historia y proyección: anteponer el último punto histórico
+            var lastP = hx[hx.length - 1], lastV = hy[hy.length - 1];
+            var fxc = [lastP].concat(fx);
+            var mean = [lastV].concat(r.forecast.map(function (d) { return d.mean; }));
+            var lo80 = [lastV].concat(r.forecast.map(function (d) { return d.lo80; }));
+            var hi80 = [lastV].concat(r.forecast.map(function (d) { return d.hi80; }));
+            var lo95 = [lastV].concat(r.forecast.map(function (d) { return d.lo95; }));
+            var hi95 = [lastV].concat(r.forecast.map(function (d) { return d.hi95; }));
+
+            var allCats = [];
+            hx.forEach(function (c) { if (allCats.indexOf(c) < 0) { allCats.push(c); } });
+            fx.forEach(function (c) { if (allCats.indexOf(c) < 0) { allCats.push(c); } });
+
+            var traces = [
+                { x: fxc, y: hi95, mode: "lines", line: { width: 0 },
+                  showlegend: false, hoverinfo: "skip" },
+                { x: fxc, y: lo95, mode: "lines", line: { width: 0 }, fill: "tonexty",
+                  fillcolor: "rgba(56,189,248,0.10)", name: "IC 95%", hoverinfo: "skip" },
+                { x: fxc, y: hi80, mode: "lines", line: { width: 0 },
+                  showlegend: false, hoverinfo: "skip" },
+                { x: fxc, y: lo80, mode: "lines", line: { width: 0 }, fill: "tonexty",
+                  fillcolor: "rgba(56,189,248,0.22)", name: "IC 80%", hoverinfo: "skip" },
+                { x: hx, y: hy, mode: "lines+markers", name: "Historia",
+                  line: { color: "#38bdf8", width: 2 }, marker: { size: 3 } },
+                { x: fxc, y: mean, mode: "lines+markers", name: "Proyección",
+                  line: { color: "#f472b6", width: 2, dash: "dash" }, marker: { size: 4 } }
+            ];
+
+            Plotly.newPlot(el, traces, {
+                margin: { t: 10, r: 10, b: 70, l: 90 }, height: 360,
+                paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)",
+                font: { color: "#94a3b8" },
+                xaxis: { type: "category", categoryorder: "array", categoryarray: allCats,
+                         gridcolor: "#334155", tickangle: -45 },
+                yaxis: { gridcolor: "#334155" },
+                legend: { orientation: "h", y: -0.32 }
+            }, { displayModeBar: false, responsive: true });
+        });
+    }
+    draw();
+})();
+</script>
+{% elif meta %}
+<p class="loading">
+    No hay serie suficiente para proyectar {{ meta.entity_name }}
+    (se requieren al menos 16 observaciones).
+</p>
+{% endif %}

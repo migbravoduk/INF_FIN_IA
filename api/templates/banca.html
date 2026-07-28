@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}Bancos · INF_FIN_IA{% endblock %}
+
+{% block content %}
+<h1 id="banca-top">Estados financieros de bancos</h1>
+<p class="subtitle">CMF · Bancos e Instituciones Financieras — desglose por tipo de moneda (SBIF)</p>
+
+<nav class="banca-minimap" aria-label="Secciones de la vista de bancos">
+    <span class="minimap-label">Ir a:</span>
+    <a href="#banca-detalle">Detalle por moneda</a>
+    <a href="#banca-evolutivo">Evolutivo (total)</a>
+</nav>
+
+<form class="eeff-form" id="banca-form"
+      hx-get="/banca/table"
+      hx-target="#banca-results"
+      hx-trigger="load, change"
+      hx-swap="innerHTML">
+
+    <label>Banco
+        <select name="bank" id="banca-bank-sel">
+            {% for b in banks %}
+            <option value="{{ b.bank_code }}">{{ b.bank_name }}</option>
+            {% endfor %}
+        </select>
+    </label>
+
+    <label>Período (detalle)
+        <select name="period">
+            {% for p in periods %}
+            <option value="{{ p }}">{{ p }}</option>
+            {% endfor %}
+        </select>
+    </label>
+
+    <label>Reporte
+        <select name="type" id="banca-type-sel">
+            <option value="balance">Balance</option>
+            <option value="resultado">Estado de resultados</option>
+        </select>
+    </label>
+
+    <label>Serie evolutiva
+        <select name="serie" id="banca-serie-sel">
+            <option value="cons12" selected>Meses consecutivos — últimos 12</option>
+            <option value="cons24">Meses consecutivos — últimos 24</option>
+            <option value="anual5">Cierres anuales (dic) — últimos 5</option>
+            <option value="anual10">Cierres anuales (dic) — últimos 10</option>
+            <option value="mismomes5">Mismo mes — últimos 5 años</option>
+            <option value="mismomes10">Mismo mes — últimos 10 años</option>
+        </select>
+    </label>
+</form>
+
+<h2 id="banca-detalle" style="font-size:1rem;color:var(--muted);margin-top:1.2rem">Detalle por moneda (período seleccionado)</h2>
+<section id="banca-results">
+    <p class="loading">Cargando detalle por moneda…</p>
+</section>
+
+<h2 id="banca-evolutivo" style="font-size:1rem;color:var(--muted);margin-top:2rem">
+    Serie de tiempo — total consolidado
+    <a href="#banca-top" class="minimap-top" title="Volver arriba">↑ arriba</a>
+</h2>
+<section id="banca-evolucion" class="evol-scroll"
+         hx-get="/banca/evolucion"
+         hx-trigger="load, change from:#banca-bank-sel, change from:#banca-type-sel, change from:#banca-serie-sel"
+         hx-include="#banca-bank-sel, #banca-type-sel, #banca-serie-sel"
+         hx-swap="innerHTML">
+    <p class="loading">Cargando evolución del total…</p>
+</section>
+
+<style>
+/* El mini-mapa pegajoso y sus estilos son compartidos → api/static/app.css */
+/* Compensar la barra pegajosa al saltar a un ancla, para que el título no quede tapado. */
+#banca-detalle, #banca-evolutivo { scroll-margin-top: 3.5rem; }
+
+/* La matriz evolutiva bancaria (400+ cuentas) va en caja scrolleable con encabezado fijo,
+   para que no sepulte el detalle por moneda. */
+#banca-evolucion .table-scroll { max-height: 65vh; overflow-y: auto; }
+#banca-evolucion .evol-table thead th { position: sticky; top: 0; background: var(--bg, #0f172a); z-index: 2; }
+</style>
+{% endblock %}

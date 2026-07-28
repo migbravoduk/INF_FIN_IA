@@ -22,17 +22,23 @@ STORYTELLING (dashboard web, API REST, reportes Jules)
 
 | Fase | Estado | Descripción |
 |------|--------|-------------|
-| **1 — Macro BCCh** | ✅ Activa | PIB, IPC, TPM, empleo, tipo de cambio |
+| **1 — Macro BCCh** | ✅ Activa | PIB, IPC, TPM, empleo, tipo de cambio (historia completa **1975–hoy**) |
 | **2 — Series adicionales BCCh + SII** | ✅ Activa | UF, UTM, IVP, IMACEC desde la API de la BDE |
 | **3 — CMF: Empresas y Mercados** | ✅ Activa | Ingesta de archivos trimestrales planos .txt de estados financieros corporativos |
 | **4 — CMF: Bancos e Inst. Financieras** | ✅ Activa | Ingesta mensual de balances y resultados con desglose por moneda desde la API REST SBIFv3 |
-| **SP — Fondos de Pensiones** | ✅ Activa | Valores cuota diarios (desde 2002), carteras mensuales XML, cinta de precios diaria |
-| **5 — Calendarios y Alertas** | ⏳ Planificada | Fechas de publicaciones, alertas automáticas |
-| **6 — Análisis y Proyecciones** | ⏳ Planificada | Proyecciones macrofundadas, ratios, anomalías |
-| **7 — API + Dashboard** | ⏳ Planificada | FastAPI + visualización web interactiva |
-| **8 — Storytelling / Jules** | ⏳ Planificada | Reportes narrativos automáticos con LLM |
+| **4b — CMF: Seguros e Intermediarios** | ✅ Activa | EEFF trimestrales con plan de cuentas **FECU propio**: compañías de seguros (vida y generales, Circulares 2022/2050) y corredores de bolsa / agentes de valores |
+| **4c — CMF: Cartera de seguros** | ✅ Activa | Composición mensual de inversiones bajo la **Circular 1.835** (vida + generales, 2020→hoy): totales por tipo de inversión y detalle instrumento a instrumento de renta fija |
+| **SP — Fondos de Pensiones** | ✅ Activa | Valores cuota diarios (desde 2008), carteras mensuales XML, cinta de precios diaria |
+| **5 — Calendarios y Alertas** | 🟡 Parcial | Catch-up por frescura: ingesta automática "al publicarse" (`main.py catchup`) |
+| **6 — Análisis y Proyecciones** | ✅ Activa | Ratios, comparación sectorial, radar de salud **y proyecciones de EEFF en producción** (modelo híbrido estructural + SARIMAX, validado por backtest — ver "Capa Analítica") |
+| **7 — API + Dashboard** | 🟡 Avanzada | FastAPI + dashboard (panel, EEFF por clasificación de entidad, comparar, salud, **proyecciones**, banca, **inversión institucional**) — ver "Capa Web" |
+| **8 — Storytelling / Jules** | ⏳ Planificada | Reportes narrativos automáticos con LLM (la trayectoria estructural de la Fase 6 es su materia prima) |
 
 ---
+
+> **Para desarrolladores**: la guía de desarrollo (arquitectura, módulos, *gotchas* como la
+> concurrencia DuckDB y el orden IFRS, y cómo hacer tareas comunes) está en
+> [`CONTEXTO.md`](CONTEXTO.md).
 
 ## Requisitos para retomar el proyecto
 
@@ -40,16 +46,16 @@ STORYTELLING (dashboard web, API REST, reportes Jules)
 
 | Requisito | Versión | Notas |
 |---|---|---|
-| Python | 3.11+ | Instalado en `C:\Users\mbrav\anaconda3\` |
-| Anaconda | Cualquiera | Se usa el Python del entorno base de Anaconda |
-| pip | — | Disponible en el entorno Anaconda |
+| Python | 3.11+ | Entorno virtual local del proyecto en `.venv\` |
+| venv | — | `python -m venv .venv` y activar/usar su intérprete |
+| pip | — | Disponible dentro del `.venv` |
 
-> **Importante**: En este equipo, Python está en Anaconda. Usar siempre `C:\Users\mbrav\anaconda3\python.exe` en vez de `python` o `py` (los alias del sistema apuntan al Microsoft Store stub).
+> **Importante**: En este equipo `python`/`py` apuntan al stub de Microsoft Store. Usar siempre el intérprete del entorno virtual del proyecto: `.\.venv\Scripts\python.exe`.
 
 ### Dependencias
 
 ```powershell
-C:\Users\mbrav\anaconda3\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
 ### Credenciales y accesos
@@ -86,7 +92,7 @@ LOG_FILE=logs/app.log
 ### Verificar que todo está en orden
 
 ```powershell
-C:\Users\mbrav\anaconda3\python.exe main.py status
+.\.venv\Scripts\python.exe main.py status
 ```
 
 Salida esperada:
@@ -100,20 +106,21 @@ Salida esperada:
 ## Instalación desde cero
 
 ```powershell
-cd c:\Users\mbrav\Desktop\INF_FIN_IA
+cd C:\Users\mbrav\Desktop\PROYECTOS_IA\INF_FIN_IA
 
-# Instalar dependencias en Anaconda
-C:\Users\mbrav\anaconda3\python.exe -m pip install -r requirements.txt
+# Crear el entorno virtual (si no existe) e instalar dependencias
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
 
 # Copiar y editar credenciales
 copy .env.example .env
 # (editar .env con tus datos)
 
 # Verificar estado
-C:\Users\mbrav\anaconda3\python.exe main.py status
+.\.venv\Scripts\python.exe main.py status
 
 # Backfill inicial (descarga histórico de todas las series)
-C:\Users\mbrav\anaconda3\python.exe main.py fetch --all
+.\.venv\Scripts\python.exe main.py fetch --all
 ```
 
 ---
@@ -122,94 +129,228 @@ C:\Users\mbrav\anaconda3\python.exe main.py fetch --all
 
 ```powershell
 # Ver estado del sistema y credenciales
-C:\Users\mbrav\anaconda3\python.exe main.py status
+.\.venv\Scripts\python.exe main.py status
 
 # Backfill inicial — descarga todas las series del catálogo
-C:\Users\mbrav\anaconda3\python.exe main.py fetch --all
+.\.venv\Scripts\python.exe main.py fetch --all
 
 # Descargar una serie por nombre (búsqueda en catálogo local)
-C:\Users\mbrav\anaconda3\python.exe main.py fetch --series IPC
-C:\Users\mbrav\anaconda3\python.exe main.py fetch --series "tipo de cambio"
-C:\Users\mbrav\anaconda3\python.exe main.py fetch --series cobre
+.\.venv\Scripts\python.exe main.py fetch --series IPC
+.\.venv\Scripts\python.exe main.py fetch --series "tipo de cambio"
+.\.venv\Scripts\python.exe main.py fetch --series cobre
 
 # Descargar por código exacto BDE (verificar código en si3.bcentral.cl primero)
-C:\Users\mbrav\anaconda3\python.exe main.py fetch --id F032.PIB.FLU.R.CLP.EP18.Z.Z.0.T
+.\.venv\Scripts\python.exe main.py fetch --id F032.PIB.FLU.R.CLP.EP18.Z.Z.0.T
 
 # Descargar con rango de fechas
-C:\Users\mbrav\anaconda3\python.exe main.py fetch --series PIB --from-date 2010-01-01 --to-date 2025-12-31
+.\.venv\Scripts\python.exe main.py fetch --series PIB --from-date 2010-01-01 --to-date 2025-12-31
 
 # Consultar datos almacenados
-C:\Users\mbrav\anaconda3\python.exe main.py query --series PIB
-C:\Users\mbrav\anaconda3\python.exe main.py query --series PIB --format csv
-C:\Users\mbrav\anaconda3\python.exe main.py query --series PIB --format json
+.\.venv\Scripts\python.exe main.py query --series PIB
+.\.venv\Scripts\python.exe main.py query --series PIB --format csv
+.\.venv\Scripts\python.exe main.py query --series PIB --format json
 
 # ============================================================
 # Ingesta y Consulta Corporativa (Fase 3 — CMF de Chile)
 # ============================================================
 
 # Descargar e ingestar estados financieros trimestrales corporativos (ej. 202512)
-C:\Users\mbrav\anaconda3\python.exe main.py fetch-cmf --period 202512
+.\.venv\Scripts\python.exe main.py fetch-cmf --period 202512
 
 # Consultar estados financieros corporativos de forma interactiva (ej. Correos de Chile)
-C:\Users\mbrav\anaconda3\python.exe main.py query-cmf --rut 60503000 --period 202512
+.\.venv\Scripts\python.exe main.py query-cmf --rut 60503000 --period 202512
 
 # Consultar estados financieros filtrando por nombre de empresa en formato JSON
-C:\Users\mbrav\anaconda3\python.exe main.py query-cmf --company "CORREOS" --period 202512 --limit 5 --format json
+.\.venv\Scripts\python.exe main.py query-cmf --company "CORREOS" --period 202512 --limit 5 --format json
 
 # ============================================================
 # Ingesta y Consulta Bancaria (Fase 4 — CMF Bancos)
 # ============================================================
 
 # Descargar e ingestar reportes mensuales bancarios para un banco específico (ej. Banco de Chile 001, Dic 2025)
-C:\Users\mbrav\anaconda3\python.exe main.py fetch-banks --year 2025 --month 12 --bank 001
+.\.venv\Scripts\python.exe main.py fetch-banks --year 2025 --month 12 --bank 001
 
 # Descargar automáticamente todos los bancos de la plaza para un mes específico (Nov 2025)
-C:\Users\mbrav\anaconda3\python.exe main.py fetch-banks --year 2025 --month 11
+.\.venv\Scripts\python.exe main.py fetch-banks --year 2025 --month 11
 
 # Realizar un backfill histórico completo de todos los bancos principales desde 2024 de forma automatizada
-C:\Users\mbrav\anaconda3\python.exe main.py fetch-banks --history
+.\.venv\Scripts\python.exe main.py fetch-banks --history
 
 # Consultar activos u otras cuentas bancarias (ej. Total Activos 100000000 de Banco de Chile)
-C:\Users\mbrav\anaconda3\python.exe main.py query-banks --bank 001 --account 100000000
+.\.venv\Scripts\python.exe main.py query-banks --bank 001 --account 100000000
 
 # Exportar en formato JSON de alta precisión (limitado a 2 registros)
-C:\Users\mbrav\anaconda3\python.exe main.py query-banks --bank 001 --account 100000000 --format json --limit 2
+.\.venv\Scripts\python.exe main.py query-banks --bank 001 --account 100000000 --format json --limit 2
+
+# ============================================================
+# Seguros e Intermediarios (CMF — FECU con plan de cuentas propio)
+# ============================================================
+
+# EEFF de compañías de seguros. Una sola descarga por período trae TODAS las
+# compañías del ramo (a diferencia de bancos, que itera por entidad).
+.\.venv\Scripts\python.exe main.py fetch-seguros --year 2026 --month 3
+.\.venv\Scripts\python.exe main.py fetch-seguros --ramo vida --year 2026 --month 3
+.\.venv\Scripts\python.exe main.py fetch-seguros --history          # backfill trimestral 2015+
+
+# EEFF de corredores de bolsa y agentes de valores
+.\.venv\Scripts\python.exe main.py fetch-intermediarios --year 2026 --month 3
+.\.venv\Scripts\python.exe main.py fetch-intermediarios --history
+
+# ============================================================
+# Cartera de inversiones de seguros (CMF — Circular 1.835)
+# ============================================================
+
+# Descarga E ingesta en un paso. Cubre ambos ramos por defecto.
+.\.venv\Scripts\python.exe main.py fetch-cartera-seguros --latest            # último mes publicado
+.\.venv\Scripts\python.exe main.py fetch-cartera-seguros --period 202606
+.\.venv\Scripts\python.exe main.py fetch-cartera-seguros --ramo generales --period 202606
+
+# Backfill histórico (la CMF publica desde 2016-01); acotable con --since
+.\.venv\Scripts\python.exe main.py fetch-cartera-seguros --history --since 202001
+
+# Respaldo offline: reingesta ZIP ya presentes en data/seguros_cartera_raw/ sin tocar la red
+.\.venv\Scripts\python.exe main.py import-cartera-seguros
 
 # ============================================================
 # Ingesta y Consulta de Pensiones (Superintendencia de Pensiones — SP)
 # ============================================================
 
 # Descargar e ingestar valores cuota de multifondos (ej. histórico completo desde 2002 para todos los fondos)
-C:\Users\mbrav\anaconda3\python.exe main.py fetch-sp-cuotas --year-start 2002
+.\.venv\Scripts\python.exe main.py fetch-sp-cuotas --year-start 2002
 
 # Descargar valores cuota para un fondo y rango específico (ej. Fondo A entre 2025 y 2026)
-C:\Users\mbrav\anaconda3\python.exe main.py fetch-sp-cuotas --year-start 2025 --year-end 2026 --fund A
+.\.venv\Scripts\python.exe main.py fetch-sp-cuotas --year-start 2025 --year-end 2026 --fund A
 
 # Descargar la cartera de inversión mensual desagregada para un período específico (ej. Enero 2026)
-C:\Users\mbrav\anaconda3\python.exe main.py fetch-sp-cartera --period 202601
+.\.venv\Scripts\python.exe main.py fetch-sp-cartera --period 202601
 
 # Descargar la cinta diaria de precios de instrumentos financieros para una fecha específica (ej. 2026-01-02)
-C:\Users\mbrav\anaconda3\python.exe main.py fetch-sp-precios --date 2026-01-02
+.\.venv\Scripts\python.exe main.py fetch-sp-precios --date 2026-01-02
 
 # Realizar un backfill completo de precios diarios (últimos 5 años diarios, y anteriores 5 años los miércoles)
-C:\Users\mbrav\anaconda3\python.exe main.py fetch-sp-precios --history
+.\.venv\Scripts\python.exe main.py fetch-sp-precios --history
 
 # Consultar valores cuota y patrimonio en terminal
-C:\Users\mbrav\anaconda3\python.exe main.py query-sp-cuotas --afp CAPITAL --fund A --limit 5
+.\.venv\Scripts\python.exe main.py query-sp-cuotas --afp CAPITAL --fund A --limit 5
 
 # Consultar precios diarios de instrumentos (ej. nemotécnico o RUT)
-C:\Users\mbrav\anaconda3\python.exe main.py query-sp-precios --instrument AESANDES --limit 5
+.\.venv\Scripts\python.exe main.py query-sp-precios --instrument AESANDES --limit 5
 
 # ============================================================
 # Listar y Scheduler
 # ============================================================
 
 # Listar series macroeconómicas registradas en la base de datos local
-C:\Users\mbrav\anaconda3\python.exe main.py list
+.\.venv\Scripts\python.exe main.py list
 
 # Iniciar scheduler automático (bloqueante — corre indefinidamente)
-C:\Users\mbrav\anaconda3\python.exe main.py run-scheduler
+.\.venv\Scripts\python.exe main.py run-scheduler
 ```
+
+---
+
+## Capa Web (Fase 7) — API REST + Dashboard
+
+Stack: **FastAPI + Jinja2 + HTMX + Plotly** (server-rendered, sin Node). La API reusa la
+capa DuckDB existente y se sirve en un solo proceso.
+
+**Inicio rápido (un clic):** doble clic en **`iniciar_web.bat`** (en la raíz del proyecto).
+La primera vez crea el entorno virtual e instala dependencias; luego levanta el servidor y
+abre el navegador en `http://127.0.0.1:8000/`. Equivale a `main.py serve`.
+
+```powershell
+# Levantar la web (panel + API navegable en /docs); abre el navegador solo
+.\.venv\Scripts\python.exe main.py serve
+
+# Levantar en proceso único CON el scheduler embebido (BD en lectura/escritura)
+.\.venv\Scripts\python.exe main.py serve --with-scheduler
+
+# Generar un HTML local autocontenido del panel (sin servidor) para examinarlo
+.\.venv\Scripts\python.exe main.py web-preview
+
+# Exportar los estados financieros de empresas a HTML navegable (índice + página/empresa)
+.\.venv\Scripts\python.exe main.py eeff-export            # período más reciente
+.\.venv\Scripts\python.exe main.py eeff-export -p 202512  # período específico
+```
+
+Vistas disponibles:
+
+| Ruta | Descripción |
+|---|---|
+| `/` | Panel multi-fuente: PIB/IMACEC var. anual, IPC, USD/CLP; top-5 bancos por activos y resultado; rentabilidad 12m por fondo AFP (+ AFP nº1 por rentabilidad y por patrimonio); gráficos UF y TPM a 12 meses |
+| `/eeff` | **Hub** de estados financieros por clasificación de entidad: cada una tiene su plan de cuentas y su fuente |
+| `/eeff/corporativos` | EEFF corporativos (CMF) por empresa (buscador) y período. Orden **IFRS oficial**, subsecciones del balance (Activos/Pasivos/Patrimonio), nombres de estado legibles, totales en negrita, **indicadores financieros (ROE/ROA/márgenes/liquidez/deuda)**, gráfico de evolución de cualquier partida (con opción desacumular flujos) |
+| `/eeff/seguros` | EEFF de compañías de seguros (vida y generales) con su **plan de cuentas FECU propio** — no mezclar con el IFRS corporativo ni con el bancario |
+| `/eeff/intermediarios` | EEFF de corredores de bolsa y agentes de valores (FECU IFRS) |
+| `/eeff/agf` | EEFF de administradoras generales de fondos, separadas para analizarlas como grupo |
+| `/comparar` | Compara una misma partida en hasta 3 empresas libres o superposición automática del Top 5 de un sector **+ tabla comparativa de ratios** |
+| `/ranking` | Top 15 empresas por un indicador (ROE, ROA, márgenes, liquidez, deuda) en un período, con **filtro por sector** |
+| `/salud` | Radar de Salud Financiera: gráfico de dispersión cruzando Riesgo (Deuda) vs Rentabilidad (ROE) y Liquidez, identificando unicornios y empresas en riesgo por sector |
+| `/proyecciones` | **Hub** de proyecciones por clasificación de entidad |
+| `/proyecciones/corporativos` | **Proyecciones de EEFF a 1–3 años** (ingresos y resultado neto): fan charts con bandas empíricas 80/95%, supuestos macro anclados a las encuestas EEE+EOF del BCCh y trayectoria estructural (activos → rotación → margen). Modelo híbrido validado por backtest |
+| `/proyecciones/{bancos,seguros,intermediarios}` | Proyección univariante (SARIMAX) de las entidades con plan de cuentas propio |
+| `/banca` | Estados bancarios con desglose por moneda; gráfico de evolución de cualquier cuenta |
+| `/inversion-institucional` | **Hub** de administradores de activos: cartera de seguros, AFP y fondos de pensiones |
+| `/seguros/cartera` | **Asset allocation de compañías de seguros** (Circular 1.835, mensual): panel del período con exposición extranjera, respaldo de reservas técnicas (RT+PR), CUI/APV y método de valorización; **deriva histórica** del allocation por clase de activo; comparación entre compañías con HHI; concentración por emisor de la renta fija. Códigos traducidos con la **codificación oficial CMF** (`config/insurer_investment_codes.yaml`) |
+| `/afp` | Evolución de fondos de pensiones: una AFP/un fondo, comparar fondos, comparar AFP; métrica valor cuota / patrimonio / participación de mercado; rentabilidad nominal vs real; composición de cartera (glosario oficial SP); **rentabilidad neta de comisiones** (simulación sueldo configurable) |
+| `/fondos` | **Comparativo por fondo entre AFP**: retornos del valor cuota en horizontes 1M/3M/6M/12M/3A/5A/10A (anualizados desde 3A) + composición vigente de cartera por AFP (secciones del informe SP apiladas). Selector dinámico — escala solo a los fondos generacionales |
+| `/docs` | Swagger de la API REST (`/api/...`) |
+
+Export estático navegable de EEFF (sin servidor): `main.py eeff-export` → `preview/eeff/index.html`
+(índice buscable + una página por empresa). Panel estático: `main.py web-preview` → `preview/overview.html`.
+
+> **Concurrencia DuckDB**: solo un proceso puede escribir a la vez. Por eso, para correr la
+> web y el scheduler simultáneamente, usar `serve --with-scheduler` (proceso único) en vez de
+> levantar `run-scheduler` aparte.
+
+### Ingesta automática "al publicarse" (catch-up por frescura)
+
+```powershell
+# Ver qué fuentes tienen datos pendientes sin descargar nada
+.\.venv\Scripts\python.exe main.py catchup --dry-run
+
+# Descargar lo que falte dentro de su ventana de publicación (idempotente)
+.\.venv\Scripts\python.exe main.py catchup
+```
+
+El catch-up compara, por fuente, el último período en la BD contra el siguiente esperado
+(según frecuencia + rezago de publicación) y descarga solo lo que corresponda. Corre también
+como job horario dentro del scheduler.
+
+---
+
+## Capa Analítica (Fase 6) — Proyecciones macrofundadas
+
+**Principio metodológico**: los factores macro futuros **no se proyectan internamente**.
+Se anclan a las medianas de las dos encuestas oficiales del Banco Central — la
+**Encuesta de Expectativas Económicas** (EEE, economistas, mensual) y la **Encuesta de
+Operadores Financieros** (EOF, mercado, quincenal) — interpolando linealmente entre sus
+horizontes publicados (1 → 36 meses). Máxima defendibilidad: los insumos son consenso
+experto oficial; la mecánica es auditable a mano.
+
+**Modelo de producción** (`/proyecciones`): híbrido por horizonte, calibrado por backtest
+fuera de muestra (40 empresas × 8 orígenes, vintages honestos de encuestas):
+
+| Horizonte | Modelo | Por qué |
+|---|---|---|
+| 1er trimestre | SARIMAX(1,0,0)×(0,1,1,4) puro | El momentum de la propia serie manda a corto plazo |
+| 2° trimestre en adelante | **Estructural**: Δlog(activos operacionales) ← macro (panel con shrinkage empresa→sector→global) → ingresos vía rotación → resultado vía margen | Robustez muy superior (los errores no explotan) y coherencia económica |
+
+Las **bandas de confianza (80/95%) son empíricas**: cuantiles del error real medido en el
+backtest, reescalados por la volatilidad de cada empresa — no supuestos gaussianos.
+
+```powershell
+# Re-correr el backtest de modelos (resultados a scratch/, resumen en consola)
+.\.venv\Scripts\python.exe -m models.backtest --companies 40 --origins 8 --horizon 4
+```
+
+Módulos en `models/`: `macro_path.py` (senda EEE+EOF, con soporte de vintage `as_of` para
+backtesting), `structural.py` (cadena activos→productividad→resultados), `forecast.py`
+(SARIMAX), `hybrid.py` (empalme de producción + bandas empíricas), `backtest.py` (arnés
+rolling-origin). Metodología y resultados: **`docs/wiki/Backtest-Modelos.md`**.
+
+> Hallazgo clave del backtest: usar el macro como exógena de flujos trimestrales EMPEORA
+> las proyecciones; el macro solo aporta en la ecuación de activos (stocks). No reintroducir.
 
 ---
 
@@ -221,6 +362,10 @@ INF_FIN_IA/
 │   ├── bcentral.py          # ✅ Cliente BDE API del Banco Central (Fases 1 y 2)
 │   ├── cmf.py               # ✅ Ingestionador plano de Estados Financieros CMF (Fase 3)
 │   ├── cmf_banks.py         # ✅ Cliente API REST de Estados Financieros Bancos CMF (Fase 4)
+│   ├── cmf_fecu.py          # ✅ Parser compartido del Excel "FECU tabla" (seguros/intermediarios)
+│   ├── cmf_insurers.py      # ✅ EEFF de compañías de seguros, vida y generales
+│   ├── cmf_brokers.py       # ✅ EEFF de corredores de bolsa y agentes de valores
+│   ├── seguros_cartera.py   # ✅ Cartera de inversiones de seguros (Circular 1.835, ZIP mensual)
 │   ├── sp_pensions.py       # ✅ Scraping de valores cuota, carteras y precios SP
 │   └── sii.py               # 🔜 Scraping SII alternativo (Fase 2)
 ├── processors/
@@ -232,15 +377,33 @@ INF_FIN_IA/
 │   ├── database.py          # ✅ Capa de acceso DuckDB
 │   └── schema.py            # ✅ Definición de tablas (series, observations, cmf, fetch_log)
 ├── scheduler/
-│   └── jobs.py              # ✅ APScheduler: daily/monthly/quarterly/annual
+│   ├── jobs.py              # ✅ APScheduler: daily/monthly/quarterly/annual + catch-up
+│   └── freshness.py         # ✅ Sondas de frescura (ingesta "al publicarse")
+├── models/                  # ✅ Fase 6: proyecciones macrofundadas
+│   ├── macro_path.py        #    senda macro anclada a encuestas EEE+EOF (vintage as_of)
+│   ├── structural.py        #    activos operacionales ← macro → rotación → margen
+│   ├── forecast.py          #    SARIMAX trimestral (partidas ERFG desacumuladas)
+│   ├── hybrid.py            #    modelo de producción (empalme + bandas empíricas)
+│   └── backtest.py          #    arnés rolling-origin (python -m models.backtest)
 ├── config/
 │   ├── settings.py          # ✅ Configuración centralizada (pydantic-settings)
-│   └── series_catalog.yaml  # ✅ Catálogo de series a ingestar
-├── api/                     # ⏳ FastAPI REST (Fase 6)
-├── dashboard/               # ⏳ Frontend web (Fase 6)
+│   ├── series_catalog.yaml  # ✅ Catálogo de series a ingestar (macro + expectativas EEE/EOF)
+│   ├── company_profiles.yaml# ✅ Reseñas y sectores de empresas (101 curadas + inferencia)
+│   ├── afp_commissions.yaml # ✅ Comisiones vigentes por AFP (rentabilidad neta)
+│   └── insurer_investment_codes.yaml # ✅ Codificación OFICIAL CMF de tipo de inversión
+│                            #    (Circular 1.835) + agrupación propia por clase y geografía
+├── api/                     # ✅ FastAPI: routers /api/*, vistas HTML, templates Jinja2, static
+│   ├── main.py              #    app + lifespan (scheduler embebido opcional)
+│   ├── routers/             #    macro, cmf, banks, sp, dashboard_kpi, views
+│   ├── templates/           #    base, overview, eeff, banca, afp, seguros_cartera + partials
+│   ├── sp_glossary.py       #    glosario oficial de nemotécnicos de la cartera SP
+│   ├── insurer_glossary.py  #    glosario de tipos de inversión de seguros + limpieza de nombres
+│   └── preview.py           #    export estático del panel (main.py web-preview)
 ├── data/
 │   ├── cmf_raw/             # Caché local de archivos planos trimestrales (.txt) de la CMF
 │   ├── bank_raw/            # Caché local de respuestas JSON de la API CMF Bancos (Fase 4)
+│   ├── insurer_raw/         # Caché de los Excel FECU de seguros
+│   ├── seguros_cartera_raw/ # Caché de los ZIP mensuales de cartera (Circular 1.835)
 │   └── finanzas_chile.duckdb  # Base de datos DuckDB (generado automáticamente)
 ├── logs/                    # Logs de ejecución (generado automáticamente)
 ├── main.py                  # ✅ CLI entry point
@@ -271,6 +434,11 @@ INF_FIN_IA/
 | **Fase 2: IVP** | Índice de Valor Promedio | `F073.IVP.PRE.Z.D` | Diario |
 | **Fase 2: UTM** | Unidad Tributaria Mensual | `F073.UTR.PRE.Z.M` | Mensual |
 | **Fase 2: IMACEC** | IMACEC mensual (Base 2018) | `F032.ICF.IND.Z.Z.EP18.Z.Z.0.M` | Mensual |
+
+Además, la **Fase 6** ingesta ~27 series de expectativas (prefijo `F089`): la **EEE**
+(medianas de IPC/TPM/TC/PIB/IMACEC en horizontes móviles + largo plazo, mensual) y la
+**EOF** (TPM/inflación/TC, quincenal). Categoría `expectativas` en el catálogo. Alimentan
+la senda macro de las proyecciones (`models/macro_path.py`).
 
 Para agregar más series, editar `config/series_catalog.yaml`.
 
@@ -356,6 +524,36 @@ df = conn.execute("""
 print(df)
 ```
 
+### Consulta de Cartera de Seguros (Circular 1.835)
+
+```python
+import duckdb
+conn = duckdb.connect("data/finanzas_chile.duckdb")
+
+# Composición de cartera del mercado de seguros de vida, por tipo de inversión.
+# OJO: los montos vienen en MILES de pesos (M$); aquí se pasan a miles de millones.
+df = conn.execute("""
+    SELECT investment_code,
+           SUM(valor_final) / 1e6            AS mmm_clp,
+           SUM(repr_rt_pr)  / 1e6            AS respalda_reservas,
+           SUM(cui_apv)     / 1e6            AS cui_apv
+    FROM cmf_insurer_portfolio_control
+    WHERE period = 202606 AND insurance_type = 'vida'
+    GROUP BY investment_code
+    ORDER BY mmm_clp DESC
+    LIMIT 10
+""").fetchdf()
+print(df)
+```
+
+> Los códigos (`E10`, `D20`, `H62`…) se traducen con la codificación oficial de la CMF en
+> `config/insurer_investment_codes.yaml` (`api.insurer_glossary.describe`).
+> `valor_final = repr_rt_pr + no_repr_rt_pr` es identidad exacta; en cambio los cuatro campos
+> de valorización **no** suman el total (créditos, siniestros por cobrar y avances a tenedores
+> no llevan método de valorización). El detalle instrumento a instrumento está en
+> `cmf_insurer_portfolio_fixed_income`, donde `valor_nominal` va en la unidad de cada
+> instrumento (UF, $, EUR…) y **no es sumable entre monedas**.
+
 ### Consulta de Fondos de Pensiones (SP)
 
 ```python
@@ -398,11 +596,12 @@ Una vez que la base de datos tenga cobertura histórica, se incorporarán:
 
 | Capacidad | Descripción | Dependencias |
 |---|---|---|
-| **Proyecciones macro** | Modelos de proyección de variables macro (VAR, ARIMA, Kalman) usando los datos del BCCh | Fase 1–2 completas |
-| **Proyecciones de EEFF** | Proyecciones de estados financieros de empresas ancladas al escenario macro | Fase 3 completa |
-| **Ratios y comparación sectorial** | Cálculo automático de ROE, ROA, EV/EBITDA por empresa y sector | Fase 3 completa |
-| **Detección de anomalías** | Alertas cuando una empresa o indicador se desvía de su comportamiento histórico | Fase 3 + datos históricos |
-| **Informes narrativos (Jules)** | Integración con el agente Jules para generación automática de reportes Word/PPT | Fase 6 |
+| **Supuestos macro** | La senda de factores se ancla a las encuestas EEE+EOF del BCCh (no se proyecta macro propio) | ✅ Operativa |
+| **Proyecciones de EEFF** | Proyecciones de ingresos y resultado de empresas, modelo híbrido estructural + SARIMAX validado por backtest (`/proyecciones`) | ✅ Operativa |
+| **Ratios y comparación sectorial** | Cálculo automático de ROE, ROA, márgenes, Radar de Salud por empresa y sector | ✅ Operativa |
+| **Detección de anomalías** | Alertas visuales en Radar de Salud; falta detección estadística (Z-Score/Outliers ML) | 🟡 Parcial |
+| **Ampliar proyecciones** | Más partidas (márgenes intermedios), rezagos post-M&A, backtest por sub-sector | ⏳ Siguiente |
+| **Informes narrativos (Jules)** | Reportes automáticos con LLM a partir de la trayectoria estructural | ⏳ Fase 8 |
 
 ---
 
@@ -411,7 +610,7 @@ Una vez que la base de datos tenga cobertura histórica, se incorporarán:
 | Herramienta | Descripción | Estado |
 |---|---|---|
 | **CLI** | Consulta de datos por terminal | ✅ Operativa |
-| **API REST** (FastAPI) | Endpoints para consumir los datos desde cualquier app | ⏳ Fase 6 |
-| **Dashboard web** | Visualizaciones interactivas (Chart.js / Plotly) | ⏳ Fase 6 |
+| **API REST** (FastAPI) | Endpoints `/api/*` para consumir los datos (`main.py serve` → `/docs`) | 🟡 En desarrollo |
+| **Dashboard web** | Panel multi-fuente + EEFF (corporativos, seguros, intermediarios, AGF) + banca + inversión institucional (AFP, fondos, cartera de seguros) — Jinja2/HTMX/Plotly | 🟡 En desarrollo |
 | **Reportes automáticos** | Documentos Word/PPT generados por Jules a partir de la BD | ⏳ Fase 7 |
 | **Alertas** | Notificaciones cuando se acercan publicaciones o hay datos nuevos | ⏳ Fase 4 |
