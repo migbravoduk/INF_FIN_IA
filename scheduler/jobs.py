@@ -23,6 +23,8 @@ from apscheduler.events import EVENT_JOB_ERROR, EVENT_JOB_EXECUTED
 from collectors.bcentral import BCentralCollector
 from collectors.cmf import CMFCollector
 from collectors.cmf_banks import CMFBankCollector
+from collectors.cmf_insurers import CMFInsurerCollector
+from collectors.cmf_brokers import CMFBrokerCollector
 from collectors.sp_pensions import SPPensionCollector
 from db.database import Database
 from processors.normalizer import normalize_observations
@@ -194,7 +196,7 @@ def run_sp_monthly_fetch() -> None:
 
 # Mapea el `kind` de la sonda al source_id usado en fetch_log.
 _SOURCE_OF = {
-    "bcentral": "bcentral", "cmf_emp": "cmf", "cmf_bank": "cmf",
+    "bcentral": "bcentral", "cmf_emp": "cmf", "cmf_bank": "cmf", "cmf_insurer": "cmf", "cmf_broker": "cmf",
     "sp_cuotas": "sp", "sp_precios": "sp", "sp_cartera": "sp",
 }
 
@@ -244,6 +246,24 @@ def _dispatch_catchup(db: Database, st: FreshnessStatus) -> tuple[str, int]:
                     total += db.insert_bank_records(y, m, code, rtype, recs)
         db.log_fetch(f"cmf_bank:{expected}", "cmf", "ok" if total else "no_data", total, started_at=started)
         return ("ok" if total else "no_data"), total
+
+    if st.kind == "cmf_insurer":
+        y, m = st.params["year"], st.params["month"]
+        freq = st.params.get("freq", "trimestral")
+        ins_type = st.params.get("insurance_type", "vida")
+        period = int(f"{y}{m:02d}")
+        recs = CMFInsurerCollector(insurance_type=ins_type).fetch_period(y, m, freq=freq)
+        n = db.insert_insurer_records(period, freq, recs, insurance_type=ins_type) if recs else 0
+        db.log_fetch(f"cmf_insurer_{ins_type}:{period}", "cmf", "ok" if recs else "no_data", n, started_at=started)
+        return ("ok" if recs else "no_data"), n
+
+    if st.kind == "cmf_broker":
+        y, m = st.params["year"], st.params["month"]
+        period = int(f"{y}{m:02d}")
+        recs = CMFBrokerCollector().fetch_period(y, m)
+        n = db.insert_broker_records(period, recs) if recs else 0
+        db.log_fetch(f"cmf_broker:{period}", "cmf", "ok" if recs else "no_data", n, started_at=started)
+        return ("ok" if recs else "no_data"), n
 
     if st.kind == "sp_cuotas":
         year = st.params["year"]

@@ -262,6 +262,10 @@ class SPPensionCollector:
             r_zip.raise_for_status()
 
             # Validación de integridad del ZIP
+            if not r_zip.content.startswith(b"PK\x03\x04"):
+                logger.warning(f"La cartera de inversión para el período {period_str} no tiene formato ZIP (puede no estar publicada aún por la SP).")
+                return []
+
             if len(r_zip.content) < 5000:
                 raise ValueError("El archivo ZIP de la cartera descargado es demasiado pequeño, puede estar corrupto.")
 

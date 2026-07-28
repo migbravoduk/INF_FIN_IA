@@ -341,3 +341,67 @@ bcentral:
     frequency: daily
     unit: CLP_por_USD
     description: Expectativa del tipo de cambio a 3 meses (mediana EOF)
+
+  - id: F032.IMC.IND.Z.Z.EP18.03.Z.0.M
+    name: IMACEC Minero (Base 2018)
+    category: actividad_mensual
+    frequency: monthly
+    unit: indice
+    description: Imacec minero, serie empalmada (índice 2018=100)
+
+  - id: F032.IMC.IND.Z.Z.EP18.N03.Z.0.M
+    name: IMACEC No Minero (Base 2018)
+    category: actividad_mensual
+    frequency: monthly
+    unit: indice
+    description: Imacec no minero, serie empalmada (índice 2018=100)
+
+  - id: F022.BCLP.TIS.AN05.NO.Z.D
+    name: Tasa BCP 5 años (curva soberana pesos)
+    category: curva_soberana
+    frequency: daily
+    unit: porcentaje_anual
+    description: Tasa de interés mercado secundario de los bonos BCP a 5 años
+
+  - id: F022.BCLP.TIS.AN10.NO.Z.D
+    name: Tasa BCP 10 años (curva soberana pesos)
+    category: curva_soberana
+    frequency: daily
+    unit: porcentaje_anual
+    description: Tasa de interés mercado secundario de los bonos BCP a 10 años
+
+  - id: F022.BUF.TIS.AN05.UF.Z.D
+    name: Tasa BCU 5 años (curva soberana UF)
+    category: curva_soberana
+    frequency: daily
+    unit: porcentaje_anual
+    description: Tasa de interés mercado secundario de los bonos BCU a 5 años
+
+  - id: F022.BUF.TIS.AN10.UF.Z.D
+    name: Tasa BCU 10 años (curva soberana UF)
+    category: curva_soberana
+    frequency: daily
+    unit: porcentaje_anual
+    description: Tasa de interés mercado secundario de los bonos BCU a 10 años
+
+  - id: F022.COM.TIP.Z.NO.Z.M
+    name: Tasa comercial promedio
+    category: colocaciones
+    frequency: monthly
+    unit: porcentaje_anual
+    description: Tasa de interés promedio ponderada de créditos comerciales
+
+  - id: F022.CON.TIP.Z.NO.Z.M
+    name: Tasa consumo promedio
+    category: colocaciones
+    frequency: monthly
+    unit: porcentaje_anual
+    description: Tasa de interés promedio ponderada de créditos de consumo
+
+  - id: F022.VIV.TIP.MA03.UF.Z.M
+    name: Tasa vivienda promedio UF
+    category: colocaciones
+    frequency: monthly
+    unit: porcentaje_anual
+    description: Tasa de interés promedio de créditos de vivienda en UF a más de 3 años
+

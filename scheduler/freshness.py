@@ -29,6 +29,8 @@ LAG_DEFAULTS = {"daily": 1, "monthly": 8, "quarterly": 85}
 # Overrides conocidos para fuentes no-BCCh (días tras el cierre del período).
 LAG_CMF_EMPRESAS = 60   # EEFF trimestrales XBRL (plazo regulatorio ~60 días)
 LAG_CMF_BANCOS = 35     # Estados bancarios mensuales SBIF (~30-40 días)
+LAG_CMF_SEGUROS = 60    # FECU trimestral de seguros de vida (~2 meses tras el cierre)
+LAG_CMF_INTERMEDIARIOS = 60  # FECU trimestral de corredores de bolsa / agentes de valores
 LAG_SP_CARTERA = 40     # Cartera desagregada mensual SP
 
 # Tope de días hábiles a recuperar de una vez para fuentes diarias (evita loops largos).
@@ -184,6 +186,30 @@ def _probe_cmf_bancos(db, today: dt.date) -> FreshnessStatus:
     )
 
 
+def _probe_cmf_seguros(db, today: dt.date, insurance_type: str) -> FreshnessStatus:
+    ey, eq = _expected_quarter(today, LAG_CMF_SEGUROS)
+    expected_period = ey * 100 + eq * 3   # YYYYMM del cierre trimestral (03/06/09/12)
+    have = db.get_latest_insurer_period(freq="trimestral", insurance_type=insurance_type)
+    due = have is None or have < expected_period
+    return FreshnessStatus(
+        source=f"CMF · EEFF seguros {insurance_type}", kind="cmf_insurer", frequency="quarterly",
+        latest_have=str(have) if have else None, expected=str(expected_period), due=due,
+        params={"year": ey, "month": eq * 3, "freq": "trimestral", "insurance_type": insurance_type},
+    )
+
+
+def _probe_cmf_intermediarios(db, today: dt.date) -> FreshnessStatus:
+    ey, eq = _expected_quarter(today, LAG_CMF_INTERMEDIARIOS)
+    expected_period = ey * 100 + eq * 3
+    have = db.get_latest_broker_period()
+    due = have is None or have < expected_period
+    return FreshnessStatus(
+        source="CMF · EEFF intermediarios de valores", kind="cmf_broker", frequency="quarterly",
+        latest_have=str(have) if have else None, expected=str(expected_period), due=due,
+        params={"year": ey, "month": eq * 3},
+    )
+
+
 def _probe_sp_cuotas(db, today: dt.date) -> FreshnessStatus:
     expected_d = _last_business_day_before(today)
     have = db.get_latest_sp_quota_date()
@@ -232,6 +258,9 @@ def probe_all(db, today: Optional[dt.date] = None) -> list[FreshnessStatus]:
     statuses.extend(_probe_bcentral(db, today))
     statuses.append(_probe_cmf_empresas(db, today))
     statuses.append(_probe_cmf_bancos(db, today))
+    statuses.append(_probe_cmf_seguros(db, today, "vida"))
+    statuses.append(_probe_cmf_seguros(db, today, "generales"))
+    statuses.append(_probe_cmf_intermediarios(db, today))
     statuses.append(_probe_sp_cuotas(db, today))
     statuses.append(_probe_sp_precios(db, today))
     statuses.append(_probe_sp_cartera(db, today))
