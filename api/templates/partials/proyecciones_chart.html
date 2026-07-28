@@ -112,6 +112,10 @@
             var lo95 = [lastV].concat(r.forecast.map(function (d) { return d.lo95; }));
             var hi95 = [lastV].concat(r.forecast.map(function (d) { return d.hi95; }));
 
+            var allCats = [];
+            hx.forEach(function (c) { if (allCats.indexOf(c) < 0) { allCats.push(c); } });
+            fx.forEach(function (c) { if (allCats.indexOf(c) < 0) { allCats.push(c); } });
+
             var traces = [
                 { x: fxc, y: hi95, mode: "lines", line: { width: 0 },
                   showlegend: false, hoverinfo: "skip" },
@@ -131,7 +135,13 @@
                 margin: { t: 10, r: 10, b: 60, l: 80 }, height: 360,
                 paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)",
                 font: { color: "#94a3b8" },
-                xaxis: { type: "category", gridcolor: "#334155", tickangle: -45 },
+                xaxis: {
+                    type: "category",
+                    categoryorder: "array",
+                    categoryarray: allCats,
+                    gridcolor: "#334155",
+                    tickangle: -45
+                },
                 yaxis: { gridcolor: "#334155" },
                 legend: { orientation: "h", y: -0.3 }
             }, { displayModeBar: false, responsive: true });

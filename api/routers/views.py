@@ -43,19 +43,88 @@ def overview(request: Request, db: Database = Depends(get_db)):
 # Estados financieros corporativos (CMF)
 # ----------------------------------------------------------
 
+# Clasificaciones de entidad del hub de EEFF. Cada una tiene su plan de cuentas y fuente;
+# bancos conserva su propia vista/lógica (desglose por moneda), el resto comparte el patrón.
+EEFF_CLASSES = [
+    {"key": "corporativos", "url": "/eeff/corporativos", "icon": "🏢", "title": "Corporativos",
+     "desc": "Sociedades anónimas y demás emisores que no caen en otra clasificación.",
+     "meta": "CMF · archivo plano IFRS · trimestral"},
+    {"key": "bancos", "url": "/banca", "icon": "🏦", "title": "Bancos",
+     "desc": "Balances y resultados con desglose por tipo de moneda (lógica propia).",
+     "meta": "CMF/SBIF · mensual"},
+    {"key": "seguros", "url": "/eeff/seguros", "icon": "🛡️", "title": "Compañías de seguros",
+     "desc": "Aseguradoras de vida y generales, con su plan de cuentas FECU.",
+     "meta": "CMF · FECU seguros · trimestral"},
+    {"key": "intermediarios", "url": "/eeff/intermediarios", "icon": "📈",
+     "title": "Intermediarios de valores",
+     "desc": "Corredores de bolsa y agentes de valores.",
+     "meta": "CMF · FECU IFRS · trimestral"},
+    {"key": "agf", "url": "/eeff/agf", "icon": "💼", "title": "AGF",
+     "desc": "Administradoras generales de fondos y administradoras de fondos afines.",
+     "meta": "CMF · archivo plano IFRS · trimestral"},
+]
+
+# Configuración de las vistas que reusan la lógica EEFF corporativa (archivo plano).
+_EEFF_SCOPES = {
+    "corporativos": {
+        "agf": False,
+        "title": "Estados financieros corporativos",
+        "subtitle": "CMF · Empresas y Mercados — balance, resultados y flujo de caja, en serie "
+                    "(vista evolutiva). Excluye bancos, seguros, intermediarios y AGF.",
+    },
+    "agf": {
+        "agf": True,
+        "title": "Estados financieros de AGF",
+        "subtitle": "CMF · Administradoras generales de fondos — mismo formato IFRS que los "
+                    "corporativos, separadas para analizarlas como grupo.",
+    },
+}
+
+
 @router.get("/eeff")
+def eeff_hub(request: Request):
+    """Hub de estados financieros: menú de clasificación de entidad."""
+    return templates.TemplateResponse(request, "eeff_hub.html", {"classes": EEFF_CLASSES})
+
+
+@router.get("/eeff/corporativos")
+@router.get("/eeff/agf")
 def eeff(request: Request, db: Database = Depends(get_db)):
-    """Vista de estados financieros: selector de empresa y período."""
+    """Vista EEFF del archivo plano CMF, según la clasificación de la ruta."""
+    scope = "agf" if request.url.path.endswith("/agf") else "corporativos"
+    cfg = _EEFF_SCOPES[scope]
     return templates.TemplateResponse(request, "eeff.html", {
-        "companies": records(db.get_cmf_companies()),
+        "companies": records(db.get_cmf_companies(agf=cfg["agf"])),
         "periods": db.get_cmf_periods(),
+        "scope": scope,
+        "page_title": cfg["title"],
+        "page_subtitle": cfg["subtitle"],
     })
+
+
+@router.get("/eeff/search")
+def eeff_search(request: Request, q: str = Query(""), scope: str = Query("corporativos"),
+                db: Database = Depends(get_db)):
+    """Fragmento HTMX: resultados del autocompletar de empresas (razón social · RUT · sector).
+    `scope` acota el universo: 'corporativos' (sin AGF) o 'agf' (solo AGF)."""
+    q = q.strip()
+    agf_filter = _EEFF_SCOPES.get(scope, _EEFF_SCOPES["corporativos"])["agf"]
+    results = []
+    if len(q) >= 2:
+        df = db.search_cmf_companies(q, limit=15, agf=agf_filter)
+        for _, row in df.iterrows():
+            rut, name = str(row["rut"]), str(row["company_name"])
+            results.append({"rut": rut, "name": name,
+                            "sector": get_profile(rut, name)["macro_sector"]})
+    return templates.TemplateResponse(request, "partials/eeff_company_results.html",
+                                      {"results": results, "q": q})
 
 
 @router.get("/eeff/table")
 def eeff_table(
     request: Request,
     company: str = Query(""),
+    rut: str = Query(""),
     serie: str = Query("anual5"),
     db: Database = Depends(get_db),
 ):
@@ -63,11 +132,17 @@ def eeff_table(
     Fragmento HTMX: vista de empresa fusionada (EEFF + Evolución). Muestra reseña, ratios
     (último período), selectores de gráfico y la MATRIZ evolutiva (cuentas × períodos) de
     cada estado estándar, según el tipo de serie elegido.
+
+    La empresa se resuelve por `rut` (exacto, sin ambigüedad, vía autocompletar). Se admite
+    `company` (nombre difuso) por compatibilidad hacia atrás / enlaces antiguos.
     """
     empty = templates.TemplateResponse(request, "partials/eeff_table.html", {"meta": None})
-    if not company.strip():
+    if rut.strip():
+        match = db.query_cmf_statements(rut=rut, limit=1)
+    elif company.strip():
+        match = db.query_cmf_statements(company=company, limit=1)
+    else:
         return empty
-    match = db.query_cmf_statements(company=company, limit=1)
     if match.empty:
         return empty
     rut, cname = str(match.iloc[0]["rut"]), str(match.iloc[0]["company_name"])
@@ -349,8 +424,17 @@ def comparar_ratios(
 
 
 _RATIO_LABELS = {
-    "roe": "ROE", "roa": "ROA", "margen_neto": "Margen neto", "margen_bruto": "Margen bruto",
-    "liquidez": "Liquidez corriente", "endeudamiento": "Deuda / Patrimonio",
+    "roe": "ROE",
+    "roa": "ROA",
+    "margen_neto": "Margen neto",
+    "margen_bruto": "Margen bruto",
+    "liquidez": "Liquidez corriente",
+    "endeudamiento": "Deuda / Patrimonio",
+    "margen_ebit": "Margen EBIT",
+    "margen_ebitda": "Margen EBITDA",
+    "test_acido": "Test Ácido",
+    "cobertura_intereses": "Cobertura de Intereses",
+    "capital_trabajo": "Capital de Trabajo",
 }
 
 
@@ -377,9 +461,10 @@ def ranking_table(
     period_int = int(period) if period else (periods[0] if periods else None)
     sec = sector.strip() if sector else None
     rows = db.get_ratios_ranking(period_int, metric, 15, sec) if period_int else []
+    is_pct = metric in ("roe", "roa", "margen_neto", "margen_bruto", "pasivo_activo", "margen_ebit", "margen_ebitda")
     return templates.TemplateResponse(request, "partials/ranking_table.html", {
         "rows": rows, "metric_label": _RATIO_LABELS.get(metric, metric),
-        "period": period_int, "is_pct": metric not in ("liquidez", "endeudamiento"),
+        "period": period_int, "is_pct": is_pct,
     })
 
 
@@ -398,6 +483,143 @@ def _select_periods(allp: list, serie: str) -> list:
     if serie == "trim8":
         return allp[-8:]
     return allp[-5:]
+
+
+# ----------------------------------------------------------
+# EEFF de entidades con plan de cuentas FECU propio (seguros e intermediarios)
+# ----------------------------------------------------------
+
+# Estados de la FECU, en orden de presentación.
+FECU_GROUPS = [
+    {"code": "ESF", "label": "Estado de situación financiera"},
+    {"code": "ERI", "label": "Estado del resultado integral"},
+    {"code": "EFE", "label": "Estado de flujos de efectivo"},
+]
+
+_FECU_UNIT = "miles de CLP"
+
+
+def _proy_period_label(period: int, monthly: bool) -> str:
+    """Etiqueta de un período YYYYMM (int) para los ejes: mensual '2026-06', trimestral '2026 T2'.
+    (`_period_label` no sirve aquí: espera str y siempre rotula trimestres.)"""
+    p = int(period)
+    y, m = p // 100, p % 100
+    return f"{y}-{m:02d}" if monthly else f"{y} T{(m + 2) // 3}"
+
+
+def _select_quarter_periods(allp: list, serie: str) -> list:
+    """Períodos para las series trimestrales de las FECU (seguros / intermediarios)."""
+    allp = sorted(int(p) for p in allp)
+    if not allp:
+        return []
+    if serie.startswith("anual"):
+        n = 10 if "10" in serie else 5
+        return [p for p in allp if p % 100 == 12][-n:]
+    if serie.startswith("mismotrim"):
+        q = max(allp) % 100
+        return [p for p in allp if p % 100 == q][-5:]
+    if serie == "trim12":
+        return allp[-12:]
+    return allp[-8:]
+
+
+@router.get("/eeff/seguros")
+def eeff_seguros(request: Request, db: Database = Depends(get_db)):
+    """Vista EEFF de compañías de seguros (vida y generales)."""
+    df = db.get_insurer_list()
+    entities = [{"rut": r["rut"], "company_name": r["company_name"],
+                 "kind": r["insurance_type"]} for _, r in df.iterrows()]
+    return templates.TemplateResponse(request, "fecu_entidad.html", {
+        "page_title": "Estados financieros de compañías de seguros",
+        "page_subtitle": "CMF · FECU de seguros (Circulares N°2022 y N°2050) — plan de cuentas "
+                         "propio del negocio asegurador. Cifras en miles de CLP.",
+        "endpoint": "/eeff/seguros/table",
+        "kind_label": "Ramo",
+        "kinds": [{"value": "vida", "label": "Vida"},
+                  {"value": "generales", "label": "Generales"}],
+        "entities": entities,
+        "groups": FECU_GROUPS,
+    })
+
+
+@router.get("/eeff/seguros/table")
+def eeff_seguros_table(
+    request: Request,
+    rut: str = Query(""),
+    kind: str = Query("vida"),
+    serie: str = Query("trim8"),
+    db: Database = Depends(get_db),
+):
+    """Fragmento HTMX: matrices evolutivas de una compañía de seguros."""
+    empty = templates.TemplateResponse(request, "partials/fecu_statements.html", {"meta": None})
+    if not rut.strip():
+        return empty
+    periods = _select_quarter_periods(
+        db.get_insurer_periods(insurance_type=kind), serie)
+    if not periods:
+        return empty
+    statements = []
+    for g in FECU_GROUPS:
+        ev = db.get_insurer_evolution(rut, periods, g["code"], insurance_type=kind)
+        if ev["accounts"]:
+            statements.append({"label": g["label"], "code": g["code"], "ev": ev})
+    if not statements:
+        return empty
+    name = next((e["company_name"] for _, e in db.get_insurer_list(insurance_type=kind).iterrows()
+                 if e["rut"] == rut), rut)
+    meta = {"company_name": name, "rut": rut, "kind": f"seguros {kind}",
+            "periods": periods, "unit": _FECU_UNIT}
+    return templates.TemplateResponse(request, "partials/fecu_statements.html",
+                                      {"meta": meta, "statements": statements})
+
+
+@router.get("/eeff/intermediarios")
+def eeff_intermediarios(request: Request, db: Database = Depends(get_db)):
+    """Vista EEFF de intermediarios de valores (corredores de bolsa y agentes)."""
+    df = db.get_broker_list()
+    entities = [{"rut": r["rut"], "company_name": r["company_name"],
+                 "kind": r["broker_type"]} for _, r in df.iterrows()]
+    return templates.TemplateResponse(request, "fecu_entidad.html", {
+        "page_title": "Estados financieros de intermediarios de valores",
+        "page_subtitle": "CMF · FECU IFRS de corredores de bolsa y agentes de valores — plan de "
+                         "cuentas propio de intermediarios. Cifras en miles de CLP.",
+        "endpoint": "/eeff/intermediarios/table",
+        "kind_label": "Tipo",
+        "kinds": [{"value": "CORREDORES", "label": "Corredores de bolsa"},
+                  {"value": "AGENTES", "label": "Agentes de valores"}],
+        "entities": entities,
+        "groups": FECU_GROUPS,
+    })
+
+
+@router.get("/eeff/intermediarios/table")
+def eeff_intermediarios_table(
+    request: Request,
+    rut: str = Query(""),
+    kind: str = Query(""),
+    serie: str = Query("trim8"),
+    db: Database = Depends(get_db),
+):
+    """Fragmento HTMX: matrices evolutivas de un intermediario de valores."""
+    empty = templates.TemplateResponse(request, "partials/fecu_statements.html", {"meta": None})
+    if not rut.strip():
+        return empty
+    periods = _select_quarter_periods(db.get_broker_periods(), serie)
+    if not periods:
+        return empty
+    statements = []
+    for g in FECU_GROUPS:
+        ev = db.get_broker_evolution(rut, periods, g["code"])
+        if ev["accounts"]:
+            statements.append({"label": g["label"], "code": g["code"], "ev": ev})
+    if not statements:
+        return empty
+    row = next((e for _, e in db.get_broker_list().iterrows() if e["rut"] == rut), None)
+    meta = {"company_name": row["company_name"] if row is not None else rut, "rut": rut,
+            "kind": (row["broker_type"].capitalize() if row is not None else kind),
+            "periods": periods, "unit": _FECU_UNIT}
+    return templates.TemplateResponse(request, "partials/fecu_statements.html",
+                                      {"meta": meta, "statements": statements})
 
 
 @router.get("/evolucion")
@@ -420,9 +642,10 @@ def eeff_ratios_serie(
                                           {"series": [], "label": None, "is_pct": True})
     s = db.get_company_ratios_series(rut)
     series = [{"period": str(r["period"]), "value": r.get(metric)} for r in s]
+    is_pct = metric in ("roe", "roa", "margen_neto", "margen_bruto", "pasivo_activo", "margen_ebit", "margen_ebitda")
     return templates.TemplateResponse(request, "partials/ratios_serie.html", {
         "series": series, "label": _RATIO_LABELS.get(metric, metric),
-        "is_pct": metric not in ("liquidez", "endeudamiento"),
+        "is_pct": is_pct,
     })
 
 
@@ -766,12 +989,217 @@ def _period_label(period: str) -> str:
     return f"{period[:4]} T{int(period[4:]) // 3}"
 
 
+# Hub de proyecciones: mismas clasificaciones que EEFF. Corporativos y AGF usan el modelo
+# híbrido (macro + estructural + bandas empíricas calibradas); el resto usa SARIMAX
+# univariante, porque ni la cadena estructural ni las bandas del backtest corporativo
+# aplican a entidades financieras (ver models/simple_forecast.py).
+PROY_CLASSES = [
+    {"url": "/proyecciones/corporativos", "icon": "🏢", "title": "Corporativos",
+     "desc": "Ingresos y resultado con modelo híbrido anclado en las encuestas del BCCh.",
+     "meta": "Híbrido · bandas calibradas por backtest"},
+    {"url": "/proyecciones/bancos", "icon": "🏦", "title": "Bancos",
+     "desc": "Serie de EEFF total (consolidada, sin desglose por moneda), mensual.",
+     "meta": "SARIMAX · bandas no calibradas"},
+    {"url": "/proyecciones/seguros", "icon": "🛡️", "title": "Compañías de seguros",
+     "desc": "Total activo y resultado del período, vida y generales.",
+     "meta": "SARIMAX · bandas no calibradas"},
+    {"url": "/proyecciones/intermediarios", "icon": "📈", "title": "Intermediarios de valores",
+     "desc": "Total activos y utilidad del ejercicio de corredores y agentes.",
+     "meta": "SARIMAX · bandas no calibradas"},
+    {"url": "/proyecciones/agf", "icon": "💼", "title": "AGF",
+     "desc": "Administradoras generales de fondos (mismo formato IFRS que corporativos).",
+     "meta": "Híbrido · bandas calibradas por backtest"},
+]
+
+# Config de las clasificaciones que van con SARIMAX univariante.
+# `accumulated` marca los estados de resultado, que la CMF publica acumulados en el año.
+_PROY_SIMPLE = {
+    "bancos": {
+        "title": "Proyecciones de bancos",
+        "subtitle": "Serie de EEFF TOTAL (consolidada, sin desglose por moneda). Mensual, con "
+                    "los dos planes de cuentas empalmados y homologados a pesos.",
+        "monthly": True, "unit": "CLP", "cadence": "mensual",
+        "kind_label": None, "kinds": None,
+        "horizons": [{"value": 6, "label": "6 meses", "default": True},
+                     {"value": 12, "label": "12 meses"}, {"value": 24, "label": "24 meses"}],
+        "accounts": [
+            {"label": "Total activos", "key": "TOTAL ACTIVOS", "report": "balance",
+             "stock": True, "accumulated": False},
+            {"label": "Resultado de los propietarios", "key": "RESULTADO DE LOS PROPIETARIOS",
+             "report": "resultado", "stock": False, "accumulated": True},
+        ],
+    },
+    "seguros": {
+        "title": "Proyecciones de compañías de seguros",
+        "subtitle": "FECU de seguros, trimestral. Total activo y resultado del período.",
+        "monthly": False, "unit": "miles de CLP", "cadence": "trimestral",
+        "kind_label": "Ramo",
+        "kinds": [{"value": "vida", "label": "Vida"}, {"value": "generales", "label": "Generales"}],
+        "horizons": [{"value": 4, "label": "4 trimestres (1 año)", "default": True},
+                     {"value": 8, "label": "8 trimestres (2 años)"}],
+        "accounts": [
+            {"label": "Total activo", "key": "5.10.00.00", "stock": True, "accumulated": False},
+            {"label": "Total resultado del período", "key": "5.31.00.00",
+             "stock": False, "accumulated": True},
+        ],
+    },
+    "intermediarios": {
+        "title": "Proyecciones de intermediarios de valores",
+        "subtitle": "FECU IFRS de corredores de bolsa y agentes, trimestral. "
+                    "Total activos y utilidad del ejercicio.",
+        "monthly": False, "unit": "miles de CLP", "cadence": "trimestral",
+        "kind_label": "Tipo",
+        "kinds": [{"value": "CORREDORES", "label": "Corredores de bolsa"},
+                  {"value": "AGENTES", "label": "Agentes de valores"}],
+        "horizons": [{"value": 4, "label": "4 trimestres (1 año)", "default": True},
+                     {"value": 8, "label": "8 trimestres (2 años)"}],
+        "accounts": [
+            {"label": "Total activos", "key": "10.00.00", "stock": True, "accumulated": False},
+            {"label": "Utilidad (pérdida) del ejercicio", "key": "30.00.00",
+             "stock": False, "accumulated": True},
+        ],
+    },
+}
+
+# Config de las que reusan el modelo híbrido corporativo.
+_PROY_HYBRID = {
+    "corporativos": {"agf": False, "title": "Proyecciones corporativas",
+                     "subtitle": "SARIMAX + modelo estructural anclado en la Encuesta de "
+                                 "Expectativas Económicas (EEE, BCCh). Bandas empíricas "
+                                 "calibradas con backtest rolling-origin."},
+    "agf": {"agf": True, "title": "Proyecciones de AGF",
+            "subtitle": "Administradoras generales de fondos. Mismo motor híbrido que "
+                        "corporativos: comparten formato IFRS y plan de cuentas."},
+}
+
+
 @router.get("/proyecciones")
+def proyecciones_hub(request: Request):
+    """Hub de proyecciones: menú de clasificación de entidad."""
+    return templates.TemplateResponse(request, "proyecciones_hub.html",
+                                      {"classes": PROY_CLASSES})
+
+
+@router.get("/proyecciones/corporativos")
+@router.get("/proyecciones/agf")
 def proyecciones(request: Request, db: Database = Depends(get_db)):
-    """Vista de proyecciones: selector de empresa."""
+    """Vista de proyecciones con el modelo híbrido (corporativos o AGF)."""
+    scope = "agf" if request.url.path.endswith("/agf") else "corporativos"
+    cfg = _PROY_HYBRID[scope]
     return templates.TemplateResponse(request, "proyecciones.html", {
-        "companies": records(db.get_cmf_companies()),
+        "companies": records(db.get_cmf_companies(agf=cfg["agf"])),
+        "page_title": cfg["title"],
+        "page_subtitle": cfg["subtitle"],
     })
+
+
+# Rutas explícitas (NO un catch-all `/{clase}`: capturaría también `/proyecciones/chart`).
+@router.get("/proyecciones/bancos")
+@router.get("/proyecciones/seguros")
+@router.get("/proyecciones/intermediarios")
+def proyecciones_simple(request: Request, db: Database = Depends(get_db)):
+    """Vista de proyecciones SARIMAX para bancos, seguros e intermediarios."""
+    clase = request.url.path.rsplit("/", 1)[-1]
+    cfg = _PROY_SIMPLE[clase]
+
+    if clase == "bancos":
+        entities = [{"id": r["bank_code"], "name": r["bank_name"], "kind": ""}
+                    for _, r in db.get_bank_list().iterrows()]
+    elif clase == "seguros":
+        entities = [{"id": r["rut"], "name": r["company_name"], "kind": r["insurance_type"]}
+                    for _, r in db.get_insurer_list().iterrows()]
+    else:
+        entities = [{"id": r["rut"], "name": r["company_name"], "kind": r["broker_type"]}
+                    for _, r in db.get_broker_list().iterrows()]
+
+    return templates.TemplateResponse(request, "proyecciones_simple.html", {
+        "page_title": cfg["title"], "page_subtitle": cfg["subtitle"],
+        "endpoint": f"/proyecciones/{clase}/chart",
+        "kind_label": cfg["kind_label"], "kinds": cfg["kinds"],
+        "entities": entities, "horizons": cfg["horizons"],
+    })
+
+
+@router.get("/proyecciones/bancos/chart")
+@router.get("/proyecciones/seguros/chart")
+@router.get("/proyecciones/intermediarios/chart")
+def proyecciones_simple_chart(
+    request: Request,
+    entity: str = Query(""),
+    kind: str = Query(""),
+    steps: int = Query(4),
+    db: Database = Depends(get_db),
+):
+    """Fragmento HTMX: fan charts SARIMAX de una entidad no corporativa."""
+    from models.simple_forecast import deaccumulate_ytd, forecast_series
+
+    clase = request.url.path.split("/")[2]
+    cfg = _PROY_SIMPLE.get(clase)
+    empty = templates.TemplateResponse(request, "partials/proyecciones_simple.html",
+                                       {"results": [], "meta": None})
+    if not cfg or not entity.strip():
+        return empty
+
+    steps = min(max(int(steps), 2), 24)
+    monthly = cfg["monthly"]
+
+    # Nombre y subtipo de la entidad para el encabezado
+    if clase == "bancos":
+        row = next((r for _, r in db.get_bank_list().iterrows()
+                    if str(r["bank_code"]) == entity), None)
+        ent_name = row["bank_name"] if row is not None else entity
+        ent_kind, ent_id = "", f"Ficha {entity}"
+    elif clase == "seguros":
+        row = next((r for _, r in db.get_insurer_list().iterrows() if r["rut"] == entity), None)
+        ent_name = row["company_name"] if row is not None else entity
+        ent_kind = f"seguros {row['insurance_type']}" if row is not None else kind
+        ent_id = f"RUT {entity}"
+    else:
+        row = next((r for _, r in db.get_broker_list().iterrows() if r["rut"] == entity), None)
+        ent_name = row["company_name"] if row is not None else entity
+        ent_kind = row["broker_type"].capitalize() if row is not None else kind
+        ent_id = f"RUT {entity}"
+
+    results = []
+    for acc in cfg["accounts"]:
+        if clase == "bancos":
+            serie = db.get_bank_total_series(entity, acc["key"], acc["report"])
+        elif clase == "seguros":
+            serie = db.get_insurer_account_series(entity, acc["key"],
+                                                  insurance_type=(kind or "vida"))
+        else:
+            serie = db.get_broker_account_series(entity, acc["key"])
+
+        if serie is None or serie.empty:
+            continue
+        if acc["accumulated"]:
+            serie = deaccumulate_ytd(serie)
+
+        fc = forecast_series(serie, steps, monthly=monthly, is_stock=acc["stock"])
+        if fc is None:
+            continue
+        note = ("nivel (stock)" if acc["stock"]
+                else ("flujo del período — desacumulado del acumulado anual"))
+        results.append({
+            "account": acc["label"], "unit_note": note,
+            # El spec es POR SERIE: stocks y flujos usan specs distintos, así que no puede
+            # ir en `meta` (se pisarían entre sí).
+            "spec": fc["spec"], "n_obs": fc["n_obs"],
+            "history": [{"period": _proy_period_label(p, monthly), "value": float(v)}
+                        for p, v in fc["history"].items()],
+            "forecast": [{"period": _proy_period_label(p, monthly),
+                          "mean": float(fc["mean"][p]),
+                          "lo80": float(fc["ci80"].loc[p, "low"]),
+                          "hi80": float(fc["ci80"].loc[p, "high"]),
+                          "lo95": float(fc["ci95"].loc[p, "low"]),
+                          "hi95": float(fc["ci95"].loc[p, "high"])}
+                         for p in fc["mean"].index],
+        })
+
+    meta = {"entity_name": ent_name, "rut": ent_id, "kind": ent_kind,
+            "unit": cfg["unit"], "cadence": cfg["cadence"]}
+    return templates.TemplateResponse(request, "partials/proyecciones_simple.html",
+                                      {"results": results, "meta": meta})
 
 
 @router.get("/proyecciones/chart")
@@ -833,4 +1261,326 @@ def proyecciones_chart(
             "survey": survey_month.strftime("%B %Y") if survey_month is not None else "",
             "model": model_info,
         },
+    })
+
+
+# ----------------------------------------------------------
+# Inversión institucional — cartera de compañías de seguros
+# ----------------------------------------------------------
+
+# Tarjetas del hub que reúne a los inversionistas institucionales (AFP + seguros).
+INST_CLASSES = [
+    {"url": "/seguros/cartera", "icon": "🛡️", "title": "Cartera de seguros",
+     "desc": "Asset allocation de las compañías de seguros: clase de activo, exposición "
+             "extranjera, valorización y deriva histórica.",
+     "meta": "CMF · Circular 1.835 · mensual"},
+    {"url": "/afp", "icon": "🏛️", "title": "AFP",
+     "desc": "Rentabilidad por fondo, cartera del sistema y simulación neta de comisiones.",
+     "meta": "Superintendencia de Pensiones · mensual"},
+    {"url": "/fondos", "icon": "📊", "title": "Fondos de pensiones",
+     "desc": "Retornos multi-horizonte y composición de cada fondo por AFP.",
+     "meta": "Superintendencia de Pensiones · mensual"},
+]
+
+# Ramos con cartera publicada bajo la Circular 1.835.
+_RAMOS = {"vida": "Seguros de vida", "generales": "Seguros generales"}
+
+
+def _pct(part: float, whole: float) -> Optional[float]:
+    """Porcentaje protegido: None cuando no hay base sobre la cual calcular."""
+    return (part / whole * 100.0) if whole else None
+
+
+def _build_allocation(df, top_codes: int = 14) -> dict:
+    """
+    Traduce el DataFrame de cartera (por código de inversión) a la estructura que consumen
+    las plantillas: totales, apertura por clase de activo, por geografía, mix de valorización
+    y el detalle por código.
+
+    Los montos entran en miles de pesos (M$) y salen en MMM$ (miles de millones de CLP).
+    """
+    from api.insurer_glossary import clase_label, clase_order, describe
+
+    def num(v) -> float:
+        try:
+            f = float(v)
+        except (TypeError, ValueError):
+            return 0.0
+        return 0.0 if f != f else f  # descarta NaN
+
+    total = sum(num(r.valor_final) for r in df.itertuples())
+    por_clase: dict[str, float] = {}
+    por_geo = {"nacional": 0.0, "extranjero": 0.0}
+    codigos = []
+    repr_rt = no_repr = cui = 0.0
+    ca = vr = ee = otras = 0.0
+
+    for r in df.itertuples():
+        info = describe(r.investment_code)
+        monto = num(r.valor_final)
+        por_clase[info["clase"]] = por_clase.get(info["clase"], 0.0) + monto
+        por_geo[info["geo"]] = por_geo.get(info["geo"], 0.0) + monto
+        repr_rt += num(r.repr_rt_pr)
+        no_repr += num(r.no_repr_rt_pr)
+        cui += num(r.cui_apv)
+        ca += num(r.costo_amortizado)
+        vr += num(r.valor_razonable)
+        ee += num(r.efectivo_equiv)
+        otras += num(r.otras_clasif)
+        codigos.append({
+            "code": info["code"], "label": info["label"], "glosa": info["glosa"],
+            "clase": clase_label(info["clase"]), "geo": info["geo"],
+            "monto": monto / 1e6, "pct": _pct(monto, total),
+        })
+
+    codigos.sort(key=lambda c: c["monto"], reverse=True)
+    clases = [{
+        "clase": clase_label(k), "monto": por_clase[k] / 1e6, "pct": _pct(por_clase[k], total),
+    } for k in clase_order() if por_clase.get(k)]
+    clases.sort(key=lambda c: c["monto"], reverse=True)
+
+    # El mix de valorización se mide sobre lo CLASIFICADO: créditos, siniestros por cobrar y
+    # avances a tenedores no llevan método de valorización, así que no forman parte de la base.
+    clasificado = ca + vr + ee + otras
+    valorizacion = [
+        {"label": "Costo amortizado", "monto": ca / 1e6, "pct": _pct(ca, clasificado)},
+        {"label": "Valor razonable", "monto": vr / 1e6, "pct": _pct(vr, clasificado)},
+        {"label": "Efectivo equivalente", "monto": ee / 1e6, "pct": _pct(ee, clasificado)},
+        {"label": "Otra clasificación", "monto": otras / 1e6, "pct": _pct(otras, clasificado)},
+    ]
+
+    return {
+        "total": total / 1e6,
+        "clases": clases,
+        "codigos": codigos[:top_codes],
+        "codigos_todos": codigos,
+        "geo": {
+            "nacional": por_geo.get("nacional", 0.0) / 1e6,
+            "extranjero": por_geo.get("extranjero", 0.0) / 1e6,
+            "pct_extranjero": _pct(por_geo.get("extranjero", 0.0), total),
+        },
+        "reservas": {
+            "repr": repr_rt / 1e6, "no_repr": no_repr / 1e6,
+            "pct_repr": _pct(repr_rt, total),
+        },
+        "cui": {"monto": cui / 1e6, "pct": _pct(cui, total)},
+        "valorizacion": valorizacion,
+        "clasificado": clasificado / 1e6,
+        "pct_clasificado": _pct(clasificado, total),
+    }
+
+
+@router.get("/inversion-institucional")
+def inversion_institucional(request: Request):
+    """Hub de inversionistas institucionales: AFP y compañías de seguros."""
+    return templates.TemplateResponse(request, "institucional_hub.html", {
+        "classes": INST_CLASSES,
+    })
+
+
+@router.get("/seguros/cartera")
+def seguros_cartera(request: Request, ramo: str = Query("vida"),
+                    db: Database = Depends(get_db)):
+    """Vista de asset allocation de las compañías de seguros (Circular 1.835)."""
+    ramo = ramo if ramo in _RAMOS else "vida"
+    periods = db.get_insurer_portfolio_periods(insurance_type=ramo)
+    companies = db.get_insurer_portfolio_companies(periods[0], ramo) if periods else None
+
+    from api.insurer_glossary import clean_company_name
+    company_options = []
+    if companies is not None:
+        company_options = [{"rut": str(r.rut),
+                            "name": clean_company_name(r.company_name, str(r.rut))}
+                           for r in companies.itertuples()]
+
+    return templates.TemplateResponse(request, "seguros_cartera.html", {
+        "ramo": ramo, "ramos": _RAMOS, "periods": periods,
+        "companies": company_options,
+    })
+
+
+@router.get("/seguros/cartera/panel")
+def seguros_cartera_panel(request: Request, ramo: str = Query("vida"),
+                          period: Optional[int] = Query(None),
+                          rut: str = Query(""), db: Database = Depends(get_db)):
+    """Fragmento HTMX: asset allocation del período (mercado del ramo o una compañía)."""
+    ramo = ramo if ramo in _RAMOS else "vida"
+    periods = db.get_insurer_portfolio_periods(insurance_type=ramo)
+    if not periods:
+        return templates.TemplateResponse(request, "partials/seguros_cartera_panel.html",
+                                          {"alloc": None, "meta": {}})
+    period = period if period in periods else periods[0]
+    rut = (rut or "").strip()
+
+    df = db.get_insurer_allocation(period, ramo, rut or None)
+    alloc = _build_allocation(df) if len(df) else None
+
+    from api.insurer_glossary import clean_company_name
+    companies = db.get_insurer_portfolio_companies(period, ramo)
+    name = ""
+    if rut:
+        match = [r for r in companies.itertuples() if str(r.rut) == rut]
+        name = clean_company_name(match[0].company_name, rut) if match else f"RUT {rut}"
+
+    return templates.TemplateResponse(request, "partials/seguros_cartera_panel.html", {
+        "alloc": alloc,
+        "meta": {
+            "period": period, "ramo": ramo, "ramo_label": _RAMOS[ramo],
+            "scope": name or f"Mercado — {_RAMOS[ramo].lower()}",
+            "n_companies": (0 if rut else int(companies.rut.nunique()) if len(companies) else 0),
+            "is_market": not rut,
+        },
+    })
+
+
+@router.get("/seguros/cartera/evolucion")
+def seguros_cartera_evolucion(request: Request, ramo: str = Query("vida"),
+                              rut: str = Query(""), since: int = Query(202001),
+                              db: Database = Depends(get_db)):
+    """
+    Fragmento HTMX: deriva del asset allocation en el tiempo. Devuelve, por período, el peso
+    (%) de cada clase de activo — que es como se lee un cambio de política de inversión.
+    """
+    from api.insurer_glossary import clase_label, clase_order, describe
+
+    ramo = ramo if ramo in _RAMOS else "vida"
+    rut = (rut or "").strip()
+    df = db.get_insurer_allocation_series(ramo, rut or None, since=since)
+    if not len(df):
+        return templates.TemplateResponse(request, "partials/seguros_cartera_evolucion.html",
+                                          {"periods": [], "series": []})
+
+    # period → clase → monto
+    acc: dict[int, dict[str, float]] = {}
+    for r in df.itertuples():
+        try:
+            monto = float(r.valor_final)
+        except (TypeError, ValueError):
+            continue
+        if monto != monto:  # NaN
+            continue
+        clase = describe(r.investment_code)["clase"]
+        acc.setdefault(int(r.period), {}).setdefault(clase, 0.0)
+        acc[int(r.period)][clase] += monto
+
+    periods = sorted(acc)
+    orden = [k for k in clase_order() if any(acc[p].get(k) for p in periods)]
+    series = []
+    for k in orden:
+        pts = []
+        for p in periods:
+            total = sum(acc[p].values())
+            pts.append(_pct(acc[p].get(k, 0.0), total))
+        series.append({"clase": clase_label(k), "puntos": pts})
+
+    # Deriva: cuánto se movió cada clase entre el primer y el último período cargado.
+    deriva = []
+    if len(periods) >= 2:
+        for s in series:
+            ini, fin = s["puntos"][0], s["puntos"][-1]
+            if ini is not None and fin is not None:
+                deriva.append({"clase": s["clase"], "inicio": ini, "fin": fin,
+                               "delta": fin - ini})
+        deriva.sort(key=lambda d: abs(d["delta"]), reverse=True)
+
+    return templates.TemplateResponse(request, "partials/seguros_cartera_evolucion.html", {
+        "periods": [str(p) for p in periods], "series": series,
+        "deriva": deriva[:8],
+        "desde": periods[0] if periods else None, "hasta": periods[-1] if periods else None,
+    })
+
+
+@router.get("/seguros/cartera/companias")
+def seguros_cartera_companias(request: Request, ramo: str = Query("vida"),
+                              period: Optional[int] = Query(None),
+                              db: Database = Depends(get_db)):
+    """
+    Fragmento HTMX: comparación entre compañías del ramo — tamaño de cartera, peso relativo
+    y perfil de inversión (extranjero, renta fija, CUI/APV) para leer quién invierte distinto.
+    """
+    from api.insurer_glossary import clean_company_name, describe
+
+    ramo = ramo if ramo in _RAMOS else "vida"
+    periods = db.get_insurer_portfolio_periods(insurance_type=ramo)
+    if not periods:
+        return templates.TemplateResponse(request, "partials/seguros_cartera_companias.html",
+                                          {"rows": [], "period": None})
+    period = period if period in periods else periods[0]
+
+    companies = db.get_insurer_portfolio_companies(period, ramo)
+    mercado = sum(float(r.total) for r in companies.itertuples()
+                  if r.total == r.total and r.total is not None)
+
+    _RF = {"rf_estatal", "rf_bancaria", "rf_corporativa", "rf_hipotecaria"}
+    rows = []
+    for c in companies.itertuples():
+        df = db.get_insurer_allocation(period, ramo, str(c.rut))
+        if not len(df):
+            continue
+        a = _build_allocation(df)
+        rf = sum(x["monto"] for x in a["codigos_todos"]
+                 if describe(x["code"])["clase"] in _RF)
+        rows.append({
+            "rut": str(c.rut),
+            "name": clean_company_name(c.company_name, str(c.rut)),
+            "total": a["total"],
+            "share": _pct(a["total"] * 1e6, mercado),
+            "pct_extranjero": a["geo"]["pct_extranjero"],
+            "pct_rf": _pct(rf, a["total"]),
+            "pct_cui": a["cui"]["pct"],
+            "pct_repr": a["reservas"]["pct_repr"],
+        })
+    rows.sort(key=lambda r: r["total"], reverse=True)
+
+    # HHI sobre las participaciones de mercado (0-10.000): concentración de la industria.
+    hhi = sum((r["share"] or 0.0) ** 2 for r in rows)
+
+    return templates.TemplateResponse(request, "partials/seguros_cartera_companias.html", {
+        "rows": rows, "period": period, "ramo_label": _RAMOS[ramo],
+        "total_mercado": mercado / 1e6, "hhi": hhi,
+    })
+
+
+@router.get("/seguros/cartera/emisores")
+def seguros_cartera_emisores(request: Request, ramo: str = Query("vida"),
+                             period: Optional[int] = Query(None),
+                             rut: str = Query(""), db: Database = Depends(get_db)):
+    """
+    Fragmento HTMX: concentración por emisor de la renta fija (archivo B.1).
+
+    Se muestra el NÚMERO de instrumentos y el nominal ABIERTO POR MONEDA: el valor nominal
+    viene en la unidad de cada instrumento (UF, $, USD…) y sumarlo entre monedas no
+    significaría nada. Tampoco es valor de mercado — sirve para ver concentración de emisores,
+    no para ponderar la cartera.
+    """
+    ramo = ramo if ramo in _RAMOS else "vida"
+    periods = db.get_insurer_portfolio_periods(insurance_type=ramo)
+    if not periods:
+        return templates.TemplateResponse(request, "partials/seguros_cartera_emisores.html",
+                                          {"rows": [], "period": None})
+    period = period if period in periods else periods[0]
+    rut = (rut or "").strip()
+
+    df = db.get_insurer_issuer_exposure(period, ramo, rut or None, limit=15)
+    agrupado: dict[str, dict] = {}
+    for r in df.itertuples():
+        key = str(r.rut_emisor)
+        e = agrupado.setdefault(key, {
+            "rut": key,
+            "name": (r.nombre if isinstance(r.nombre, str) and r.nombre.strip() else ""),
+            "total": int(r.total_instr or 0), "monedas": [],
+        })
+        try:
+            nominal = float(r.nominal)
+        except (TypeError, ValueError):
+            nominal = 0.0
+        e["monedas"].append({"unidad": str(r.unidad_monetaria or "—"),
+                             "n": int(r.n_instrumentos or 0),
+                             "nominal": 0.0 if nominal != nominal else nominal})
+    rows = sorted(agrupado.values(), key=lambda x: x["total"], reverse=True)
+    for e in rows:
+        e["monedas"].sort(key=lambda m: m["n"], reverse=True)
+
+    return templates.TemplateResponse(request, "partials/seguros_cartera_emisores.html", {
+        "rows": rows, "period": period, "ramo_label": _RAMOS[ramo],
     })

@@ -36,7 +36,7 @@ STORYTELLING (dashboard web, API REST, reportes Jules)
 
 > **Para desarrolladores**: la guía de desarrollo (arquitectura, módulos, *gotchas* como la
 > concurrencia DuckDB y el orden IFRS, y cómo hacer tareas comunes) está en
-> [`CLAUDE.md`](CLAUDE.md).
+> [`CONTEXTO.md`](CONTEXTO.md).
 
 ## Requisitos para retomar el proyecto
 

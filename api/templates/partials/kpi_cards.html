@@ -11,8 +11,47 @@
         <h3>Macro · BCCh</h3>
         <div class="kpi-row"><span>PIB (var. anual)</span>{{ signo(kpi.macro.pib_yoy) }}</div>
         <div class="kpi-row"><span>IMACEC (var. anual)</span>{{ signo(kpi.macro.imacec_yoy) }}</div>
+        <div class="kpi-row" style="padding-left: 1rem; border-bottom: 1px dashed #334155; font-size: 0.9em; color: #94a3b8;">
+            <span>└─ IMACEC Minero</span>{{ signo(kpi.macro.imacec_minero_yoy) }}
+        </div>
+        <div class="kpi-row" style="padding-left: 1rem; border-bottom: 1px dashed #334155; font-size: 0.9em; color: #94a3b8;">
+            <span>└─ IMACEC No Minero</span>{{ signo(kpi.macro.imacec_no_minero_yoy) }}
+        </div>
         <div class="kpi-row"><span>IPC 12m</span><b>{{ "{:.2f}".format(kpi.macro.ipc_v12) ~ "%" if kpi.macro.ipc_v12 is not none else "—" }}</b></div>
         <div class="kpi-row"><span>USD/CLP</span><b>{{ "{:,.2f}".format(kpi.macro.usd_clp) if kpi.macro.usd_clp is not none else "—" }}</b></div>
+    </article>
+
+    <article class="kpi-card mercado-tasas" style="min-width: 250px;">
+        <h3>Tasas de Interés y Bonos · BCCh</h3>
+        <div class="kpi-section-title" style="font-size: 0.85rem; color: var(--accent); font-weight: bold; margin-top: 0.25rem;">Curva de Rendimiento Soberano</div>
+        <div class="kpi-row">
+            <span>BCP Pesos 5Y / 10Y</span>
+            <b>
+                {{ "{:.2f}%".format(kpi.curva_soberana.bcp_5y) if kpi.curva_soberana.bcp_5y is not none else "—" }} /
+                {{ "{:.2f}%".format(kpi.curva_soberana.bcp_10y) if kpi.curva_soberana.bcp_10y is not none else "—" }}
+            </b>
+        </div>
+        <div class="kpi-row">
+            <span>BCU UF 5Y / 10Y</span>
+            <b>
+                {{ "{:.2f}%".format(kpi.curva_soberana.bcu_5y) if kpi.curva_soberana.bcu_5y is not none else "—" }} /
+                {{ "{:.2f}%".format(kpi.curva_soberana.bcu_10y) if kpi.curva_soberana.bcu_10y is not none else "—" }}
+            </b>
+        </div>
+        
+        <div class="kpi-section-title" style="font-size: 0.85rem; color: var(--accent); font-weight: bold; margin-top: 0.5rem;">Tasas de Colocación (Mercado)</div>
+        <div class="kpi-row">
+            <span>Crédito de Consumo</span>
+            <b>{{ "{:.2f}%".format(kpi.tasas_colocacion.consumo) if kpi.tasas_colocacion.consumo is not none else "—" }}</b>
+        </div>
+        <div class="kpi-row">
+            <span>Crédito Comercial</span>
+            <b>{{ "{:.2f}%".format(kpi.tasas_colocacion.comercial) if kpi.tasas_colocacion.comercial is not none else "—" }}</b>
+        </div>
+        <div class="kpi-row">
+            <span>Vivienda UF (>3 años)</span>
+            <b>{{ "{:.2f}%".format(kpi.tasas_colocacion.vivienda) if kpi.tasas_colocacion.vivienda is not none else "—" }}</b>
+        </div>
     </article>
 
     <article class="kpi-card afp">

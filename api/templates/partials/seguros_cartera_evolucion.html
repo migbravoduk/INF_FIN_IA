@@ -1,0 +1,76 @@
+{#
+  partials/seguros_cartera_evolucion.html — Deriva del asset allocation.
+  periods = ["202001", ...]; series = [{clase, puntos[%]}]; deriva = [{clase, inicio, fin, delta}]
+#}
+{% macro pct(v) %}{% if v is none %}—{% else %}{{ "{:,.1f}".format(v) }}%{% endif %}{% endmacro %}
+
+{% if series %}
+<div class="chart-block" style="margin-top:.8rem">
+    <h4>Peso por clase de activo <span class="lead">({{ desde }} → {{ hasta }} · % de la cartera)</span></h4>
+    <div id="cartera-evol-chart" class="chart"></div>
+</div>
+
+{% if deriva %}
+<div class="chart-block" style="margin-top:1rem">
+    <h4>Mayores movimientos <span class="lead">(puntos porcentuales entre {{ desde }} y {{ hasta }})</span></h4>
+    <table class="eeff-table">
+        <thead>
+            <tr>
+                <th>Clase de activo</th>
+                <th style="text-align:right">{{ desde }}</th>
+                <th style="text-align:right">{{ hasta }}</th>
+                <th style="text-align:right">Δ pp</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for d in deriva %}
+            <tr>
+                <td>{{ d.clase }}</td>
+                <td style="text-align:right">{{ pct(d.inicio) }}</td>
+                <td style="text-align:right">{{ pct(d.fin) }}</td>
+                <td style="text-align:right">
+                    <b class="{{ 'pos' if d.delta >= 0 else 'neg' }}">{{ "{:+,.1f}".format(d.delta) }}</b>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <p class="lead" style="margin-top:.5rem">
+        «Derivados y pactos» puede aparecer con peso negativo: la Circular 1.835 exige informar
+        los derivados <em>pasivos</em> con signo negativo, así que restan de la cartera.
+    </p>
+</div>
+{% endif %}
+
+<script>
+(function () {
+    var periods = {{ periods | tojson }};
+    var series  = {{ series | tojson }};
+    function draw() {
+        if (!window.Plotly) { return setTimeout(draw, 100); }
+        var traces = series.map(function (s) {
+            return {
+                x: periods, y: s.puntos, name: s.clase,
+                type: "scatter", mode: "lines", stackgroup: "one",
+                hovertemplate: "<b>%{fullData.name}</b><br>%{x} · %{y:.1f}%<extra></extra>"
+            };
+        });
+        Plotly.newPlot("cartera-evol-chart", traces, {
+            margin: { t: 10, r: 20, b: 70, l: 50 }, height: 420,
+            paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)",
+            font: { color: "#94a3b8" }, hovermode: "x unified",
+            legend: { orientation: "h", y: -0.28, font: { size: 10 } },
+            // type category: los períodos son etiquetas (202001…), no números — sin esto
+            // Plotly los escala y los rotula como "202.1k".
+            xaxis: { gridcolor: "#334155", tickangle: -45, nticks: 14, type: "category" },
+            // Sin rango fijo: los derivados pasivos se informan con signo NEGATIVO (Circular
+            // 1.835), así que la composición puede caer bajo 0 y hay que dejar que se vea.
+            yaxis: { gridcolor: "#334155", ticksuffix: "%", zeroline: true, zerolinecolor: "#475569" }
+        }, { displayModeBar: false, responsive: true });
+    }
+    draw();
+})();
+</script>
+{% else %}
+<p class="loading">Sin serie histórica para ese alcance.</p>
+{% endif %}

@@ -1,0 +1,93 @@
+{#
+  fecu_entidad.html — Vista de EEFF para entidades con plan de cuentas FECU propio
+  (compañías de seguros e intermediarios de valores). Mismo patrón que el resto:
+  selector de entidad + serie → matrices evolutivas (cuentas × períodos) por estado.
+
+  Contexto: page_title, page_subtitle, endpoint (fragmento HTMX), kinds (filtro de subtipo:
+  ramo o tipo de intermediario), kind_label, entities [{rut, company_name, kind}].
+#}
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }} · INF_FIN_IA{% endblock %}
+
+{% block content %}
+<p class="crumb"><a href="/eeff">← Estados financieros</a></p>
+<h1 id="fecu-top">{{ page_title }}</h1>
+<p class="subtitle">{{ page_subtitle }}</p>
+
+<nav class="banca-minimap" aria-label="Secciones">
+    <span class="minimap-label">Ir a:</span>
+    {% for g in groups %}<a href="#grp-{{ g.code }}">{{ g.label }}</a>{% endfor %}
+</nav>
+
+<form class="eeff-form" id="fecu-form"
+      hx-get="{{ endpoint }}"
+      hx-target="#fecu-results"
+      hx-trigger="load, change"
+      hx-swap="innerHTML">
+
+    {% if kinds %}
+    <label>{{ kind_label }}
+        <select name="kind" id="fecu-kind">
+            {% for k in kinds %}<option value="{{ k.value }}">{{ k.label }}</option>{% endfor %}
+        </select>
+    </label>
+    {% endif %}
+
+    <label>Entidad
+        <select name="rut" id="fecu-rut">
+            {% for e in entities %}
+            <option value="{{ e.rut }}" data-kind="{{ e.kind }}">{{ e.company_name }}</option>
+            {% endfor %}
+        </select>
+    </label>
+
+    <label>Serie
+        <select name="serie">
+            <option value="trim8" selected>Trimestral — últimos 8 (2 años)</option>
+            <option value="trim12">Trimestral — últimos 12 (3 años)</option>
+            <option value="anual5">Cierres anuales (dic) — últimos 5</option>
+            <option value="anual10">Cierres anuales (dic) — últimos 10</option>
+            <option value="mismotrim5">Mismo trimestre — últimos 5 años</option>
+        </select>
+    </label>
+</form>
+
+<section id="fecu-results">
+    <p class="loading">Cargando estados financieros…</p>
+</section>
+
+<script>
+// Filtra el selector de entidades según el subtipo elegido (ramo / tipo de intermediario),
+// manteniendo una selección válida.
+(function () {
+    var kindSel = document.getElementById('fecu-kind');
+    var rutSel  = document.getElementById('fecu-rut');
+    if (!kindSel || !rutSel) return;
+    var all = Array.prototype.slice.call(rutSel.options).map(function (o) {
+        return { value: o.value, text: o.text, kind: o.getAttribute('data-kind') };
+    });
+    function applyFilter() {
+        var k = kindSel.value;
+        var prev = rutSel.value;
+        rutSel.innerHTML = '';
+        all.filter(function (o) { return k === '' || o.kind === k; })
+           .forEach(function (o) {
+               var opt = document.createElement('option');
+               opt.value = o.value; opt.textContent = o.text;
+               opt.setAttribute('data-kind', o.kind);
+               rutSel.appendChild(opt);
+           });
+        if (rutSel.querySelector('option[value="' + prev + '"]')) rutSel.value = prev;
+    }
+    kindSel.addEventListener('change', applyFilter);
+    applyFilter();
+})();
+</script>
+
+<style>
+/* Mini-mapa, migas y anclas: estilos compartidos en api/static/app.css */
+#fecu-results .table-scroll { max-height: 70vh; overflow-y: auto; }
+#fecu-results .evol-table thead th { position: sticky; top: 0; background: var(--bg, #0f172a); z-index: 2; }
+</style>
+{% endblock %}

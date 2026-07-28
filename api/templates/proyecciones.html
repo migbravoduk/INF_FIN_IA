@@ -1,13 +1,11 @@
 {% extends "base.html" %}
 
-{% block title %}Proyecciones · INF_FIN_IA{% endblock %}
+{% block title %}{{ page_title }} · INF_FIN_IA{% endblock %}
 
 {% block content %}
-<h1>Proyecciones macrofundadas</h1>
-<p class="subtitle">
-    SARIMAX trimestral anclado en la Encuesta de Expectativas Económicas (EEE, BCCh) —
-    ingresos y resultado neto proyectados a 2 años con bandas de confianza
-</p>
+<p class="crumb"><a href="/proyecciones">← Proyecciones</a></p>
+<h1>{{ page_title }}</h1>
+<p class="subtitle">{{ page_subtitle }}</p>
 
 <form class="eeff-form"
       hx-get="/proyecciones/chart"

@@ -1,30 +1,35 @@
 {% extends "base.html" %}
 
-{% block title %}Estados Financieros · INF_FIN_IA{% endblock %}
+{% block title %}{{ page_title }} · INF_FIN_IA{% endblock %}
 
 {% block content %}
-<h1>Estados financieros corporativos</h1>
-<p class="subtitle">CMF · Empresas y Mercados — balance, resultados y flujo de caja, en serie (vista evolutiva)</p>
+<p class="crumb"><a href="/eeff">← Estados financieros</a></p>
+<h1>{{ page_title }}</h1>
+<p class="subtitle">{{ page_subtitle }}</p>
 
-<form class="eeff-form"
+<form class="eeff-form" id="eeff-form"
       hx-get="/eeff/table"
       hx-target="#eeff-results"
-      hx-trigger="load, change"
+      hx-trigger="load, company-picked, change from:#eeff-serie"
       hx-swap="innerHTML">
 
     <label>Empresa
-        <input list="companies-list" name="company" autocomplete="off"
-               placeholder="Escribe para buscar… ({{ companies|length }} empresas)"
-               value="{{ companies[0].company_name if companies else '' }}">
-        <datalist id="companies-list">
-            {% for c in companies %}
-            <option value="{{ c.company_name }}"></option>
-            {% endfor %}
-        </datalist>
+        <div class="combo" id="eeff-combo">
+            <input type="text" id="eeff-company-input" autocomplete="off"
+                   placeholder="Escribe para buscar… ({{ companies|length }} empresas)"
+                   value="{{ companies[0].company_name if companies else '' }}"
+                   hx-get="/eeff/search" hx-trigger="keyup changed delay:200ms"
+                   hx-target="#eeff-company-results" hx-swap="innerHTML"
+                   hx-vals='{"scope": "{{ scope }}"}'
+                   name="q">
+            <input type="hidden" name="rut" id="eeff-rut"
+                   value="{{ companies[0].rut if companies else '' }}">
+            <div id="eeff-company-results" class="combo-results" hidden></div>
+        </div>
     </label>
 
     <label>Serie
-        <select name="serie">
+        <select name="serie" id="eeff-serie">
             <option value="anual5">Cierres anuales — últimos 5</option>
             <option value="anual10">Cierres anuales — últimos 10</option>
             <option value="trimq5">Mismo trimestre — últimos 5 años</option>
@@ -33,6 +38,34 @@
         </select>
     </label>
 </form>
+
+<script>
+(function () {
+    var combo   = document.getElementById('eeff-combo');
+    var input   = document.getElementById('eeff-company-input');
+    var results = document.getElementById('eeff-company-results');
+
+    // Mostrar el desplegable cuando llegan resultados nuevos (swap de HTMX).
+    results.addEventListener('htmx:afterSwap', function () { results.hidden = false; });
+
+    // Al hacer clic en un resultado: fijar RUT exacto, reflejar el nombre y recargar la tabla.
+    window.pickCompany = function (rut, name) {
+        document.getElementById('eeff-rut').value = rut;
+        input.value = name;
+        results.hidden = true;
+        htmx.trigger('#eeff-form', 'company-picked');
+    };
+
+    // Cerrar el desplegable al hacer clic fuera del combo.
+    document.addEventListener('mousedown', function (e) {
+        if (!combo.contains(e.target)) results.hidden = true;
+    });
+    // Reabrir al enfocar si ya hay resultados cargados.
+    input.addEventListener('focus', function () {
+        if (results.children.length) results.hidden = false;
+    });
+})();
+</script>
 
 <section id="eeff-results">
     <p class="loading">Cargando estados financieros…</p>

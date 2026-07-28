@@ -1,0 +1,49 @@
+{#
+  partials/seguros_cartera_emisores.html — Concentración por emisor (renta fija, archivo B.1).
+  rows = [{rut, name, total, monedas:[{unidad, n, nominal}]}]
+  El nominal va ABIERTO POR MONEDA a propósito: viene en la unidad del instrumento y no es
+  sumable entre monedas. Tampoco es valor de mercado.
+#}
+{% if rows %}
+<div class="eeff-meta" style="margin:.6rem 0 1rem">
+    {{ ramo_label }} · período {{ period }} · top {{ rows|length }} emisores por número de posiciones
+</div>
+
+<table class="eeff-table">
+    <thead>
+        <tr>
+            <th>Emisor</th>
+            <th style="text-align:right">Posiciones</th>
+            <th>Nominal por moneda</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for r in rows %}
+        <tr>
+            <td>
+                {% if r.name %}{{ r.name }} <span class="lead">{{ r.rut }}</span>
+                {% else %}<span class="lead">RUT</span> {{ r.rut }}{% endif %}
+            </td>
+            <td style="text-align:right">{{ "{:,}".format(r.total) }}</td>
+            <td>
+                {% for m in r.monedas %}
+                <span style="display:inline-block; margin-right:1rem">
+                    <b>{{ m.unidad }}</b> {{ "{:,.0f}".format(m.nominal) }}
+                    <span class="lead">({{ "{:,}".format(m.n) }})</span>
+                </span>
+                {% endfor %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+<p class="lead" style="margin-top:.5rem">
+    Nominal en la unidad de cada instrumento (UF, $, EUR…), <strong>no sumable entre monedas</strong>
+    y <strong>no es valor de mercado</strong>: los montos de valorización del archivo B.1 aún no
+    están reconciliados. Sirve para leer concentración de emisores, no para ponderar la cartera.
+    Los nombres se resuelven contra los RUT conocidos en otras tablas; varios originadores
+    hipotecarios y de leasing no están y quedan solo con RUT.
+</p>
+{% else %}
+<p class="loading">Sin detalle de renta fija para ese período.</p>
+{% endif %}

@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title %}Proyecciones · INF_FIN_IA{% endblock %}
+
+{% block content %}
+<h1>Proyecciones</h1>
+<p class="subtitle">
+    Elige la clasificación de entidad. El motor difiere según el tipo: corporativos y AGF usan
+    el modelo híbrido macrofundado; el resto, SARIMAX univariante.
+</p>
+
+<div class="hub-grid">
+    {% for c in classes %}
+    <a class="hub-card" href="{{ c.url }}">
+        <span class="hub-icon">{{ c.icon }}</span>
+        <h3>{{ c.title }}</h3>
+        <p>{{ c.desc }}</p>
+        <span class="hub-meta">{{ c.meta }}</span>
+    </a>
+    {% endfor %}
+</div>
+
+<p class="warn-box" style="margin-top:1.5rem">
+    ⚠ <strong>Sobre las bandas de confianza.</strong> Solo corporativos y AGF tienen bandas
+    <em>calibradas</em>: son cuantiles del error real fuera de muestra, medidos con el arnés de
+    backtest sobre empresas IFRS. En bancos, seguros e intermediarios los intervalos son los
+    del propio SARIMAX y <strong>no</strong> han sido validados contra desempeño histórico —
+    ni la cadena estructural ni el ancla macro del modelo corporativo aplican a entidades
+    financieras. Para calibrarlas hay que correr el arnés por clasificación.
+</p>
+{% endblock %}

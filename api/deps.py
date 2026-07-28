@@ -35,6 +35,16 @@ from config.settings import settings
 TEMPLATES_DIR = Path(__file__).parent / "templates"
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
+# Cache-busting de estáticos: el navegador cachea `app.css` agresivamente y los cambios de
+# estilo no se ven hasta un refresco forzado. Se cuelga la mtime del archivo como query param
+# (se recalcula al reiniciar el servidor, que es cuando cambian los estilos en la práctica).
+_CSS_PATH = Path(__file__).parent / "static" / "app.css"
+try:
+    ASSET_VERSION = str(int(_CSS_PATH.stat().st_mtime))
+except OSError:
+    ASSET_VERSION = "0"
+templates.env.globals["asset_version"] = ASSET_VERSION
+
 
 def records(df) -> list[dict]:
     """

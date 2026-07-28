@@ -1,0 +1,19 @@
+{#
+  partials/eeff_company_results.html — Resultados del autocompletar de empresas (EEFF).
+  results = [{rut, name, sector}]. Al hacer clic, pickCompany() fija el RUT oculto y recarga.
+#}
+{% if results %}
+<ul class="combo-list" role="listbox">
+    {% for r in results %}
+    <li class="combo-item" role="option"
+        onclick="pickCompany('{{ r.rut }}', {{ r.name|tojson }})">
+        <span class="combo-name">{{ r.name }}</span>
+        <span class="combo-meta">{{ r.rut }} · {{ r.sector }}</span>
+    </li>
+    {% endfor %}
+</ul>
+{% elif q|length >= 2 %}
+<div class="combo-empty">Sin coincidencias para «{{ q }}»</div>
+{% else %}
+<div class="combo-empty">Escribe al menos 2 letras…</div>
+{% endif %}

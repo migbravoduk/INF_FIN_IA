@@ -151,6 +151,87 @@ h1 { margin: 0 0 0.2rem; }
     font-size: 0.9rem;
     min-width: 240px;
 }
+/* Mini-mapa de navegación pegajoso (banca, seguros, intermediarios): saltos a cada
+   sección para que las matrices largas no sepulten el resto de la página. */
+.banca-minimap {
+    position: sticky; top: 0; z-index: 5;
+    display: flex; align-items: center; gap: 0.9rem; flex-wrap: wrap;
+    margin: 0.4rem 0 1rem; padding: 0.5rem 0.8rem;
+    background: var(--bg, #0f172a); border: 1px solid var(--border);
+    border-radius: 8px;
+}
+.banca-minimap .minimap-label { color: var(--muted); font-size: 0.8rem; }
+.banca-minimap a {
+    color: var(--accent); text-decoration: none; font-size: 0.85rem;
+    padding: 0.15rem 0.5rem; border: 1px solid var(--border); border-radius: 6px;
+}
+.banca-minimap a:hover { border-color: var(--accent); }
+.minimap-top { float: right; font-size: 0.72rem; color: var(--muted); text-decoration: none; font-weight: 400; }
+.minimap-top:hover { color: var(--accent); }
+.fecu-grp { scroll-margin-top: 3.5rem; }
+
+/* Hubs de clasificación (EEFF y Proyecciones) */
+.hub-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1rem; margin-top: 1.5rem;
+}
+.hub-card {
+    display: block; text-decoration: none; color: inherit;
+    background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+    padding: 1.1rem 1.2rem; transition: border-color .15s, transform .15s;
+}
+.hub-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+.hub-icon { font-size: 1.6rem; display: block; margin-bottom: .4rem; }
+.hub-card h3 { margin: 0 0 .3rem; font-size: 1rem; color: var(--accent); }
+.hub-card p { margin: 0 0 .6rem; font-size: .85rem; color: var(--ink); line-height: 1.45; }
+.hub-meta { font-size: .72rem; color: var(--muted); }
+
+/* Aviso metodológico (ej. bandas de confianza no calibradas) */
+.warn-box {
+    background: rgba(234, 179, 8, .08);
+    border: 1px solid rgba(234, 179, 8, .35);
+    border-left: 3px solid #eab308;
+    border-radius: 8px;
+    padding: .7rem .9rem;
+    margin: 1rem 0;
+    font-size: .84rem;
+    line-height: 1.5;
+    color: var(--ink);
+    max-width: 900px;
+}
+
+/* Migas de navegación hacia el hub de EEFF */
+.crumb { margin: 0 0 .2rem; font-size: .8rem; }
+.crumb a { color: var(--muted); text-decoration: none; }
+.crumb a:hover { color: var(--accent); }
+
+/* Autocompletar de empresa (combo con búsqueda en servidor vía HTMX) */
+.combo { position: relative; }
+.combo input[type="text"] {
+    background: var(--panel);
+    color: var(--ink);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.5rem 0.7rem;
+    font-size: 0.9rem;
+    min-width: 320px;
+}
+.combo input[type="text"]:focus { outline: none; border-color: var(--accent); }
+.combo-results {
+    position: absolute; z-index: 20; top: calc(100% + 4px); left: 0; right: 0;
+    background: var(--panel); border: 1px solid var(--border); border-radius: 8px;
+    max-height: 340px; overflow-y: auto; box-shadow: 0 8px 24px rgba(0,0,0,.35);
+}
+.combo-list { list-style: none; margin: 0; padding: 0.25rem; }
+.combo-item {
+    display: flex; flex-direction: column; gap: 0.1rem;
+    padding: 0.4rem 0.6rem; border-radius: 6px; cursor: pointer;
+}
+.combo-item:hover { background: rgba(56,189,248,.12); }
+.combo-name { color: var(--ink); font-size: 0.9rem; }
+.combo-meta { color: var(--muted); font-size: 0.72rem; }
+.combo-empty { padding: 0.6rem 0.7rem; color: var(--muted); font-size: 0.82rem; }
+
 .eeff-head { margin-bottom: 1rem; }
 .eeff-head h3 { margin: 0; }
 .eeff-meta { color: var(--muted); font-size: 0.8rem; }
