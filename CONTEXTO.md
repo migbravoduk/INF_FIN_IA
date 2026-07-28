@@ -8,7 +8,8 @@ El README es la documentación de usuario; este archivo es la guía de desarroll
 Repositorio de datos financieros y macroeconómicos de Chile en Python, con BD local
 **DuckDB**, ingesta automática (catch-up + APScheduler), **CLI** (Click + Rich), una
 **capa web** (FastAPI + Jinja2 + HTMX + Plotly, sin Node) y una **capa analítica** de
-proyecciones de EEFF (`models/`). ~3,06M filas, ~168 MB.
+proyecciones de EEFF (`models/`). ~12,9M filas, ~700 MB (el grueso es el detalle de renta
+fija de la cartera de seguros: 7,9M filas por sí solo).
 
 ## Cómo correr (importante)
 
@@ -20,7 +21,9 @@ proyecciones de EEFF (`models/`). ~3,06M filas, ~168 MB.
 
 Comandos clave: `status`, `fetch --all`, `catchup [--dry-run]`, `serve [--with-scheduler]`,
 `web-preview`, `eeff-export [-p YYYYMM]`, `query-cmf`, `query-banks`, `query-sp-cuotas`,
-`fetch-sp-cartera -p YYYYMM`. Backtest de modelos: `python -m models.backtest`.
+`fetch-sp-cartera -p YYYYMM`, `fetch-seguros`, `fetch-intermediarios`,
+`fetch-cartera-seguros [--latest | --period YYYYMM | --history --since YYYYMM]`.
+Backtest de modelos: `python -m models.backtest`.
 Para shell scripts en este repo se usa el Bash tool con heredoc (evita problemas de quoting).
 Nota de encoding: al correr scripts que imprimen Δ/acentos, anteponer `PYTHONIOENCODING=utf-8`
 (la consola de Windows usa cp1252 y revienta con caracteres Unicode).
@@ -43,8 +46,8 @@ Fuentes (BCCh BDE API · CMF XBRL plano · CMF/SBIF API · SP scraping)
 | `cmf_financial_statements` | CMF (archivo plano `.txt` trimestral) | EEFF corporativos; ~1,5M filas, 45 períodos |
 | `cmf_bank_statements` | CMF/SBIFv3 (API JSON) | balances/resultados con desglose por moneda; ~1,8M filas, 2019+ (plan de cuentas cambió en 2022, ver gotchas) |
 | `cmf_insurer_statements` | CMF (descarga Excel FECU seguros) | EEFF de seguros **vida + generales** (col `insurance_type`); plan de cuentas propio (Circulares 2022/2050); **trimestral** 2015Q1+; ~581K filas (vida 338K + generales 243K), 72 compañías; cifras en **miles de CLP** |
-| `cmf_insurer_portfolio_control` | CMF Circular 1.835 (ZIP mensual, **descarga manual**) | Cartera de inversiones de seguros: totales por tipo de inversión y compañía (archivo B.8 Control); miles de CLP |
-| `cmf_insurer_portfolio_fixed_income` | CMF Circular 1.835 (archivo B.1) | Detalle de instrumentos de renta fija por compañía: emisor, tipo, nemotécnico/ISIN, país, valor nominal (campos **reconciliados** contra los datos; valoración de mercado pendiente) |
+| `cmf_insurer_portfolio_control` | CMF Circular 1.835 (ZIP **mensual**, descarga automática) | Cartera de inversiones: totales por tipo de inversión y compañía (archivo B.8 Control). **Vida + generales, 2020-01→2026-06 completo** (78 meses, sin huecos); ~72K filas, 75 compañías; miles de CLP. Es la base de `/seguros/cartera` |
+| `cmf_insurer_portfolio_fixed_income` | CMF Circular 1.835 (archivo B.1) | Detalle instrumento a instrumento de renta fija: emisor, tipo, nemotécnico/ISIN, país, valor nominal (campos **reconciliados** contra los datos; valoración de mercado pendiente). **~7,9M filas** — la tabla más grande del repo |
 | `cmf_broker_statements` | CMF (descarga Excel FECU IFRS intermediarios) | EEFF de **corredores de bolsa + agentes de valores** (col `broker_type`); plan de cuentas propio (códigos `11.01.00`), 14 secciones en `section`; **trimestral** 2015Q1+; ~210K filas, 56 entidades; cifras en **miles de CLP** |
 | `sp_quota_values` | SP (scraping) | valor cuota + patrimonio diario por AFP/fondo |
 | `sp_instrument_prices` | SP | cinta de precios diaria |
@@ -73,6 +76,14 @@ Fuentes (BCCh BDE API · CMF XBRL plano · CMF/SBIF API · SP scraping)
 - **DuckDB = un solo proceso escritor.** La API abre `read_only` salvo en modo embebido
   (`serve --with-scheduler`, donde comparte proceso). No correr `run-scheduler` aparte mientras
   la web sirve. Los backfills largos toman la BD: hacerlos en background y no leer en paralelo.
+- **No poner índices secundarios en las tablas de cartera de seguros.** En DuckDB 1.5.1 un
+  índice ART sobre una columna con claves muy duplicadas (p. ej. `period`, donde ~100K filas
+  comparten valor) hace **fallar el DELETE** del patrón Delete-then-Insert de la reingesta por
+  período —`Invalid Input Error: Failed to delete all rows from index`— y, peor, **invalida la
+  base para todo el proceso** ("database has been invalidated because of a previous fatal
+  error"). El síntoma engaña: parece corrupción de datos y no lo es; basta `DROP INDEX` y la
+  BD queda sana. DuckDB es columnar con zonemaps, así que el filtrado por `period`/`rut` no
+  necesita esos índices. Si se agrega otra tabla con reingesta masiva por período, misma regla.
 - **Parser decimal BCCh**: la API BDE entrega `.` como separador DECIMAL. El bug original lo
   trataba como miles y corrompía todo (`bcentral._parse_value`, ya corregido). Si aparecen
   valores raros en BCCh, **cruzar contra el archivo/fuente antes de asumir bug**.
@@ -171,19 +182,30 @@ Fuentes (BCCh BDE API · CMF XBRL plano · CMF/SBIF API · SP scraping)
   CMF muestra un CAPTCHA de imagen, pero se verificó empíricamente que **no se valida del lado
   servidor** (`captcha.php {accion:valida}` es control de cliente; el endpoint `fnAjax=descarga`
   sirve el ZIP a cualquier GET). Por eso `fetch-cartera-seguros` (`--period YYYYMM` | `--latest`
-  | `--history`) baja **e** ingesta en un paso, como los demás colectores; `list_remote_periods`
-  descubre los períodos publicados (126 a jul-2026, desde 2016-01). Fallback offline:
-  `import-cartera-seguros` reingesta ZIP ya presentes en `data/seguros_cartera_raw/`
-  (`YYYYMM<v|g>.zip`) sin tocar la red. Solo **vida** por ahora (falta ubicar el `tipoentidad`
-  de generales en la CMF). El ZIP trae 12 tipos de archivo × compañía, de **ancho fijo, UTF-8, separados
-  por `\n`**, con registros tipo 1 (identificación) / 2 (detalle) / 3 (totales).
-  **Enfoque escalonado**: hoy solo se importa el archivo **C = B.8 Control**, cuyo layout
-  reconcilia EXACTO con los datos (registro de 138 chars; 0 montos inválidos en 33 compañías).
-  Los archivos de detalle (I/A/F/X…) tienen specs publicadas que **NO cuadran** con los
-  archivos reales (el PDF de B.1 declara un registro de identificación de 930 chars y el dato
-  real tiene 970; en el detalle quedan ~105 chars sin explicar y campos fundidos). Sus
-  primeros ~15 campos sí validan; el resto exige reconciliación campo a campo contra los
-  datos antes de confiar en los montos. **No estimar posiciones a ojo.**
+  | `--history [--since YYYYMM]`) baja **e** ingesta en un paso, como los demás colectores;
+  `list_remote_periods` descubre los períodos publicados (126 a jul-2026, desde 2016-01).
+  Fallback offline: `import-cartera-seguros` reingesta ZIP ya presentes en
+  `data/seguros_cartera_raw/` (`YYYYMM<v|g>.zip`) sin tocar la red.
+  **Ambos ramos**: `tipoentidad=CSVID` (vida) y `CSGEN` (generales), servidos desde la MISMA
+  carpeta `dcisgv/` — el código de generales no se deduce del de vida, hay que usar ese.
+  **La descarga necesita reintentos**: aunque `fnAjax=archi` confirme que el período existe,
+  el servidor devuelve HTML en vez del ZIP de forma intermitente (~6% de los meses en un
+  backfill). `download_cartera` reintenta 3 veces antes de rendirse.
+- **Nombres de archivo DENTRO del ZIP: tres convenciones conviviendo.** El parser matchea por
+  letra de tipo + 6 dígitos, con el sufijo de ramo **opcional** (`_type_files`), porque:
+  (1) los períodos antiguos usan `YYMMDD` del último día del mes (`c200131v`) y los recientes
+  `YYYYMM` (`c202606v`); (2) hay meses sueltos —202412— que omiten la letra de ramo justo en
+  los archivos de control (`c202412`) aunque sí la traigan en los de renta fija. No fijar el
+  valor del período en el patrón.
+- **Cartera: qué se importa.** El ZIP trae 12 tipos de archivo × compañía, de **ancho fijo,
+  UTF-8, separados por `\n`**, con registros tipo 1 (identificación) / 2 (detalle) / 3
+  (totales). Hoy se importan **B.8 Control** (registro de 138 chars, reconcilia EXACTO) y
+  **B.1 Renta Fija**. Los registros de B.1 miden **930 chars en el layout antiguo y 970 en el
+  nuevo** (`B1_RECORD_LENS`): no es un error del spec, son dos épocas; el prefijo `0:154` del
+  que salen todos los campos reconciliados es idéntico en ambos (validado 500/500 sobre datos
+  de 2020). Los montos de valoración al final del registro siguen **sin reconciliar**, y los
+  demás archivos de detalle (A/F/X/O/P…) tampoco están incorporados. **No estimar posiciones a
+  ojo** ni confiar en montos no reconciliados.
   El registro tipo 3 **no sirve de cuadratura**: su TOTAL_REGISTROS es inconsistente entre
   compañías (+2 en 56 archivos, +1 en 6, atípicos de +4/-2/-5, y 2 archivos sin tipo 3).
   Validación fiable = largo de registro + que los montos parseen. Cruce de sanidad: el total

@@ -26,10 +26,12 @@ STORYTELLING (dashboard web, API REST, reportes Jules)
 | **2 — Series adicionales BCCh + SII** | ✅ Activa | UF, UTM, IVP, IMACEC desde la API de la BDE |
 | **3 — CMF: Empresas y Mercados** | ✅ Activa | Ingesta de archivos trimestrales planos .txt de estados financieros corporativos |
 | **4 — CMF: Bancos e Inst. Financieras** | ✅ Activa | Ingesta mensual de balances y resultados con desglose por moneda desde la API REST SBIFv3 |
+| **4b — CMF: Seguros e Intermediarios** | ✅ Activa | EEFF trimestrales con plan de cuentas **FECU propio**: compañías de seguros (vida y generales, Circulares 2022/2050) y corredores de bolsa / agentes de valores |
+| **4c — CMF: Cartera de seguros** | ✅ Activa | Composición mensual de inversiones bajo la **Circular 1.835** (vida + generales, 2020→hoy): totales por tipo de inversión y detalle instrumento a instrumento de renta fija |
 | **SP — Fondos de Pensiones** | ✅ Activa | Valores cuota diarios (desde 2008), carteras mensuales XML, cinta de precios diaria |
 | **5 — Calendarios y Alertas** | 🟡 Parcial | Catch-up por frescura: ingesta automática "al publicarse" (`main.py catchup`) |
 | **6 — Análisis y Proyecciones** | ✅ Activa | Ratios, comparación sectorial, radar de salud **y proyecciones de EEFF en producción** (modelo híbrido estructural + SARIMAX, validado por backtest — ver "Capa Analítica") |
-| **7 — API + Dashboard** | 🟡 Avanzada | FastAPI + dashboard (panel, EEFF, comparar, salud, **proyecciones**, banca, AFP) — ver "Capa Web" |
+| **7 — API + Dashboard** | 🟡 Avanzada | FastAPI + dashboard (panel, EEFF por clasificación de entidad, comparar, salud, **proyecciones**, banca, **inversión institucional**) — ver "Capa Web" |
 | **8 — Storytelling / Jules** | ⏳ Planificada | Reportes narrativos automáticos con LLM (la trayectoria estructural de la Fase 6 es su materia prima) |
 
 ---
@@ -181,6 +183,35 @@ copy .env.example .env
 .\.venv\Scripts\python.exe main.py query-banks --bank 001 --account 100000000 --format json --limit 2
 
 # ============================================================
+# Seguros e Intermediarios (CMF — FECU con plan de cuentas propio)
+# ============================================================
+
+# EEFF de compañías de seguros. Una sola descarga por período trae TODAS las
+# compañías del ramo (a diferencia de bancos, que itera por entidad).
+.\.venv\Scripts\python.exe main.py fetch-seguros --year 2026 --month 3
+.\.venv\Scripts\python.exe main.py fetch-seguros --ramo vida --year 2026 --month 3
+.\.venv\Scripts\python.exe main.py fetch-seguros --history          # backfill trimestral 2015+
+
+# EEFF de corredores de bolsa y agentes de valores
+.\.venv\Scripts\python.exe main.py fetch-intermediarios --year 2026 --month 3
+.\.venv\Scripts\python.exe main.py fetch-intermediarios --history
+
+# ============================================================
+# Cartera de inversiones de seguros (CMF — Circular 1.835)
+# ============================================================
+
+# Descarga E ingesta en un paso. Cubre ambos ramos por defecto.
+.\.venv\Scripts\python.exe main.py fetch-cartera-seguros --latest            # último mes publicado
+.\.venv\Scripts\python.exe main.py fetch-cartera-seguros --period 202606
+.\.venv\Scripts\python.exe main.py fetch-cartera-seguros --ramo generales --period 202606
+
+# Backfill histórico (la CMF publica desde 2016-01); acotable con --since
+.\.venv\Scripts\python.exe main.py fetch-cartera-seguros --history --since 202001
+
+# Respaldo offline: reingesta ZIP ya presentes en data/seguros_cartera_raw/ sin tocar la red
+.\.venv\Scripts\python.exe main.py import-cartera-seguros
+
+# ============================================================
 # Ingesta y Consulta de Pensiones (Superintendencia de Pensiones — SP)
 # ============================================================
 
@@ -247,12 +278,20 @@ Vistas disponibles:
 | Ruta | Descripción |
 |---|---|
 | `/` | Panel multi-fuente: PIB/IMACEC var. anual, IPC, USD/CLP; top-5 bancos por activos y resultado; rentabilidad 12m por fondo AFP (+ AFP nº1 por rentabilidad y por patrimonio); gráficos UF y TPM a 12 meses |
-| `/eeff` | Estados financieros corporativos (CMF) por empresa (buscador) y período. Orden **IFRS oficial**, subsecciones del balance (Activos/Pasivos/Patrimonio), nombres de estado legibles, totales en negrita, **indicadores financieros (ROE/ROA/márgenes/liquidez/deuda)**, gráfico de evolución de cualquier partida (con opción desacumular flujos) |
+| `/eeff` | **Hub** de estados financieros por clasificación de entidad: cada una tiene su plan de cuentas y su fuente |
+| `/eeff/corporativos` | EEFF corporativos (CMF) por empresa (buscador) y período. Orden **IFRS oficial**, subsecciones del balance (Activos/Pasivos/Patrimonio), nombres de estado legibles, totales en negrita, **indicadores financieros (ROE/ROA/márgenes/liquidez/deuda)**, gráfico de evolución de cualquier partida (con opción desacumular flujos) |
+| `/eeff/seguros` | EEFF de compañías de seguros (vida y generales) con su **plan de cuentas FECU propio** — no mezclar con el IFRS corporativo ni con el bancario |
+| `/eeff/intermediarios` | EEFF de corredores de bolsa y agentes de valores (FECU IFRS) |
+| `/eeff/agf` | EEFF de administradoras generales de fondos, separadas para analizarlas como grupo |
 | `/comparar` | Compara una misma partida en hasta 3 empresas libres o superposición automática del Top 5 de un sector **+ tabla comparativa de ratios** |
 | `/ranking` | Top 15 empresas por un indicador (ROE, ROA, márgenes, liquidez, deuda) en un período, con **filtro por sector** |
 | `/salud` | Radar de Salud Financiera: gráfico de dispersión cruzando Riesgo (Deuda) vs Rentabilidad (ROE) y Liquidez, identificando unicornios y empresas en riesgo por sector |
-| `/proyecciones` | **Proyecciones de EEFF a 1–3 años** (ingresos y resultado neto): fan charts con bandas empíricas 80/95%, supuestos macro anclados a las encuestas EEE+EOF del BCCh y trayectoria estructural (activos → rotación → margen). Modelo híbrido validado por backtest |
+| `/proyecciones` | **Hub** de proyecciones por clasificación de entidad |
+| `/proyecciones/corporativos` | **Proyecciones de EEFF a 1–3 años** (ingresos y resultado neto): fan charts con bandas empíricas 80/95%, supuestos macro anclados a las encuestas EEE+EOF del BCCh y trayectoria estructural (activos → rotación → margen). Modelo híbrido validado por backtest |
+| `/proyecciones/{bancos,seguros,intermediarios}` | Proyección univariante (SARIMAX) de las entidades con plan de cuentas propio |
 | `/banca` | Estados bancarios con desglose por moneda; gráfico de evolución de cualquier cuenta |
+| `/inversion-institucional` | **Hub** de administradores de activos: cartera de seguros, AFP y fondos de pensiones |
+| `/seguros/cartera` | **Asset allocation de compañías de seguros** (Circular 1.835, mensual): panel del período con exposición extranjera, respaldo de reservas técnicas (RT+PR), CUI/APV y método de valorización; **deriva histórica** del allocation por clase de activo; comparación entre compañías con HHI; concentración por emisor de la renta fija. Códigos traducidos con la **codificación oficial CMF** (`config/insurer_investment_codes.yaml`) |
 | `/afp` | Evolución de fondos de pensiones: una AFP/un fondo, comparar fondos, comparar AFP; métrica valor cuota / patrimonio / participación de mercado; rentabilidad nominal vs real; composición de cartera (glosario oficial SP); **rentabilidad neta de comisiones** (simulación sueldo configurable) |
 | `/fondos` | **Comparativo por fondo entre AFP**: retornos del valor cuota en horizontes 1M/3M/6M/12M/3A/5A/10A (anualizados desde 3A) + composición vigente de cartera por AFP (secciones del informe SP apiladas). Selector dinámico — escala solo a los fondos generacionales |
 | `/docs` | Swagger de la API REST (`/api/...`) |
@@ -323,6 +362,10 @@ INF_FIN_IA/
 │   ├── bcentral.py          # ✅ Cliente BDE API del Banco Central (Fases 1 y 2)
 │   ├── cmf.py               # ✅ Ingestionador plano de Estados Financieros CMF (Fase 3)
 │   ├── cmf_banks.py         # ✅ Cliente API REST de Estados Financieros Bancos CMF (Fase 4)
+│   ├── cmf_fecu.py          # ✅ Parser compartido del Excel "FECU tabla" (seguros/intermediarios)
+│   ├── cmf_insurers.py      # ✅ EEFF de compañías de seguros, vida y generales
+│   ├── cmf_brokers.py       # ✅ EEFF de corredores de bolsa y agentes de valores
+│   ├── seguros_cartera.py   # ✅ Cartera de inversiones de seguros (Circular 1.835, ZIP mensual)
 │   ├── sp_pensions.py       # ✅ Scraping de valores cuota, carteras y precios SP
 │   └── sii.py               # 🔜 Scraping SII alternativo (Fase 2)
 ├── processors/
@@ -345,15 +388,22 @@ INF_FIN_IA/
 ├── config/
 │   ├── settings.py          # ✅ Configuración centralizada (pydantic-settings)
 │   ├── series_catalog.yaml  # ✅ Catálogo de series a ingestar (macro + expectativas EEE/EOF)
-│   └── company_profiles.yaml# ✅ Reseñas y sectores de empresas (101 curadas + inferencia)
+│   ├── company_profiles.yaml# ✅ Reseñas y sectores de empresas (101 curadas + inferencia)
+│   ├── afp_commissions.yaml # ✅ Comisiones vigentes por AFP (rentabilidad neta)
+│   └── insurer_investment_codes.yaml # ✅ Codificación OFICIAL CMF de tipo de inversión
+│                            #    (Circular 1.835) + agrupación propia por clase y geografía
 ├── api/                     # ✅ FastAPI: routers /api/*, vistas HTML, templates Jinja2, static
 │   ├── main.py              #    app + lifespan (scheduler embebido opcional)
 │   ├── routers/             #    macro, cmf, banks, sp, dashboard_kpi, views
-│   ├── templates/           #    base, overview, eeff, banca, afp + partials
+│   ├── templates/           #    base, overview, eeff, banca, afp, seguros_cartera + partials
+│   ├── sp_glossary.py       #    glosario oficial de nemotécnicos de la cartera SP
+│   ├── insurer_glossary.py  #    glosario de tipos de inversión de seguros + limpieza de nombres
 │   └── preview.py           #    export estático del panel (main.py web-preview)
 ├── data/
 │   ├── cmf_raw/             # Caché local de archivos planos trimestrales (.txt) de la CMF
 │   ├── bank_raw/            # Caché local de respuestas JSON de la API CMF Bancos (Fase 4)
+│   ├── insurer_raw/         # Caché de los Excel FECU de seguros
+│   ├── seguros_cartera_raw/ # Caché de los ZIP mensuales de cartera (Circular 1.835)
 │   └── finanzas_chile.duckdb  # Base de datos DuckDB (generado automáticamente)
 ├── logs/                    # Logs de ejecución (generado automáticamente)
 ├── main.py                  # ✅ CLI entry point
@@ -474,6 +524,36 @@ df = conn.execute("""
 print(df)
 ```
 
+### Consulta de Cartera de Seguros (Circular 1.835)
+
+```python
+import duckdb
+conn = duckdb.connect("data/finanzas_chile.duckdb")
+
+# Composición de cartera del mercado de seguros de vida, por tipo de inversión.
+# OJO: los montos vienen en MILES de pesos (M$); aquí se pasan a miles de millones.
+df = conn.execute("""
+    SELECT investment_code,
+           SUM(valor_final) / 1e6            AS mmm_clp,
+           SUM(repr_rt_pr)  / 1e6            AS respalda_reservas,
+           SUM(cui_apv)     / 1e6            AS cui_apv
+    FROM cmf_insurer_portfolio_control
+    WHERE period = 202606 AND insurance_type = 'vida'
+    GROUP BY investment_code
+    ORDER BY mmm_clp DESC
+    LIMIT 10
+""").fetchdf()
+print(df)
+```
+
+> Los códigos (`E10`, `D20`, `H62`…) se traducen con la codificación oficial de la CMF en
+> `config/insurer_investment_codes.yaml` (`api.insurer_glossary.describe`).
+> `valor_final = repr_rt_pr + no_repr_rt_pr` es identidad exacta; en cambio los cuatro campos
+> de valorización **no** suman el total (créditos, siniestros por cobrar y avances a tenedores
+> no llevan método de valorización). El detalle instrumento a instrumento está en
+> `cmf_insurer_portfolio_fixed_income`, donde `valor_nominal` va en la unidad de cada
+> instrumento (UF, $, EUR…) y **no es sumable entre monedas**.
+
 ### Consulta de Fondos de Pensiones (SP)
 
 ```python
@@ -531,6 +611,6 @@ Una vez que la base de datos tenga cobertura histórica, se incorporarán:
 |---|---|---|
 | **CLI** | Consulta de datos por terminal | ✅ Operativa |
 | **API REST** (FastAPI) | Endpoints `/api/*` para consumir los datos (`main.py serve` → `/docs`) | 🟡 En desarrollo |
-| **Dashboard web** | Panel multi-fuente + EEFF + banca + AFP (Jinja2/HTMX/Plotly) | 🟡 En desarrollo |
+| **Dashboard web** | Panel multi-fuente + EEFF (corporativos, seguros, intermediarios, AGF) + banca + inversión institucional (AFP, fondos, cartera de seguros) — Jinja2/HTMX/Plotly | 🟡 En desarrollo |
 | **Reportes automáticos** | Documentos Word/PPT generados por Jules a partir de la BD | ⏳ Fase 7 |
 | **Alertas** | Notificaciones cuando se acercan publicaciones o hay datos nuevos | ⏳ Fase 4 |
