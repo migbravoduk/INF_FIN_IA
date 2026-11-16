@@ -91,6 +91,7 @@ class _StructuralCache:
         self.panel = load_panel(db)
         self._models: dict = {}   # as_of_period -> AssetModel
         self._macros: dict = {}   # as_of_period -> MacroPath
+        self._drv: dict = {}      # as_of_period -> impulsores no operacionales
 
     def get(self, as_of_period: str, as_of_ts, horizon: int):
         from models.structural import estimate_asset_model, _quarterly_factors
@@ -99,12 +100,18 @@ class _StructuralCache:
             self._macros[as_of_period] = mp
             self._models[as_of_period] = estimate_asset_model(
                 self.panel, _quarterly_factors(mp), as_of_period)
+            from models.nonop import drivers
+            self._drv[as_of_period] = drivers(self.db, mp)
         return self.panel, self._models[as_of_period], self._macros[as_of_period]
+
+    def drv(self, as_of_period: str):
+        return self._drv.get(as_of_period)
 
 
 def backtest_series(db, rut: str, nombre: str, account: str,
                     origins: int = 8, horizon: int = 4,
-                    structural: "_StructuralCache | None" = None) -> list[dict]:
+                    structural: "_StructuralCache | None" = None,
+                    solo_estructural: bool = False) -> list[dict]:
     """Backtest rolling-origin de una (empresa, partida). Devuelve filas de resultados."""
     endog = get_quarterly_deaccumulated(db, rut, account)
     if endog.dropna().shape[0] < MIN_OBS + origins + horizon:
@@ -144,14 +151,13 @@ def backtest_series(db, rut: str, nombre: str, account: str,
         endog_s = train.values / endog_scale
 
         preds = {}
-        try:
-            preds["eee"] = _fit_and_forecast(endog_s, ehz.values, efz.values, horizon) * endog_scale
-        except Exception:
-            logger.exception("eee falló %s/%s @%s", rut, account, origin_p)
-        try:
-            preds["noexog"] = _fit_and_forecast(endog_s, None, None, horizon) * endog_scale
-        except Exception:
-            logger.exception("noexog falló %s/%s @%s", rut, account, origin_p)
+        for spec, ex_h, ex_f in (("eee", ehz.values, efz.values), ("noexog", None, None)):
+            if solo_estructural:
+                break
+            try:
+                preds[spec] = _fit_and_forecast(endog_s, ex_h, ex_f, horizon) * endog_scale
+            except Exception:
+                logger.exception("%s falló %s/%s @%s", spec, rut, account, origin_p)
         # Naive estacional: y[T+h] = y[T+h-4] (para h<=4 siempre cae dentro del train)
         preds["snaive"] = np.array([endog.iloc[i + 1 + h - 4] for h in range(horizon)])
 
@@ -160,11 +166,15 @@ def backtest_series(db, rut: str, nombre: str, account: str,
             from models.structural import forecast_structural
             key = "ingresos" if account == "Ingresos de actividades ordinarias" else "ganancia"
             panel, amodel, mp_s = structural.get(origin_p, as_of, horizon)
-            for spec, anchor in (("estr_m4", "mean4"), ("estr_last", "last")):
+            specs = [("estr_m4", "mean4", False), ("estr_last", "last", False)]
+            if key == "ganancia":
+                specs += [("estr_m4_nop", "mean4", True), ("estr_last_nop", "last", True)]
+            for spec, anchor, nop in specs:
                 try:
                     r = forecast_structural(db, rut, steps=horizon, panel=panel,
                                             model=amodel, macro=mp_s,
-                                            as_of_period=origin_p, ratio_anchor=anchor)
+                                            as_of_period=origin_p, ratio_anchor=anchor,
+                                            nonop=nop, drv=structural.drv(origin_p))
                     if r is not None and r.get(key) is not None:
                         s = r[key]
                         preds[spec] = np.array([s.get(p, np.nan) for p in targets])
@@ -211,6 +221,10 @@ def main():
     ap.add_argument("--out", default="scratch/backtest_results.csv")
     ap.add_argument("--no-structural", action="store_true",
                     help="Omitir los specs estructurales (solo SARIMAX/naive)")
+    ap.add_argument("--solo-estructural", action="store_true",
+                    help="Omitir los SARIMAX (más rápido; para A/B entre specs estructurales)")
+    ap.add_argument("--cuentas", default="",
+                    help="Partidas separadas por coma (default: todas las proyectables)")
     args = ap.parse_args()
 
     from db.database import Database
@@ -225,10 +239,12 @@ def main():
 
     t0, all_rows = time.time(), []
     for k, (rut, nombre) in enumerate(companies, 1):
-        for account in FORECASTABLE_ACCOUNTS:
+        cuentas = [c for c in args.cuentas.split(",") if c] or FORECASTABLE_ACCOUNTS
+        for account in cuentas:
             all_rows.extend(backtest_series(db, rut, nombre, account,
                                             args.origins, args.horizon,
-                                            structural=structural))
+                                            structural=structural,
+                                            solo_estructural=args.solo_estructural))
         print(f"[{k}/{len(companies)}] {nombre[:50]:<50} filas acumuladas={len(all_rows)} "
               f"t={time.time()-t0:.0f}s", flush=True)
 

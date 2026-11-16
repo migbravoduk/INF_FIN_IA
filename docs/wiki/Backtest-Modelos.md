@@ -103,3 +103,22 @@ no se usa.
 
 Detalle completo de las corridas: `scratch/backtest_results.csv`,
 `scratch/backtest_ab.csv` y `scratch/backtest_ab2.csv` (no versionados).
+
+## Ronda 4: resultado no operacional separado (nov-2026)
+
+Plan y detalle: [`docs/PLAN_PROYECCIONES_MACRO.md`](../PLAN_PROYECCIONES_MACRO.md) §B.
+Ganancia = operacional + (1−27%)·(reajuste UF + diferencias de cambio); el margen se mide
+sobre la operacional y el no operacional se proyecta con la exposición de cada empresa ×
+senda de inflación y TC (`models/nonop.py`). Orígenes 202409–202606 (más recientes que las
+rondas 1–3: las cifras absolutas no son comparables con las de julio).
+
+| h | estr_last | estr_last_nop | ablación (nop, proyección 0) | snaive |
+|---|---|---|---|---|
+| 1 | 1.017 | **0.927** | 0.945 | 0.940 |
+| 2 | 1.054 | 0.960 | **0.938** | 0.993 |
+| 3 | 0.945 | 0.889 | **0.881** | 0.944 |
+| 4 | 0.909 | 0.835 | **0.818** | 0.897 |
+
+En pares (1.280): `estr_last_nop` gana a `estr_last` en 53% (Δ media −0.068) y a la ablación
+en 56–58% en todos los horizontes. **Producción**: el híbrido usa `nonop=True` en h≥2 y
+`BAND_QUANTILES` de ganancia h=2–4 se actualizaron con esta corrida (`scratch/bt_nop.csv`).

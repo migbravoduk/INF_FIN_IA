@@ -187,7 +187,19 @@ def proyecciones_chart(
                            for p, row in r.macro_assumptions.iterrows()]
 
     # Narrativa estructural: activos, rotación y margen proyectados
-    structural_rows = None
+    structural_rows, nonop_rows = None, None
+    if structural is not None and structural.get("no_operacional"):
+        etiquetas = {"reajuste": ("Reajuste por UF", "inflación UF del trimestre"),
+                     "dif_cambio": ("Diferencias de cambio", "variación del dólar en el trimestre")}
+        nonop_rows = []
+        for k, d in structural["no_operacional"].items():
+            nombre, impulsor = etiquetas.get(k, (k, ""))
+            nonop_rows.append({
+                "nombre": nombre, "impulsor": impulsor, "k": d["k"],
+                "trimestres": [{"period": _period_label(p), "x": x,
+                                "monto": 0.73 * d["k"] * x}
+                               for p, x in zip(structural["periods"], d["x_fc"])],
+            })
     if structural is not None:
         structural_rows = [{
             "period": _period_label(p),
@@ -199,7 +211,7 @@ def proyecciones_chart(
 
     return templates.TemplateResponse(request, "partials/proyecciones_chart.html", {
         "results": results, "assumptions": assumptions,
-        "structural": structural_rows,
+        "structural": structural_rows, "nonop": nonop_rows,
         "meta": {
             "company_name": cname, "rut": rut, "currency": currency,
             "survey": survey_month.strftime("%B %Y") if survey_month is not None else "",

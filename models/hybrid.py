@@ -37,9 +37,11 @@ BAND_QUANTILES = {
     ("Ingresos de actividades ordinarias", 3): (1.781, 4.244),
     ("Ingresos de actividades ordinarias", 4): (1.889, 5.395),
     ("Ganancia (pérdida)", 1): (1.877, 3.743),
-    ("Ganancia (pérdida)", 2): (2.310, 3.951),
-    ("Ganancia (pérdida)", 3): (2.504, 4.221),
-    ("Ganancia (pérdida)", 4): (2.411, 4.402),
+    # h>=2 de ganancia: backtest nov-2026 del estructural con no operacional separado
+    # (`estr_last_nop`, 40 empresas × 8 orígenes 202409–202606; scratch/bt_nop.csv).
+    ("Ganancia (pérdida)", 2): (2.201, 4.222),
+    ("Ganancia (pérdida)", 3): (2.149, 4.083),
+    ("Ganancia (pérdida)", 4): (2.092, 3.848),
 }
 _STRUCT_KEY = {"Ingresos de actividades ordinarias": "ingresos",
                "Ganancia (pérdida)": "ganancia"}
@@ -69,8 +71,11 @@ def forecast_company_hybrid(db, rut: str, steps: int = 8) -> dict:
 
     est = None
     try:
+        # nonop=True: la ganancia separa reajuste UF y diferencias de cambio y los proyecta
+        # con la exposición de la empresa × senda de inflación y TC (backtest nov-2026:
+        # gana al estructural simple en 53% de los casos, error medio −0,07 MASE).
         est = forecast_structural(db, rut, steps=steps, panel=panel, model=amodel,
-                                  macro=macro, ratio_anchor="last")
+                                  macro=macro, ratio_anchor="last", nonop=True)
     except Exception:
         logger.exception("Estructural falló para %s", rut)
 
@@ -115,7 +120,7 @@ def forecast_company_hybrid(db, rut: str, steps: int = 8) -> dict:
             survey_month=macro.survey_month,
             model_info={
                 "modelo": "híbrido (SARIMAX h1 + estructural h2+)",
-                "bandas": "empíricas (backtest jul-2026)",
+                "bandas": "empíricas (backtest jul-2026; ganancia h2+ nov-2026)",
                 "n_obs": int(history.dropna().shape[0]),
                 "order": "(1,0,0)", "seasonal_order": "(0,1,1,4)",
             },
@@ -132,5 +137,6 @@ def forecast_company_hybrid(db, rut: str, steps: int = 8) -> dict:
                               if not est["rotacion_hist"].dropna().empty else None),
             "margen_last": (float(est["margen_hist"].dropna().iloc[-1])
                             if not est["margen_hist"].dropna().empty else None),
+            "no_operacional": est.get("no_operacional") or {},
         }
     return {"results": results, "structural": structural_info}

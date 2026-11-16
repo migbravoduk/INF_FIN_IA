@@ -75,6 +75,7 @@ class PanelData:
     income: pd.DataFrame      # resultado trimestral desacumulado
     sectors: dict = field(default_factory=dict)   # rut → macro_sector
     names: dict = field(default_factory=dict)     # rut → company_name
+    nonop: dict = field(default_factory=dict)     # reajuste / dif_cambio trimestrales (models/nonop.py)
 
 
 def load_panel(db) -> PanelData:
@@ -132,8 +133,10 @@ def load_panel(db) -> PanelData:
     sectors = {rut: get_profile(str(rut), str(nm))["macro_sector"]
                for rut, nm in names.items()}
 
+    from models.nonop import load_nonop
     return PanelData(assets=assets, revenue=deaccumulate(rev_w),
-                     income=deaccumulate(inc_w), sectors=sectors, names=names)
+                     income=deaccumulate(inc_w), sectors=sectors, names=names,
+                     nonop=load_nonop(db, pidx))
 
 
 # ============================================================
@@ -259,10 +262,17 @@ def forecast_structural(db, rut: str, steps: int = 8,
                         model: AssetModel | None = None,
                         macro: MacroPath | None = None,
                         as_of_period: str | None = None,
-                        ratio_anchor: str = "mean4") -> dict | None:
+                        ratio_anchor: str = "mean4",
+                        nonop: bool = False,
+                        drv: pd.DataFrame | None = None) -> dict | None:
     """
     Proyección estructural. Devuelve dict con series trimestrales proyectadas
     para ingresos y ganancia + trayectoria de activos y ratios (narrativa).
+
+    `nonop=True`: la ganancia se separa en operacional + (1−τ)·(reajuste UF + dif. de
+    cambio); el margen se mide sobre la operacional y la otra parte se proyecta con la
+    exposición de la empresa × senda de inflación y tipo de cambio (models/nonop.py).
+    `drv`: impulsores trimestrales ya calculados (`nonop.drivers`), para no recalcularlos.
     """
     if panel is None:
         panel = load_panel(db)
@@ -284,6 +294,21 @@ def forecast_structural(db, rut: str, steps: int = 8,
     if a.shape[0] < 8 or rev.dropna().shape[0] < 8:
         return None
 
+    # Períodos futuros (se necesitan antes para la parte no operacional)
+    fc_periods, p = [], _next_quarter(a.index[-1])
+    for _ in range(steps):
+        fc_periods.append(p)
+        p = _next_quarter(p)
+
+    # Ganancia operacional (sin reajuste ni diferencias de cambio) si se pide
+    adj_fc, nonop_det = None, {}
+    if nonop and inc.dropna().shape[0] >= 8:
+        from models.nonop import drivers, split_and_forecast
+        if drv is None:
+            drv = drivers(db, macro)
+        adj_hist, adj_fc, nonop_det = split_and_forecast(rut, panel.nonop, drv, list(inc.index), fc_periods)
+        inc = inc - adj_hist.reindex(inc.index).fillna(0.0)
+
     # Ratios históricos sobre sumas móviles 4T
     rev4 = rev.rolling(4).sum()
     inc4 = inc.rolling(4).sum()
@@ -291,11 +316,7 @@ def forecast_structural(db, rut: str, steps: int = 8,
     rot = (rev4.loc[common] / a.loc[common]).replace([np.inf, -np.inf], np.nan)
     mgn = (inc4 / rev4).replace([np.inf, -np.inf], np.nan)
 
-    # Períodos futuros y factores
-    fc_periods, p = [], _next_quarter(a.index[-1])
-    for _ in range(steps):
-        fc_periods.append(p)
-        p = _next_quarter(p)
+    # Factores
     if any(p not in factors_q.index for p in fc_periods):
         return None
     Xf = factors_q.loc[fc_periods].values
@@ -335,6 +356,8 @@ def forecast_structural(db, rut: str, steps: int = 8,
 
     rev_fc = telescoped(rev, rev4, rev4_path)
     inc_fc = telescoped(inc, inc4, inc4_path) if np.isfinite(inc4_path).all() else None
+    if inc_fc is not None and adj_fc is not None:
+        inc_fc = inc_fc + pd.Series(adj_fc, index=fc_periods)
 
     # Bandas de ingresos: proporcionales a las de activos (v1: incertidumbre del stock;
     # la del ratio se documenta como limitación)
@@ -354,4 +377,5 @@ def forecast_structural(db, rut: str, steps: int = 8,
         "margen_path": pd.Series(mgn_path, index=fc_periods),
         "beta": dict(zip(FACTORS, np.round(beta, 4))),
         "alpha": round(alpha, 4), "sigma_dlog": round(sigma, 4),
+        "no_operacional": nonop_det,
     }
