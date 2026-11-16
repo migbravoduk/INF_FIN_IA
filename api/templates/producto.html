@@ -46,6 +46,7 @@
     </div>
     <div class="kpi-card"><h3>Frente a su categoría</h3>
         <div class="kpi-row"><span>Diferencia con la mediana (12m)</span><b>{{ "%+.2f pp"|format(m.exceso_mediana_cat_12m) if m.exceso_mediana_cat_12m is not none else '—' }}</b></div>
+        <div class="kpi-row"><span>Frente a un depósito a plazo (12m)</span><b>{{ "%+.2f pp"|format(m.exceso_deposito_12m) if m.exceso_deposito_12m is not none else '—' }}</b></div>
         <div class="kpi-row"><span>Posición (100 = mejor)</span><b>{{ m.percentil_cat_12m|num }}{% if p.n_categoria %} de {{ p.n_categoria }}{% endif %}</b></div>
         <div class="kpi-row"><span>Consistencia</span><b>{{ m.consistencia_12m|num }}%</b></div>
         <div class="kpi-sub">Consistencia = % de los últimos 36 meses en que su rentabilidad a 12 meses quedó en la mitad superior de su categoría.</div>

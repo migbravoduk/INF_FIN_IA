@@ -23,21 +23,25 @@ _STATIC = _BASE / "static"
 
 def render_static(output_path: str = "preview/overview.html") -> str:
     """Genera el HTML estático del panel y devuelve la ruta absoluta del archivo."""
-    env = Environment(
-        loader=FileSystemLoader(str(_TEMPLATES)),
-        autoescape=select_autoescape(["html"]),
-    )
+    import re
+    from types import SimpleNamespace
+    from api.deps import templates  # mismo entorno que la web: filtros y globales
+
     with Database(read_only=True) as db:
         ctx = build_overview_context(db)
 
-    html = env.get_template("overview.html").render(**ctx)
+    fake_request = SimpleNamespace(url=SimpleNamespace(path="/"))
+    html = templates.env.get_template("overview.html").render(request=fake_request, **ctx)
 
     # Inline del CSS para que el archivo sea autocontenido.
     css = (_STATIC / "app.css").read_text(encoding="utf-8")
-    html = html.replace(
-        '<link rel="stylesheet" href="/static/app.css">',
-        f"<style>\n{css}\n</style>",
-    )
+    html = re.sub(r'<link rel="stylesheet" href="/static/app\.css[^"]*">',
+                  lambda _: f"<style>\n{css}\n</style>", html)
+    # En file:// no existe /static: los JS vuelven a la CDN (requiere internet).
+    html = html.replace("/static/vendor/htmx-2.0.4.min.js",
+                        "https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js")
+    html = html.replace("/static/vendor/plotly-2.35.2.min.js",
+                        "https://cdn.plot.ly/plotly-2.35.2.min.js")
 
     out = Path(output_path)
     out.parent.mkdir(parents=True, exist_ok=True)

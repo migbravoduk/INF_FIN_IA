@@ -6,6 +6,14 @@
 <h1>Panel multi-fuente</h1>
 <p class="subtitle">BCCh · CMF Bancos · CMF Empresas · Superintendencia de Pensiones</p>
 
+{% if dq %}
+<div class="asof{{ ' asof-warn' if dq.errores }}" role="status">
+    <span class="asof-item{{ ' asof-stale' if dq.errores }}">Calidad de datos ({{ dq.run_at.strftime('%d/%m/%Y %H:%M') }}):
+        {{ dq.total }} controles · {{ dq.errores }} errores · {{ dq.avisos }} avisos —
+        <a href="/metodologia">ver detalle</a></span>
+</div>
+{% endif %}
+
 <!--
   Las tarjetas se renderizan server-side (datos reales) en la carga inicial.
   El botón refresca el fragmento vía HTMX sin recargar la página.

@@ -638,7 +638,7 @@ def fetch_seguros(ramo, year, month, freq, history, year_start, year_end, force)
         last_q_month = ((today.month - 1) // 3) * 3  # último cierre trimestral posible
         periods = []
         for y in range(year_start, y1 + 1):
-            for mm in (3, 6, 9, 12):
+            for mm in ((12,) if freq == "anual" else (3, 6, 9, 12)):  # la FECU anual es solo diciembre
                 if y == today.year and mm > last_q_month:
                     continue
                 periods.append((y, mm))
@@ -1501,6 +1501,26 @@ def build_productos():
     console.print(f"[green]✓ Productos:[/] {res['productos']:,} · canales de proveedor: {res['proveedores']}")
     console.print(f"[green]✓ Métricas:[/] {res['metricas']:,} productos con dato en el último corte")
     console.print(f"  Emisores de renta fija (B.1) con nombre: [bold]{ok} de {tot}[/]")
+
+
+@cli.command(name="export-parquet")
+@click.option("--output", "-o", default="data/parquet", show_default=True)
+def export_parquet(output):
+    """Exporta la renta fija de seguros (B.1, ~8 M filas) a Parquet particionado por período.
+
+    Pensado para publicar la base en un servidor: la tabla más grande puede vivir en
+    archivos Parquet y leerse con DuckDB (`read_parquet('data/parquet/b1/*/*.parquet',
+    hive_partitioning=true)`) sin cargarla en la base de trabajo.
+    """
+    out = Path(output) / "b1"
+    out.mkdir(parents=True, exist_ok=True)
+    with Database(read_only=True) as db:
+        db.conn.execute(f"""
+            COPY (SELECT * FROM cmf_insurer_portfolio_fixed_income)
+            TO '{out.as_posix()}' (FORMAT PARQUET, PARTITION_BY (period), OVERWRITE_OR_IGNORE 1,
+                                   COMPRESSION zstd)""")
+    total = sum(f.stat().st_size for f in out.rglob("*.parquet"))
+    console.print(f"[green]✓ B.1 exportada a {out}[/] · {total / 1e6:,.0f} MB")
 
 
 @cli.command(name="clean-cache")

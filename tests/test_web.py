@@ -27,8 +27,27 @@ def test_health(client):
 
 @pytest.mark.parametrize("path", _nav_links() + [
     "/eeff/corporativos", "/eeff/agf", "/eeff/seguros", "/eeff/intermediarios", "/banca",
-    "/afp", "/fondos", "/seguros/cartera", "/evolucion",
+    "/afp", "/fondos", "/seguros/cartera", "/evolucion", "/inversion-institucional/emisores",
+    "/productos/tabla", "/productos/tabla?tipo=afp&clase=", "/productos/comparar",
 ])
 def test_pagina_responde(client, path):
     r = client.get(path)
     assert r.status_code == 200, f"{path} → {r.status_code}"
+
+
+def test_ficha_y_comparador_de_productos(client, real_db_readonly):
+    ids = [r[0] for r in real_db_readonly.conn.execute(
+        "SELECT producto_id FROM fact_producto_metricas ORDER BY patrimonio_clp_mm DESC NULLS LAST LIMIT 3").fetchall()]
+    if not ids:
+        pytest.skip("Sin métricas de productos (correr main.py build-productos)")
+    for pid in ids:
+        assert client.get(f"/producto/{pid}").status_code == 200
+    assert client.get("/productos/comparar?ids=" + ",".join(ids)).status_code == 200
+    assert client.get("/producto/no-existe").status_code == 404
+
+
+@pytest.mark.parametrize("path", ["/api/v1/productos?limit=5", "/api/v1/calidad",
+                                  "/api/v1/entidades/97004000"])
+def test_api_v1(client, path):
+    r = client.get(path)
+    assert r.status_code == 200, f"{path} → {r.status_code}: {r.text[:200]}"

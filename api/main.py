@@ -20,7 +20,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-from api.routers import macro, cmf, banks, sp, dashboard_kpi, views, productos
+from api.routers import macro, cmf, banks, sp, dashboard_kpi, views, productos, api_v1
 from config.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -45,7 +45,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="INF_FIN_IA — API Financiera Chile",
     description="API REST + dashboard sobre la BD DuckDB de datos financieros chilenos.",
-    version="0.1.0",
+    version="0.2.0",
     lifespan=lifespan,
 )
 
@@ -55,6 +55,7 @@ app.include_router(cmf.router, prefix="/api/cmf", tags=["cmf"])
 app.include_router(banks.router, prefix="/api/banks", tags=["banks"])
 app.include_router(sp.router, prefix="/api/sp", tags=["sp"])
 app.include_router(dashboard_kpi.router, prefix="/api/kpi", tags=["kpi"])
+app.include_router(api_v1.router, prefix="/api/v1", tags=["v1"])
 
 # Vistas HTML (dashboard)
 app.include_router(views.router, tags=["views"])

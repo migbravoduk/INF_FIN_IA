@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}Emisores en común · INF_FIN_IA{% endblock %}
+
+{% block content %}
+<p class="crumb"><a href="/inversion-institucional">← Inversión institucional</a></p>
+<h1>Emisores en común: aseguradoras y fondos mutuos</h1>
+<p class="subtitle">
+    Instrumentos que están a la vez en la renta fija de las compañías de seguros
+    (período {{ per_seg or '—' }}) y en la cartera de los fondos mutuos (período {{ per_ffm or '—' }}),
+    cruzados por nemotécnico y agrupados por emisor.
+    <br><span class="lead">Se cuentan compañías, fondos e instrumentos, no montos: la renta fija de
+    seguros viene en valor nominal y en distintas monedas. Las AFP no entran en el cruce porque la
+    Superintendencia publica su cartera agregada por categoría, sin instrumento.</span>
+</p>
+
+{% if not rows %}
+<p class="loading">Sin instrumentos en común para los períodos cargados.</p>
+{% else %}
+<div class="table-scroll">
+<table class="eeff-table">
+    <thead><tr>
+        <th>Emisor</th><th style="text-align:right">Instrumentos en común</th>
+        <th style="text-align:right">Compañías de seguros</th><th style="text-align:right">Fondos mutuos</th>
+    </tr></thead>
+    <tbody>
+    {% for r in rows %}
+    <tr>
+        <td>{{ r.emisor or 'Sin nombre en las fuentes' }}<br><span class="lead">RUT {{ r.rut }}{% if r.tipo %} · {{ r.tipo }}{% endif %}</span></td>
+        <td style="text-align:right">{{ r.instrumentos|num }}</td>
+        <td style="text-align:right">{{ r.cias_seg|num }}</td>
+        <td style="text-align:right">{{ r.fondos_ffm|num }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+<p class="lead">Las compañías y fondos se suman por instrumento: una compañía con dos bonos del mismo emisor cuenta dos veces.</p>
+{% endif %}
+{% endblock %}
