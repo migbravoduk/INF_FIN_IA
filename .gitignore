@@ -21,6 +21,9 @@ __pycache__/
 build/
 dist/
 *.spec
+# Actualizar_Datos.exe se genera con build_actualizador.py y vive en la raíz
+# (necesita ver data/, config/ y .env), pero no se versiona.
+*.exe
 
 # macOS
 .DS_Store
