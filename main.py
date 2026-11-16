@@ -1306,12 +1306,33 @@ def fetch_sp_precios(date_val, history):
     import time
     try:
         total_inserted = 0
+        fallidas = []
         with Database() as db:
+            if history:
+                # Reanudable: los días ya cargados no se vuelven a pedir.
+                ya = {str(r[0]) for r in db.conn.execute(
+                    "SELECT DISTINCT date FROM sp_instrument_prices").fetchall()}
+                dates_to_fetch = [d for d in dates_to_fetch if d not in ya]
+                console.print(f"[dim]{len(dates_to_fetch)} fechas pendientes (las ya cargadas se omiten).[/]")
             for idx, d_str in enumerate(dates_to_fetch):
                 if history and idx > 0 and idx % 20 == 0:
                     console.print(f"[dim]Procesados {idx}/{len(dates_to_fetch)} días...[/]")
-                
-                records = collector.fetch_daily_prices(d_str)
+
+                # Un timeout aislado de la SP no debe abortar un backfill de años: se
+                # reintenta dos veces y, si sigue fallando, se anota y se continúa.
+                records = None
+                for intento in range(3):
+                    try:
+                        records = collector.fetch_daily_prices(d_str)
+                        break
+                    except Exception as e:
+                        if not history:
+                            raise
+                        if intento == 2:
+                            fallidas.append(d_str)
+                            console.print(f"[yellow]⚠ {d_str}: {e} — se omite[/]")
+                        else:
+                            time.sleep(3)
                 if records:
                     inserted = db.insert_sp_instrument_prices(records)
                     total_inserted += inserted
@@ -1323,6 +1344,9 @@ def fetch_sp_precios(date_val, history):
 
         console.print(f"\n[bold green]✅ Ingesta de precios finalizada con éxito![/]")
         console.print(f"  • Total registros de instrumentos ingresados: [bold]{total_inserted:,}[/]")
+        if fallidas:
+            console.print(f"  • [yellow]{len(fallidas)} fechas con error (reintentar más tarde):[/] "
+                          f"{', '.join(fallidas[:20])}{' …' if len(fallidas) > 20 else ''}")
 
     except Exception as e:
         console.print(f"\n[bold red]❌ Error durante la ingesta de precios SP:[/] {e}")
