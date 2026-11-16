@@ -62,10 +62,18 @@ Para diarias hay un tope `MAX_DAILY_BACKFILL=10` (evita loops largos).
 anual (15-feb), SP diario (L–V 18:30), SP mensual (día 15) y un **catch-up horario** (L–V 8–20h)
 que actúa de red de seguridad. Se arranca embebido con `main.py serve --with-scheduler`.
 
-### d) App de actualización — `actualizar.py` (→ `Actualizar_Fuentes.exe`)
-**Ya existe una app interactiva** (TUI Rich, compilada a .exe con `Actualizar_Fuentes.spec`) que:
-muestra la tabla de frescura (último en BD / siguiente esperado / al día vs. pendiente),
-y ejecuta el catch-up por fuente o completo. Es exactamente el aplicativo que describes.
+### d) App de actualización — `actualizar.py` (→ `Actualizar_Datos.exe`)
+**Ya existe una app interactiva** (TUI Rich, compilada a .exe con `build_actualizador.py`) que
+muestra la tabla de frescura (último en BD / siguiente esperado / al día vs. pendiente) y
+ejecuta el catch-up por fuente o completo. Cubre las **9 fuentes con sonda**, incluida la
+cartera de seguros (Circular 1.835, `kind='cmf_cartera'`, una sonda por ramo).
+
+`--cartera-seguros` es un modo aparte y complementario: en vez de ir al período esperado,
+pregunta a la CMF qué períodos publicó y rellena todos los huecos históricos. Vive fuera de la
+sonda porque `probe_all()` es de solo lectura y no toca la red.
+
+Modo desatendido para el Programador de tareas: `Actualizar_Datos.exe --todo`
+(también `--status`, `--catchup`, `--source <kind>`, `--cartera-seguros`).
 
 ---
 

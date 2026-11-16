@@ -1,19 +1,23 @@
 # Hoja de Ruta (Roadmap)
 
-> Situación actual y plan. Última actualización: julio 2026 (rama `feature/web-api-skeleton`).
+> Situación actual y plan. Última actualización: agosto 2026 (rama `feature/web-api-skeleton`).
 
 ---
 
 ## 1. Situación actual (lo que ya existe)
 
-### Datos (DuckDB, ~3,06M filas, ~168 MB)
-- **BCCh macro** (`observations`): 1975–2026, ~59k filas (PIB, IPC, TPM, UF, IVP, UTM, IMACEC, USD/CLP, cobre, etc.) + **expectativas F089** (EEE mensual + EOF quincenal). Parser decimal corregido; datos validados.
+### Datos (DuckDB, ~12,9M filas, ~700 MB)
+- **BCCh macro** (`observations`): 1975–2026, ~64k filas (PIB, IPC, TPM, UF, IVP, UTM, IMACEC, USD/CLP, cobre, etc.) + **expectativas F089** (EEE mensual + EOF quincenal). Parser decimal corregido; datos validados.
 - **CMF empresas** (`cmf_financial_statements`): ~1,5M filas, **45 períodos (201503→202603)** = 10 cierres anuales + trimestres. Orden IFRS verificado.
-- **CMF bancos** (`cmf_bank_statements`): ~1,8M filas, balances/resultados mensuales con desglose por moneda, **2019→hoy** (el plan de cuentas CMF cambió en 2022: la serie evolutiva empalma por nombre y homologa unidades millones→pesos).
-- **SP pensiones**: cuotas (~207k, 2008+), precios (~96k), **cartera (~341k, 133 meses 2015-01→2026-01)** con `section`/`row_order`.
+- **CMF bancos** (`cmf_bank_statements`): ~1,86M filas, balances/resultados mensuales con desglose por moneda, **2019→hoy** (el plan de cuentas CMF cambió en 2022: la serie evolutiva empalma por nombre y homologa unidades millones→pesos).
+- **CMF seguros** (`cmf_insurer_statements`): ~581k filas, FECU trimestral **vida + generales**, 2015Q1→2026Q1, plan de cuentas propio (Circulares 2022/2050), en miles de CLP.
+- **CMF intermediarios** (`cmf_broker_statements`): ~210k filas, corredores de bolsa + agentes de valores, 2015Q1→2026Q1.
+- **Cartera de seguros (Circular 1.835)**: control B.8 (~72k filas) + **renta fija B.1 (~7,9M filas, la tabla más grande del repo)**, mensual 2020-01→2026-06, ambos ramos. Descarga automática.
+- **SP pensiones**: cuotas (~209k, 2008+), precios (~120k, tramo 2026), **cartera (~341k, 133 meses 2015-01→2026-01)** con `section`/`row_order`.
 
 ### Capa web (FastAPI + Jinja2 + HTMX + Plotly) — `iniciar_web.bat` / `main.py serve`
 - **Panel** `/`: KPIs multi-fuente (PIB/IMACEC var, IPC, USD/CLP; top-5 bancos; rentabilidad 12m AFP + líder por rentabilidad y patrimonio; mercado) + gráficos UF y TPM.
+- **Datos Banco Central** `/banco-central`: explorador del macro. Catálogo de las 52 series con cobertura y último dato (dato observado y expectativas EEE/EOF separadas), gráfico por serie con rangos, y comparador de dos series con eje compartido solo si son de la misma magnitud. Variación en puntos porcentuales cuando la serie ya es una tasa.
 - **EEFF** `/eeff`: por empresa/período. Reseña del negocio, ratios (ROE/ROA/márgenes/liquidez/deuda), orden IFRS, subsecciones del balance, totales en negrita, gráfico de partidas (con desacumular) y de evolución de ratios.
 - **Evolución** `/evolucion`: matriz de un estado × períodos (cierres anuales 5/10, mismo trimestre 5/10 años, 8 trimestres).
 - **Comparar** `/comparar`: partida base 100 entre empresas + tabla de ratios.
@@ -22,8 +26,14 @@
 - **Banca** `/banca`: estados con desglose por moneda + gráfico de cuenta + evolución por moneda.
 - **AFP** `/afp`: evolución cuota/patrimonio/participación, comparar fondos/AFP, nominal vs real, cartera por categoría (nemotécnicos traducidos con glosario oficial SP), rentabilidad neta de comisiones (con umbral de fondo mínimo).
 - **Fondos** `/fondos`: por fondo — retornos del valor cuota multi-horizonte (1M→10A) por AFP + composición de cartera por AFP (secciones apiladas). Selector dinámico desde la BD, preparado para los fondos generacionales.
+- **Hubs por clasificación de entidad**: `/eeff` (corporativos, seguros, intermediarios, AGF), `/proyecciones` (dos motores: híbrido para corporativos/AGF, SARIMAX para financieras) e `/inversion-institucional` (cartera de seguros, AFP, fondos).
+- **Cartera de seguros** `/seguros/cartera`: asset allocation mensual (panel del período, deriva histórica, comparación entre compañías con HHI, concentración por emisor), con la codificación oficial CMF.
 - **Reseñas de empresas**: `config/company_profiles.yaml` (101 curadas) + inferencia por tipo (520) = 70% cobertura; sin info → nombre como placeholder.
 - Export estático (`web-preview`, `eeff-export`) en `preview/`.
+
+### Actualización de datos
+- **`Actualizar_Datos.exe`** (`actualizar.py`, compilado con `build_actualizador.py`): menú de frescura por fuente + modo desatendido (`--todo`, `--catchup`, `--source`, `--status`).
+- **Catch-up por frescura completo**: las **9 fuentes** tienen sonda, incluida la cartera 1.835. El job horario del scheduler las cubre todas.
 
 ---
 
@@ -62,7 +72,9 @@
 
 ## 3. Backfills/datos pendientes
 - [x] Cartera SP: backfill completo 2015-01 → 2026-01 (133 meses, ~341k filas, 132/132 disponibles en la SP, `section` resuelta en todos los años; el esquema pasó de 8 a 9 secciones en 2018 con los activos alternativos).
-- [ ] Precios SP: nivelado hasta ~2026-06 (tope de 10 días hábiles por corrida del catch-up).
+- [ ] **Precios SP: solo está cargado 2026-01 → hoy.** El histórico nunca se backfilleó (el catch-up topa en 10 días hábiles por corrida); se reconstruye con `fetch-sp-precios --history`.
+- [ ] **FECU anual de seguros**: `report_freq='anual'` (diciembre auditado) está disponible en la CMF pero no cargado; solo se ingesta el trimestral.
+- [ ] **Renta fija B.1: montos de valoración de mercado sin reconciliar.** Se cargan solo los campos que validan al 100% (identificación + valor nominal, offsets 0-154). Cerrarlo requiere el catálogo de descriptores (archivo B.9).
 - [x] Bancos: historia mensual **2019 → hoy** (backfill jul-2026: 1.920 reportes, 0 fallas, ~977k filas nuevas; 16 bancos × 12 meses/año). La serie evolutiva empalma el cambio de plan de cuentas 2022 (nombres + unidades millones→pesos). Extensible con `fetch-banks --history --year-start N`.
 
 Ver **[Issues-Resueltos](Issues-Resueltos)** para el registro histórico.
