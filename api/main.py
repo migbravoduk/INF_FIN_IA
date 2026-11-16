@@ -20,7 +20,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-from api.routers import macro, cmf, banks, sp, dashboard_kpi, views, productos, api_v1
+from api.routers import macro, cmf, banks, sp, dashboard_kpi, views, productos, api_v1, curvas
 from config.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -60,6 +60,7 @@ app.include_router(api_v1.router, prefix="/api/v1", tags=["v1"])
 # Vistas HTML (dashboard)
 app.include_router(views.router, tags=["views"])
 app.include_router(productos.router, tags=["productos"])
+app.include_router(curvas.router, tags=["curvas"])
 
 # Estáticos
 STATIC_DIR = Path(__file__).parent / "static"

@@ -14,7 +14,7 @@ fondos de pensiones) y una web local para consultarlos.
 
 | Fuente | Datos | Frecuencia |
 |---|---|---|
-| Banco Central (API BDE) | Macro 1975→hoy, expectativas EEE/EOF, curva soberana, tasas de captación, IPSA/IGPA e índices globales | diaria / mensual / trimestral |
+| Banco Central (API BDE) | Macro 1975→hoy, expectativas EEE/EOF, bonos soberanos, swaps cámara, compensación inflacionaria, depósitos, tasas de captación, IPSA/IGPA e índices globales | diaria / mensual / trimestral |
 | CMF | EEFF corporativos IFRS, bancos (con desglose por moneda), seguros e intermediarios (FECU) | mensual / trimestral |
 | CMF · Circular 1.835 | Cartera de inversiones de seguros: composición (B.8) y renta fija instrumento a instrumento (B.1) | mensual |
 | CMF · fondos mutuos | Valor cuota, patrimonio y partícipes por serie; cartera; comisiones; rentabilidades oficiales | mensual |
@@ -28,7 +28,11 @@ Encima de las fuentes se construyen:
   su administradora, categoría y clase de inversionista.
 - **Métricas** (`fact_producto_metricas`): rentabilidad nominal y real, posición y consistencia
   en la categoría, frente a un depósito a plazo, volatilidad, caída máxima, Sharpe, escala de
-  riesgo 1–7, costo anual y en pesos a 10 años, patrimonio, flujo neto y partícipes.
+  riesgo 1–7, costo anual y en pesos a 10 años, patrimonio, flujo neto, partícipes y, en renta
+  fija, duración efectiva.
+- **Curvas de tasas** (`curva_ajuste`): swap y soberana, nominal y real, ajustadas a diario desde
+  2005 con Nelson-Siegel-Svensson; de ellas salen la inflación implícita, la TPM que descuenta el
+  mercado y el spread de los depósitos bancarios.
 - **Controles de calidad** (`dq_results`): unicidad, identidad contable, completitud,
   continuidad, rangos y cruces entre tablas.
 
@@ -47,7 +51,7 @@ Base local: `data/finanzas_chile.duckdb` (DuckDB, no versionada): **~15,8 millon
 | `cmf_mutual_fund_quota_values` | 308.973 | 2018-01 → 2026-10 (corte mensual) |
 | `cmf_broker_statements` | 213.325 | 2015-03 → 2026-06 |
 | `sp_quota_values` | 212.600 | 2008-04 → 2026-11 |
-| `observations` (61 series BCCh) | 85.068 | 1975 → 2026-11 |
+| `observations` (97 series BCCh) | 282.775 | 1975 → 2026-11 |
 | `cmf_insurer_portfolio_control` | 75.045 | 2020-01 → 2026-09 |
 | `cmf_mutual_fund_fees` | 65.897 | 2024-07 → 2026-09 |
 | `cmf_mutual_fund_returns` | 3.963 | cortes 2026-03 y 2026-06 |
@@ -126,6 +130,7 @@ o doble clic en `iniciar_web.bat`.
 | Ruta | Contenido |
 |---|---|
 | `/` | Panel multi-fuente y estado de la calidad de datos |
+| `/curvas` | Curvas de tasas, inflación implícita, TPM implícita frente a encuestas, spread bancario |
 | `/productos` | Explorador de fondos mutuos y AFP por categoría y clase de inversionista |
 | `/producto/{id}` | Ficha: rentabilidad, riesgo, costo, flujos, cartera y comparación con su categoría |
 | `/productos/comparar` | Hasta 4 productos lado a lado, con traslape de cartera |
@@ -165,6 +170,7 @@ scheduler/jobs.py     catch-up y scheduler
 db/database.py        fachada Database; métodos por dominio en db/repos/
 db/migrations.py      tablas derivadas y vistas v_* (numeradas)
 db/entities.py        maestra de entidades       db/products.py  productos y métricas
+db/curves.py          curvas de tasas (NSS)
 db/quality.py         controles de calidad       db/cross.py     cruce de carteras
 api/                  FastAPI: routers/web/* (HTML por dominio), productos, api_v1
 models/               proyecciones de EEFF (híbrido + SARIMAX) y backtest

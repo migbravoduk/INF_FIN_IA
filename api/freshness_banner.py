@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 # Prefijo de ruta → fuentes que alimentan esa vista (el primero que calza, en orden).
 ROUTE_SOURCES: list[tuple[str, list[str]]] = [
     ("/banco-central", ["bcentral"]),
+    ("/curvas", ["bcentral"]),
     ("/eeff/seguros", ["cmf_insurer"]),
     ("/eeff/intermediarios", ["cmf_broker"]),
     ("/proyecciones/bancos", ["cmf_bank"]),

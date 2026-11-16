@@ -98,7 +98,11 @@ INSERT INTO dim_dataset VALUES
   'Remuneración y gasto operacional ya están dentro del valor cuota; solo la comisión de colocación se cobra aparte.'),
  ('cmf_mutual_fund_returns', 'Rentabilidades oficiales de fondos mutuos', 'CMF · Comparador de rentabilidad',
   'https://www.cmfchile.cl', 'foto por corte (trimestral)', 'porcentaje', NULL, 'fecha, fund_run, series',
-  'cmf_fm_comparador', '3, 5 y 10 años anualizados; real descuenta UF.');
+  'cmf_fm_comparador', '3, 5 y 10 años anualizados; real descuenta UF.'),
+ ('curva_ajuste', 'Curvas de tasas ajustadas (Nelson-Siegel-Svensson)', 'Derivada de series BCCh (swaps, bonos, TIB)',
+  'https://si3.bcentral.cl/siete', 'diaria', 'parámetros en tasa continua decimal; plazos en años', 'CLP / UF',
+  'fecha, curva', 'bcentral',
+  'Se recalcula completa con db/curves.rebuild_curves. Tasas par ajustadas como cero cupón (aproximación declarada).');
 """
 
 # ------------------------------------------------------------------
@@ -256,6 +260,34 @@ ALTER TABLE fact_producto_metricas ADD COLUMN IF NOT EXISTS serie_anomala BOOLEA
 """
 
 
+# ------------------------------------------------------------------
+# 009 · curvas de tasas: parámetros Nelson-Siegel(-Svensson) por fecha y curva (db/curves.py)
+# Se reescribe completa en cada reconstrucción: sin PK/índices (DuckDB, ver CONTEXTO.md).
+# ------------------------------------------------------------------
+M009 = """
+CREATE TABLE IF NOT EXISTS curva_ajuste (
+    fecha     DATE NOT NULL,
+    curva     VARCHAR NOT NULL,   -- swap_clp | swap_uf | bono_clp | bono_uf
+    modelo    VARCHAR,            -- nss (Svensson) | ns (Nelson-Siegel)
+    b0 DOUBLE, b1 DOUBLE, b2 DOUBLE, b3 DOUBLE,
+    tau1 DOUBLE, tau2 DOUBLE,     -- años
+    n_puntos  INTEGER,
+    rmse_pb   DOUBLE,             -- error de ajuste, puntos base
+    plazo_min DOUBLE, plazo_max DOUBLE
+);
+"""
+
+
+# ------------------------------------------------------------------
+# 010 · duración efectiva de fondos de renta fija (regresión sobre cambios de tasas)
+# ------------------------------------------------------------------
+M010 = """
+ALTER TABLE fact_producto_metricas ADD COLUMN IF NOT EXISTS duracion_efectiva DOUBLE;
+ALTER TABLE fact_producto_metricas ADD COLUMN IF NOT EXISTS duracion_ee DOUBLE;
+ALTER TABLE fact_producto_metricas ADD COLUMN IF NOT EXISTS duracion_factor VARCHAR;
+"""
+
+
 MIGRATIONS: list[tuple[str, str, str]] = [
     ("001", "dq_results: controles de calidad", M001),
     ("002", "dim_dataset: metadatos de unidades, frecuencia y fuente", M002),
@@ -265,6 +297,8 @@ MIGRATIONS: list[tuple[str, str, str]] = [
     ("006", "v_mutual_fund_holdings: cartera FFMM tipada", M006),
     ("007", "fact_producto_metricas.exceso_deposito_12m", M007),
     ("008", "fact_producto_metricas.serie_anomala", M008),
+    ("009", "curva_ajuste: curvas de tasas Nelson-Siegel-Svensson", M009),
+    ("010", "fact_producto_metricas.duracion_efectiva", M010),
 ]
 
 # Migraciones que se reaplican siempre (contenido de referencia o vistas): son idempotentes.

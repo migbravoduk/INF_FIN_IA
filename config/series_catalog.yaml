@@ -380,6 +380,7 @@ bcentral:
     frequency: daily
     unit: porcentaje_anual
     description: Tasa de interés mercado secundario de los bonos BCP a 5 años
+    publish_lag_days: 3   # se publica al día hábil siguiente
 
   - id: F022.BCLP.TIS.AN10.NO.Z.D
     name: Tasa BCP 10 años (curva soberana pesos)
@@ -387,6 +388,7 @@ bcentral:
     frequency: daily
     unit: porcentaje_anual
     description: Tasa de interés mercado secundario de los bonos BCP a 10 años
+    publish_lag_days: 3   # se publica al día hábil siguiente
 
   - id: F022.BUF.TIS.AN05.UF.Z.D
     name: Tasa BCU 5 años (curva soberana UF)
@@ -394,6 +396,7 @@ bcentral:
     frequency: daily
     unit: porcentaje_anual
     description: Tasa de interés mercado secundario de los bonos BCU a 5 años
+    publish_lag_days: 3   # se publica al día hábil siguiente
 
   - id: F022.BUF.TIS.AN10.UF.Z.D
     name: Tasa BCU 10 años (curva soberana UF)
@@ -401,6 +404,7 @@ bcentral:
     frequency: daily
     unit: porcentaje_anual
     description: Tasa de interés mercado secundario de los bonos BCU a 10 años
+    publish_lag_days: 3   # se publica al día hábil siguiente
 
   - id: F022.COM.TIP.Z.NO.Z.M
     name: Tasa comercial promedio
@@ -456,6 +460,7 @@ bcentral:
     frequency: daily
     unit: porcentaje_anual
     description: Tasa de interés promedio de captaciones de 30 a 89 días, en pesos
+    publish_lag_days: 3   # se publica al día hábil siguiente
 
   - id: F022.BCLP.TIS.AN02.NO.Z.D
     name: Tasa BCP 2 años (curva soberana pesos)
@@ -463,6 +468,7 @@ bcentral:
     frequency: daily
     unit: porcentaje_anual
     description: Tasa de mercado secundario de bonos del BCCh en pesos a 2 años
+    publish_lag_days: 3   # se publica al día hábil siguiente
 
   - id: F022.BUF.TIS.AN02.UF.Z.D
     name: Tasa BCU 2 años (curva soberana UF)
@@ -470,6 +476,7 @@ bcentral:
     frequency: daily
     unit: porcentaje_anual
     description: Tasa de mercado secundario de bonos en UF a 2 años (BCU, BTU)
+    publish_lag_days: 3   # se publica al día hábil siguiente
 
   - id: F013.IBC.IND.N.7.LAC.CL.CLP.BLO.M
     name: IPSA (mensual)
@@ -502,3 +509,270 @@ bcentral:
     unit: indice
     publish_lag_days: 50
     description: Índice de bolsa Nasdaq, EE.UU., en dólares
+
+  # --- Curvas: swaps, bonos largos UF, compensación inflacionaria, depósitos (diarias) ---
+  # Insumo de db/curves.py (Nelson-Siegel-Svensson diario). Tasas base 365, % anual.
+  - id: F022.TIB.TIP.D001.NO.Z.D
+    name: TIB a 1 día (interbancaria)
+    category: curva_corta
+    frequency: daily
+    unit: porcentaje_anual
+    description: Tasa promedio transada en el mercado interbancario, 1 día
+
+  - id: F022.SPC.TPR.D090.NO.Z.D
+    name: Swap cámara pesos 90 días
+    category: curva_swap
+    frequency: daily
+    unit: porcentaje_anual
+    description: Swap promedio cámara nominal 90 días
+
+  - id: F022.SPC.TPR.D180.NO.Z.D
+    name: Swap cámara pesos 180 días
+    category: curva_swap
+    frequency: daily
+    unit: porcentaje_anual
+    description: Swap promedio cámara nominal 180 días
+
+  - id: F022.SPC.TPR.D360.NO.Z.D
+    name: Swap cámara pesos 360 días
+    category: curva_swap
+    frequency: daily
+    unit: porcentaje_anual
+    description: Swap promedio cámara nominal 360 días
+
+  - id: F022.SPC.TIN.AN02.NO.Z.D
+    name: Swap cámara pesos 2 años
+    category: curva_swap
+    frequency: daily
+    unit: porcentaje_anual
+    description: Swap promedio cámara (SPC) en pesos 2 años
+
+  - id: F022.SPC.TIN.AN03.NO.Z.D
+    name: Swap cámara pesos 3 años
+    category: curva_swap
+    frequency: daily
+    unit: porcentaje_anual
+    description: Swap promedio cámara (SPC) en pesos 3 años
+
+  - id: F022.SPC.TIN.AN04.NO.Z.D
+    name: Swap cámara pesos 4 años
+    category: curva_swap
+    frequency: daily
+    unit: porcentaje_anual
+    description: Swap promedio cámara (SPC) en pesos 4 años
+
+  - id: F022.SPC.TIN.AN05.NO.Z.D
+    name: Swap cámara pesos 5 años
+    category: curva_swap
+    frequency: daily
+    unit: porcentaje_anual
+    description: Swap promedio cámara (SPC) en pesos 5 años
+
+  - id: F022.SPC.TIN.AN10.NO.Z.D
+    name: Swap cámara pesos 10 años
+    category: curva_swap
+    frequency: daily
+    unit: porcentaje_anual
+    description: Swap promedio cámara (SPC) en pesos 10 años
+
+  - id: F022.SPC.TIN.AN01.UF.Z.D
+    name: Swap cámara UF 1 años
+    category: curva_swap
+    frequency: daily
+    unit: porcentaje_anual
+    description: Swap promedio cámara (SPC) en UF 1 años
+
+  - id: F022.SPC.TIN.AN02.UF.Z.D
+    name: Swap cámara UF 2 años
+    category: curva_swap
+    frequency: daily
+    unit: porcentaje_anual
+    description: Swap promedio cámara (SPC) en UF 2 años
+
+  - id: F022.SPC.TIN.AN03.UF.Z.D
+    name: Swap cámara UF 3 años
+    category: curva_swap
+    frequency: daily
+    unit: porcentaje_anual
+    description: Swap promedio cámara (SPC) en UF 3 años
+
+  - id: F022.SPC.TIN.AN04.UF.Z.D
+    name: Swap cámara UF 4 años
+    category: curva_swap
+    frequency: daily
+    unit: porcentaje_anual
+    description: Swap promedio cámara (SPC) en UF 4 años
+
+  - id: F022.SPC.TIN.AN05.UF.Z.D
+    name: Swap cámara UF 5 años
+    category: curva_swap
+    frequency: daily
+    unit: porcentaje_anual
+    description: Swap promedio cámara (SPC) en UF 5 años
+
+  - id: F022.SPC.TIN.AN10.UF.Z.D
+    name: Swap cámara UF 10 años
+    category: curva_swap
+    frequency: daily
+    unit: porcentaje_anual
+    description: Swap promedio cámara (SPC) en UF 10 años
+
+  - id: F022.SPC.TIN.AN20.UF.Z.D
+    name: Swap cámara UF 20 años
+    category: curva_swap
+    frequency: daily
+    unit: porcentaje_anual
+    description: Swap promedio cámara (SPC) en UF 20 años
+
+  - id: F022.BUF.TIS.AN20.UF.Z.D
+    name: Tasa bonos UF 20 años (curva soberana UF)
+    category: curva_soberana
+    frequency: daily
+    unit: porcentaje_anual
+    description: Tasa mercado secundario bonos en UF a 20 años (BCU, BTU)
+    publish_lag_days: 120   # transa esporádicamente (último dato puede tener meses)
+
+  - id: F022.BUF.TIS.AN30.UF.Z.D
+    name: Tasa bonos UF 30 años (curva soberana UF)
+    category: curva_soberana
+    frequency: daily
+    unit: porcentaje_anual
+    description: Tasa mercado secundario bonos en UF a 30 años (BCU)
+    publish_lag_days: 30   # transa esporádicamente
+
+  - id: F022.BOSP.TAS.AN02.Z.Z.D
+    name: Compensación inflacionaria bonos 2 años
+    category: compensacion_inflacionaria
+    frequency: daily
+    unit: porcentaje_anual
+    description: Breakeven spot bonos BCCh 2 años (BCCh)
+    publish_lag_days: 5   # el BCCh la publica con 2-3 días hábiles de rezago
+
+  - id: F022.BOSP.TAS.AN05.Z.Z.D
+    name: Compensación inflacionaria bonos 5 años
+    category: compensacion_inflacionaria
+    frequency: daily
+    unit: porcentaje_anual
+    description: Breakeven spot bonos BCCh 5 años (BCCh)
+    publish_lag_days: 5   # el BCCh la publica con 2-3 días hábiles de rezago
+
+  - id: F022.BOSP.TAS.AN10.Z.Z.D
+    name: Compensación inflacionaria bonos 10 años
+    category: compensacion_inflacionaria
+    frequency: daily
+    unit: porcentaje_anual
+    description: Breakeven spot bonos BCCh 10 años (BCCh)
+    publish_lag_days: 5   # el BCCh la publica con 2-3 días hábiles de rezago
+
+  - id: F022.BOFW.TAS.E3X2.Z.Z.D
+    name: Compensación inflacionaria bonos forward 3 en 2
+    category: compensacion_inflacionaria
+    frequency: daily
+    unit: porcentaje_anual
+    description: Breakeven forward 3 en 2 con bonos BCCh (BCCh)
+    publish_lag_days: 5   # el BCCh la publica con 2-3 días hábiles de rezago
+
+  - id: F022.BOFW.TAS.E5X5.Z.Z.D
+    name: Compensación inflacionaria bonos forward 5 en 5
+    category: compensacion_inflacionaria
+    frequency: daily
+    unit: porcentaje_anual
+    description: Breakeven forward 5 en 5 con bonos BCCh (BCCh)
+    publish_lag_days: 5   # el BCCh la publica con 2-3 días hábiles de rezago
+
+  - id: F022.SWSP.TAS.AN01.Z.Z.D
+    name: Compensación inflacionaria swaps 1 años
+    category: compensacion_inflacionaria
+    frequency: daily
+    unit: porcentaje_anual
+    description: Breakeven spot swaps promedio cámara 1 años (BCCh)
+
+  - id: F022.SWSP.TAS.AN02.Z.Z.D
+    name: Compensación inflacionaria swaps 2 años
+    category: compensacion_inflacionaria
+    frequency: daily
+    unit: porcentaje_anual
+    description: Breakeven spot swaps promedio cámara 2 años (BCCh)
+
+  - id: F022.SWSP.TAS.AN05.Z.Z.D
+    name: Compensación inflacionaria swaps 5 años
+    category: compensacion_inflacionaria
+    frequency: daily
+    unit: porcentaje_anual
+    description: Breakeven spot swaps promedio cámara 5 años (BCCh)
+
+  - id: F022.SWSP.TAS.AN10.Z.Z.D
+    name: Compensación inflacionaria swaps 10 años
+    category: compensacion_inflacionaria
+    frequency: daily
+    unit: porcentaje_anual
+    description: Breakeven spot swaps promedio cámara 10 años (BCCh)
+
+  - id: F022.SWFW.TAS.E1X1.Z.Z.D
+    name: Compensación inflacionaria swaps forward 1 en 1
+    category: compensacion_inflacionaria
+    frequency: daily
+    unit: porcentaje_anual
+    description: Breakeven forward 1 en 1 con swaps promedio cámara (BCCh)
+
+  - id: F022.SWFW.TAS.E3X2.Z.Z.D
+    name: Compensación inflacionaria swaps forward 3 en 2
+    category: compensacion_inflacionaria
+    frequency: daily
+    unit: porcentaje_anual
+    description: Breakeven forward 3 en 2 con swaps promedio cámara (BCCh)
+
+  - id: F022.SWFW.TAS.E5X5.Z.Z.D
+    name: Compensación inflacionaria swaps forward 5 en 5
+    category: compensacion_inflacionaria
+    frequency: daily
+    unit: porcentaje_anual
+    description: Breakeven forward 5 en 5 con swaps promedio cámara (BCCh)
+
+  - id: F022.TDB.TIS.D030.NO.Z.D
+    name: Depósitos bancarios bolsa pesos 30 días
+    category: curva_bancaria
+    frequency: daily
+    unit: porcentaje_anual
+    description: Tasa mercado secundario de depósitos bancarios en bolsa, pesos 30 días
+    publish_lag_days: 3   # se publica al día hábil siguiente
+
+  - id: F022.TDB.TIS.D090.NO.Z.D
+    name: Depósitos bancarios bolsa pesos 90 días
+    category: curva_bancaria
+    frequency: daily
+    unit: porcentaje_anual
+    description: Tasa mercado secundario de depósitos bancarios en bolsa, pesos 90 días
+    publish_lag_days: 3   # se publica al día hábil siguiente
+
+  - id: F022.TDB.TIS.D180.NO.Z.D
+    name: Depósitos bancarios bolsa pesos 180 días
+    category: curva_bancaria
+    frequency: daily
+    unit: porcentaje_anual
+    description: Tasa mercado secundario de depósitos bancarios en bolsa, pesos 180 días
+    publish_lag_days: 3   # se publica al día hábil siguiente
+
+  - id: F022.TDB.TIS.AN01.NO.Z.D
+    name: Depósitos bancarios bolsa pesos 1 año
+    category: curva_bancaria
+    frequency: daily
+    unit: porcentaje_anual
+    description: Tasa mercado secundario de depósitos bancarios en bolsa, pesos 1 año
+    publish_lag_days: 3   # se publica al día hábil siguiente
+
+  - id: F022.TDB.TIS.D090.UF.Z.D
+    name: Depósitos bancarios bolsa UF 90 días
+    category: curva_bancaria
+    frequency: daily
+    unit: porcentaje_anual
+    description: Tasa mercado secundario de depósitos bancarios en bolsa, UF 90 días
+    publish_lag_days: 3   # se publica al día hábil siguiente
+
+  - id: F022.TDB.TIS.AN01.UF.Z.D
+    name: Depósitos bancarios bolsa UF 1 año
+    category: curva_bancaria
+    frequency: daily
+    unit: porcentaje_anual
+    description: Tasa mercado secundario de depósitos bancarios en bolsa, UF 1 año
+    publish_lag_days: 3   # se publica al día hábil siguiente

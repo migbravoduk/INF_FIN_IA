@@ -50,6 +50,12 @@ def rebuild_all(db) -> dict:
     out = {"entidades": rebuild_entities(db)}
     out["productos"] = rebuild_products(db)
     out["proveedores"] = load_providers(db)
+    from db.curves import rebuild_curves
+    try:
+        out["curvas"] = rebuild_curves(db)
+    except Exception as e:  # una falla en las curvas no debe frenar productos ni métricas
+        logger.error(f"Curvas: {e}")
+        out["curvas"] = 0
     out["metricas"] = compute_metrics(db)
     return out
 
@@ -193,6 +199,46 @@ def _ann(r: float | None, months: int) -> float | None:
     return None if r is None or r <= -1 else (1 + r) ** (12 / months) - 1
 
 
+# Categorías de renta fija a las que se les estima duración (fondos mutuos de deuda y los
+# fondos D y E de pensiones, mayoritariamente renta fija).
+_RENTA_FIJA = r"(?i)deuda|^fondo [de]$"
+
+
+def _duracion(r: pd.Series, infl: pd.Series, factor: pd.DataFrame) -> tuple:
+    """
+    Duración efectiva por regresión de los últimos 60 meses (mínimo 24):
+
+        r_mes = a + c · inflación_UF_mes + b · Δtasa_mes,    duración = −b
+
+    Δtasa = desplazamiento paralelo de la curva swap en pesos o en UF (db.curves); se queda el
+    factor con mayor |t|. La inflación entra como control porque los bonos en UF devengan la
+    UF además de su tasa. Devuelve (duración en años, error estándar, 'CLP'|'UF') o Nones.
+    """
+    mejor = (None, None, None, 0.0)
+    for col, nombre in (("clp", "CLP"), ("uf", "UF")):
+        if col not in factor:
+            continue
+        d = pd.concat([r.rename("r"), infl.rename("i"), factor[col].rename("f")], axis=1).dropna().iloc[-60:]
+        if len(d) < 24 or d["f"].std() == 0:
+            continue
+        X = np.column_stack([np.ones(len(d)), d["i"].values, d["f"].values])
+        beta, *_ = np.linalg.lstsq(X, d["r"].values, rcond=None)
+        res = d["r"].values - X @ beta
+        s2 = res @ res / (len(d) - 3)
+        try:
+            ee = math.sqrt(s2 * np.linalg.inv(X.T @ X)[2, 2])
+        except np.linalg.LinAlgError:
+            continue
+        t = abs(beta[2]) / ee if ee > 0 else 0.0
+        if t > mejor[3]:
+            mejor = (float(-beta[2]), float(ee), nombre, t)
+    # Duración significativamente negativa = la regresión captura otra cosa (tipo de cambio,
+    # crédito, derivados), no sensibilidad a tasas: no se informa.
+    if mejor[0] is not None and mejor[0] < -2 * mejor[1]:
+        return None, None, None
+    return mejor[:3]
+
+
 def _drawdown(v: pd.Series) -> tuple[float | None, int | None]:
     if len(v) < 2:
         return None, None
@@ -228,7 +274,7 @@ def _compute_metrics(db, panel, fecha_corte=None) -> int:
         return 0
     uf, tpm_m = _uf_tpm(db)
     prods = db.conn.execute(
-        "SELECT producto_id, tipo, categoria, clase_inversionista FROM dim_producto").fetchdf()
+        "SELECT producto_id, tipo, categoria, clase_inversionista, moneda FROM dim_producto").fetchdf()
     cat = dict(zip(prods["producto_id"], prods["categoria"]))
     corte_mes = (pd.Period(fecha_corte, "M") if fecha_corte else panel["mes"].max())
 
@@ -257,6 +303,16 @@ def _compute_metrics(db, panel, fecha_corte=None) -> int:
 
     r12_recent = r12.iloc[-36:]
     ranks = r12_recent.apply(pct_rank_row, axis=1)
+
+    # Insumos de la duración: inflación UF mensual y cambio de nivel de las curvas swap.
+    from db.curves import factor_tasas_mensual
+    factor = factor_tasas_mensual(db)
+    uf_m = uf.groupby(uf.index.to_period("M")).last()
+    infl_m = uf_m / uf_m.shift(1) - 1
+    # Solo fondos en pesos: en los fondos en dólares la rentabilidad en pesos la domina el tipo
+    # de cambio, y la regresión devuelve "duraciones" negativas sin sentido (medido: −4 años).
+    es_rf = (prods.set_index("producto_id")["categoria"].fillna("").str.contains(_RENTA_FIJA, regex=True)
+             & prods.set_index("producto_id")["moneda"].eq("CLP"))
 
     uf_at = lambda m: uf[: m.to_timestamp(how="end")].iloc[-1] if len(uf[: m.to_timestamp(how="end")]) else None
 
@@ -307,6 +363,9 @@ def _compute_metrics(db, panel, fecha_corte=None) -> int:
         if r12 is not None and len(rf12) >= 10:
             rec["exceso_deposito_12m"] = (r12 - (float(np.prod(1 + rf12 / 12)) - 1)) * 100
 
+        if not factor.empty and es_rf.get(pid, False) and not rec["serie_anomala"]:
+            rec["duracion_efectiva"], rec["duracion_ee"], rec["duracion_factor"] = _duracion(r, infl_m, factor)
+
         if pid in fees.index:
             f = fees.loc[pid]
             rec["costo_anual"] = float(f["costo"]) if pd.notna(f["costo"]) else None
@@ -339,7 +398,7 @@ def _compute_metrics(db, panel, fecha_corte=None) -> int:
     for c in cols:
         if c not in m:
             m[c] = np.nan
-    num = [c for c in cols if c not in ("producto_id", "fecha_corte")]
+    num = [c for c in cols if c not in ("producto_id", "fecha_corte", "duracion_factor")]
     m[num] = m[num].apply(pd.to_numeric, errors="coerce")
     m["categoria"] = m["producto_id"].map(cat)
     m["serie_anomala"] = m["serie_anomala"].fillna(False).astype(bool)

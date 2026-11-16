@@ -33,12 +33,43 @@
       ellos, suponiendo la rentabilidad mediana de la categoría. Ilustración, no proyección.</li>
   <li><b>Flujo neto.</b> Cambio del patrimonio menos lo que explica la rentabilidad: estima aportes
       menos rescates.</li>
+  <li><b>Duración efectiva</b> (solo fondos de deuda en pesos y fondos D y E). Regresión de los últimos
+      60 meses (mínimo 24): retorno mensual = a + c × inflación UF del mes + b × cambio de tasas; la
+      duración es −b. El cambio de tasas es el desplazamiento paralelo de la curva swap (promedio de
+      2, 5 y 10 años), en pesos o en UF según cuál explique mejor al fondo. Se muestra ± 2 errores
+      estándar. No se informa en fondos en dólares (el tipo de cambio domina) ni cuando sale
+      significativamente negativa. Control: los fondos de deuda de corto plazo "≤ 90 días" dan
+      ~0,13 años y los "≤ 365 días" ~0,45, coherente con sus límites reglamentarios.</li>
 </ul>
 <p><b>Limitación conocida.</b> Los fondos que reparten beneficios: el valor cuota publicado no incluye
 el factor de reparto, así que su rentabilidad calculada sale menor que la real (nunca mayor). En sus
 fichas se muestra la cifra oficial de la CMF y un aviso.</p>
 <p><b>Qué no es esto.</b> Información para comparar, no asesoría de inversión. El orden de los listados
 depende solo de la métrica elegida; ningún proveedor paga por aparecer o por su posición.</p>
+</div>
+
+<section class="section-head" id="curvas"><h2>Curvas de tasas</h2></section>
+<div class="resena">
+<ul>
+  <li><b>Insumos</b> (Banco Central, diarios desde 2005). Nominal swap: tasa interbancaria a 1 día,
+      swap promedio cámara a 90, 180 y 360 días y a 2, 3, 4, 5 y 10 años. Real swap: swap cámara en UF
+      a 1, 2, 3, 4, 5, 10 y 20 años. Soberana en pesos: interbancaria + bonos BCP/BTP a 2, 5 y 10 años.
+      Soberana en UF: bonos BCU/BTU a 2, 5, 10, 20 y 30 años. Un bono que no transó vale hasta 5 días.</li>
+  <li><b>Convenciones.</b> Tasas hasta 1 año: simples base 360. Swaps: tasa fija base actual/360,
+      llevada a base 365. Bonos: TIR efectiva anual. Todo se pasa a tasa continua para ajustar y se
+      muestra como efectiva anual.</li>
+  <li><b>Modelo.</b> Nelson-Siegel-Svensson con 6 o más puntos; Nelson-Siegel con 4–5; con 3 puntos,
+      Nelson-Siegel con τ fijo en la mediana histórica de esa curva. Los τ se buscan en una grilla y los
+      coeficientes por mínimos cuadrados. La curva no se extrapola fuera de los plazos observados.</li>
+  <li><b>Aproximación declarada.</b> Las tasas de swaps de 2 años o más y las TIR de bonos son tasas par
+      (con cupón); se ajustan como si fueran cero cupón. Control: la compensación inflacionaria a 5 y 10
+      años que sale de nuestras curvas swap difiere en ~2 pb, en promedio 2015–2026, de la que publica el
+      Banco Central; a 1 año, en ~10 pb, porque no corregimos el rezago de la UF respecto del IPC.</li>
+  <li><b>TPM implícita.</b> Tasa forward a 1 mes de la curva swap en pesos, expresada como tasa
+      overnight base 360 (la convención de la TPM). Contiene premio por plazo: no es una expectativa
+      pura, y por eso suele quedar sobre las encuestas en horizontes de 1–2 años.</li>
+  <li><b>Spread bancario.</b> Depósitos a plazo transados en bolsa menos la curva swap al mismo plazo.</li>
+</ul>
 </div>
 
 <section class="section-head"><h2>Fuentes y unidades</h2></section>

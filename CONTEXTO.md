@@ -87,7 +87,7 @@ Fuentes (BCCh BDE API · CMF XBRL plano · CMF/SBIF API · SP scraping)
   por dominio de `db/repos/` (`macro`, `panel`, `eeff`, `bancos`, `fecu`, `sp`, `ffmm`). Las
   utilidades sin conexión (`compute_ratios`, criterio AGF) están en `db/common.py` y se
   re-exportan desde `db.database`. Capas derivadas: `db/entities.py`, `db/products.py`,
-  `db/cross.py`; controles en `db/quality.py`; migraciones en `db/migrations.py`.
+  `db/curves.py`, `db/cross.py`; controles en `db/quality.py`; migraciones en `db/migrations.py`.
 - `scheduler/sources.py`: registro único de fuentes (sonda + descarga + reingesta).
   `scheduler/freshness.py`: `FreshnessStatus`, utilidades de fechas y `probe_all`.
   `scheduler/jobs.py`: `run_catchup` (descarga → reconstruye derivadas → valida) y el scheduler
@@ -105,6 +105,24 @@ Fuentes (BCCh BDE API · CMF XBRL plano · CMF/SBIF API · SP scraping)
   expectativas), `company_profiles.yaml` (reseñas/sectores de empresas).
 
 ## Gotchas / decisiones (LEER antes de tocar datos)
+
+- **Curvas de tasas (`db/curves.py`, `/curvas`).** Cuatro curvas diarias desde 2005 (swap
+  pesos, swap UF, bonos pesos, bonos UF) ajustadas con Nelson-Siegel(-Svensson); `curva_ajuste`
+  guarda SOLO parámetros (se reescribe completa en ~1 s dentro de `rebuild_all`). Decisiones
+  medidas, no cambiar sin volver a validar contra el BCCh (`F022.SWSP.*`):
+  - Swaps cámara ≥ 1 año son base **actual/360** (`a360`): así la compensación inflacionaria a
+    5/10 años queda a ~2 pb del BCCh (base 365 daba 4–5 pb). A 1 año hay ~10 pb (hasta 50 pb con
+    inflación alta) por el rezago de la UF, que no se corrige.
+  - Tasas par ajustadas como cero cupón (aproximación declarada en /metodologia).
+  - Puntos sin dato valen hasta 5 días (`ffill(limit=5)`); con 3 puntos se usa NS con τ fijo en
+    la mediana de la curva (`ns_tau_fijo`, sin RMSE). Las consultas no muestran ajustes con más
+    de 10 días de antigüedad: en 2022–2023 no hay BCP a 2 años y la curva de bonos en pesos
+    simplemente no aparece.
+  - BUF 20/30 años transan esporádicamente (`publish_lag_days` 120/30 en el catálogo).
+- **Duración efectiva** (`fact_producto_metricas.duracion_*`): regresión del retorno mensual
+  sobre inflación UF + desplazamiento paralelo de la curva swap (`factor_tasas_mensual`), solo
+  fondos en PESOS de deuda y fondos D/E. En fondos en dólares el tipo de cambio da "duraciones"
+  de −4: por eso se excluyen, y se descartan estimaciones significativamente negativas.
 
 - **DuckDB = un solo proceso escritor.** La API abre `read_only` salvo en modo embebido
   (`serve --with-scheduler`, donde comparte proceso). No correr `run-scheduler` aparte mientras
