@@ -21,10 +21,6 @@ class Settings(BaseSettings):
     BCENTRAL_USER: str = ""
     BCENTRAL_PASS: str = ""
 
-    # CMF — sin API pública, acceso por scraping del portal web cmfchile.cl
-    # Esta variable queda como placeholder para futuras fases
-    CMF_API_KEY: str = ""
-
     # Base de datos
     DB_PATH: str = "data/finanzas_chile.duckdb"
 
@@ -51,11 +47,6 @@ class Settings(BaseSettings):
     @property
     def has_bcentral_credentials(self) -> bool:
         return bool(self.BCENTRAL_USER and self.BCENTRAL_PASS)
-
-    @property
-    def cmf_scraping_enabled(self) -> bool:
-        """CMF se accede por scraping — siempre disponible, no requiere clave."""
-        return True
 
 
 settings = Settings()

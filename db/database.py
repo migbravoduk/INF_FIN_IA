@@ -172,6 +172,8 @@ class Database:
         """Crea tablas si no existen y carga fuentes base."""
         self.conn.execute(SCHEMA_SQL)
         self.conn.execute(SEED_SOURCES_SQL)
+        from db.migrations import run_migrations
+        run_migrations(self.conn)
 
     # ----------------------------------------------------------
     # Series — metadatos
@@ -445,43 +447,6 @@ class Database:
         
         return {"inserted": len(records), "deleted": deleted}
 
-    def get_mutual_fund_performance(self, latest_date: date = None) -> list[dict]:
-        """
-        Obtiene el último valor cuota, patrimonio y calcula rentabilidades para análisis.
-        """
-        if True:
-            con = self.conn
-            if not latest_date:
-                res = con.execute("SELECT MAX(date) FROM cmf_mutual_fund_quota_values").fetchone()
-                if not res or not res[0]:
-                    return []
-                latest_date = res[0]
-                
-            query = """
-            WITH latest AS (
-                SELECT * FROM cmf_mutual_fund_quota_values
-                WHERE date = ?
-            ),
-            historical AS (
-                SELECT fund_run, series, date, quota_value
-                FROM cmf_mutual_fund_quota_values
-                WHERE date < ?
-            )
-            SELECT 
-                l.agf_name,
-                l.fund_run,
-                l.fund_name,
-                l.series,
-                l.quota_value,
-                l.net_asset_value,
-                l.date as latest_date
-            FROM latest l
-            ORDER BY l.net_asset_value DESC
-            """
-            res = con.execute(query, [latest_date, latest_date]).fetchall()
-            cols = [desc[0] for desc in con.description]
-            return [dict(zip(cols, row)) for row in res]
-
     # ----------------------------------------------------------
     # Fetch log
     # ----------------------------------------------------------
@@ -720,6 +685,20 @@ class Database:
             )
             for rec in records
         ]
+        # La API SBIFv3 entregó el reporte de resultados de 2023-08 con CADA cuenta dos veces
+        # (mismos valores): 19.664 llaves repetidas que duplicaban cualquier suma del mes. Se
+        # descarta la repetición exacta por código de cuenta; si una cuenta viniera dos veces
+        # con valores DISTINTOS se conservan ambas y el control de calidad lo reporta.
+        seen, deduped = set(), []
+        for t in tuples_data:
+            k = (t[6], t[8:])  # account_code + valores
+            if k not in seen:
+                seen.add(k)
+                deduped.append(t)
+        if len(deduped) < len(tuples_data):
+            logger.warning(f"Banco {clean_bank_code} {year}-{month:02d} {report_type}: "
+                           f"{len(tuples_data) - len(deduped)} filas repetidas descartadas.")
+        tuples_data = deduped
 
         self.conn.execute("BEGIN TRANSACTION")
         try:
@@ -739,8 +718,8 @@ class Database:
             """, tuples_data)
 
             self.conn.execute("COMMIT")
-            logger.info(f"Ingestados con éxito {len(records)} registros bancarios ({report_type}) para el banco {clean_bank_code} en {year}-{month:02d}.")
-            return len(records)
+            logger.info(f"Ingestados con éxito {len(tuples_data)} registros bancarios ({report_type}) para el banco {clean_bank_code} en {year}-{month:02d}.")
+            return len(tuples_data)
         except Exception as e:
             self.conn.execute("ROLLBACK")
             logger.error(f"Error al ingestar registros bancarios para el banco {clean_bank_code} en {year}-{month:02d}. Transacción revertida.", exc_info=True)
@@ -2007,6 +1986,19 @@ class Database:
                 LIMIT 1
             )
             WHERE agf_rut IS NULL
+        """)
+        # Segundo paso: fondos que no están en el comparador (nuevos o sin cifra oficial).
+        # Su administradora SÍ está identificada por la razón social larga en otras filas de
+        # la misma tabla que ya tienen RUT; se copia de ahí. Es un cruce por la razón social
+        # EXACTA del mismo archivo de la CMF, no un parecido entre nombres distintos.
+        self.conn.execute("""
+            UPDATE cmf_mutual_fund_quota_values AS q
+            SET agf_rut = k.agf_rut
+            FROM (SELECT agf_name, MIN(agf_rut) AS agf_rut
+                  FROM cmf_mutual_fund_quota_values
+                  WHERE agf_rut IS NOT NULL
+                  GROUP BY agf_name HAVING COUNT(DISTINCT agf_rut) = 1) AS k
+            WHERE q.agf_rut IS NULL AND q.agf_name = k.agf_name
         """)
         return self.conn.execute(
             "SELECT COUNT(*) FROM cmf_mutual_fund_quota_values WHERE agf_rut IS NOT NULL"

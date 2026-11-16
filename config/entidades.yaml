@@ -1,0 +1,36 @@
+# ============================================================
+# Entidades curadas a mano — RUT que sus propias fuentes NO traen.
+# Lo lee db/entities.rebuild_entities (comando `main.py build-productos`).
+#
+# REGLA: cada RUT lleva su evidencia. No se infieren RUT por parecido de nombre; si no hay
+# evidencia, la entidad se deja fuera (o con `rut: null`) y se anota qué falta.
+# ============================================================
+
+# Bancos: la API SBIFv3 identifica por código (`bank_code`), sin RUT.
+# Evidencia (2026-11-16): el RUT aparece como `rut_emisor` de bonos bancarios (BB), letras
+# hipotecarias (LH) y depósitos (DPC/DPL) en la cartera de renta fija de seguros (B.1,
+# período 202608), y el prefijo del nemotécnico identifica al banco.
+bancos:
+  "001": {rut: "97004000", corto: "Banco de Chile", evidencia: "nemotécnico BCHI…"}
+  "009": {rut: "97011000", corto: "Banco Internacional", evidencia: "nemotécnico BINTA…"}
+  "012": {rut: "97030000", corto: "BancoEstado", evidencia: "nemotécnico BEST…"}
+  "014": {rut: "97018000", corto: "Scotiabank", evidencia: "nemotécnico BBNS…"}
+  "016": {rut: "97006000", corto: "BCI", evidencia: "nemotécnico BBCI…"}
+  # BICE absorbió a Security (nov-2025): los bonos BSEC… vigentes figuran con el RUT de BICE.
+  "028": {rut: "97080000", corto: "Banco BICE", evidencia: "bonos BSEC… asumidos tras la fusión"}
+  "031": {rut: "97951000", corto: "HSBC", evidencia: "nemotécnico FUHSB…"}
+  "037": {rut: "97036000", corto: "Santander", evidencia: "nemotécnico BSTD…"}
+  "039": {rut: "97023000", corto: "Itaú", evidencia: "nemotécnico BCOR… (ex Corpbanca)"}
+  "049": {rut: "97053000", corto: "Banco Security", evidencia: "nemotécnico BSECC…"}
+  "051": {rut: "96509660", corto: "Banco Falabella", evidencia: "nemotécnico FAL…"}
+  "053": {rut: "97947000", corto: "Banco Ripley", evidencia: "nemotécnico BRPLA…"}
+  "055": {rut: "99500410", corto: "Banco Consorcio", evidencia: "nemotécnico BCNO…"}
+  "059": {rut: "76362099", corto: "BTG Pactual", evidencia: "nemotécnico BBTG…"}
+  # PENDIENTE (sin evidencia en los datos): "060" China Construction Bank y
+  # "061" Bank of China. Tomar el RUT de su ficha en cmfchile.cl antes de agregarlos.
+
+# AFP: la SP las identifica por nombre (`afp_name`), sin RUT.
+# PENDIENTE: ninguna fuente cargada trae el RUT de las AFP. Agregarlo desde la ficha de
+# cada AFP en spensiones.cl, con este formato:
+#   HABITAT: {rut: "<sin DV>", nombre: "AFP Habitat S.A."}
+afp: {}

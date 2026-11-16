@@ -50,7 +50,7 @@ from collectors.cmf_insurers import CMFInsurerCollector
 from collectors.cmf_brokers import CMFBrokerCollector
 from collectors.sp_pensions import SPPensionCollector
 from processors.normalizer import normalize_observations
-from scheduler.jobs import run_all_series, run_fetch_by_frequency, create_scheduler, run_catchup
+from scheduler.jobs import run_all_series, create_scheduler, run_catchup
 
 console = Console()
 
@@ -62,7 +62,10 @@ console = Console()
 def _setup_file_logging():
     log_file = Path(settings.LOG_FILE)
     log_file.parent.mkdir(parents=True, exist_ok=True)
-    file_handler = logging.FileHandler(log_file, encoding="utf-8")
+    # Rotación: 5 archivos de 5 MB. Antes crecía sin límite (2,7 MB en seis meses).
+    from logging.handlers import RotatingFileHandler
+    file_handler = RotatingFileHandler(log_file, maxBytes=5 * 1024 * 1024, backupCount=5,
+                                       encoding="utf-8")
     file_handler.setFormatter(
         logging.Formatter("%(asctime)s [%(levelname)s] %(name)s — %(message)s")
     )
@@ -124,7 +127,7 @@ def fetch(fetch_all, series, series_id, from_date, to_date):
 
     if fetch_all:
         console.print("[bold green]🚀 Descargando todas las series del catálogo...[/]")
-        run_all_series()
+        run_all_series(from_date=from_date)
         return
 
     if series_id:
@@ -873,22 +876,7 @@ def fetch_ffmm_cuotas(months, from_month, to_month, fecha):
 
     collector = CMFMutualFundsCollector()
 
-    def corte_del_mes(y, m):
-        """
-        Último día del mes CON publicación.
-
-        No basta con el último día hábil: los feriados chilenos (18-19 de septiembre, 31 de
-        diciembre en algunos años) caen en día hábil y ese día la CMF no publica. Se retrocede
-        hasta encontrar datos, con tope para no quedar barriendo un mes entero.
-        """
-        d = (_dt.date(y + (m // 12), (m % 12) + 1, 1) - _dt.timedelta(days=1))
-        for _ in range(8):
-            if d.weekday() < 5:
-                res = collector.fetch_daily_stats(d)
-                if res["records"]:
-                    return d, res
-            d -= _dt.timedelta(days=1)
-        return None, {"records": [], "fund_types": {}}
+    corte_del_mes = collector.fetch_month_end_stats  # último día del mes con publicación
 
     # --- Qué meses se van a pedir ---
     if fecha:
@@ -1459,7 +1447,8 @@ def query_sp_precios(instrument, date, limit, output_format):
 
 @cli.command(name="catchup")
 @click.option("--dry-run", is_flag=True, help="Solo muestra el estado de frescura; no descarga nada.")
-def catchup(dry_run):
+@click.option("--source", "kinds", multiple=True, help="Limita a una o más fuentes (kind del registro)")
+def catchup(dry_run, kinds):
     """Ingesta dirigida por frescura: descarga datos nuevos en cuanto se publican."""
 
     console.print(Panel(
@@ -1470,7 +1459,7 @@ def catchup(dry_run):
         border_style="green",
     ))
 
-    statuses = run_catchup(dry_run=dry_run)
+    statuses = run_catchup(dry_run=dry_run, kinds=list(kinds) or None)
 
     t = Table(title="Estado de frescura por fuente", box=box.ROUNDED, border_style="blue")
     t.add_column("Fuente")
@@ -1478,10 +1467,11 @@ def catchup(dry_run):
     t.add_column("Último que tengo", justify="center")
     t.add_column("Esperado", justify="center")
     t.add_column("Estado", justify="center")
+    t.add_column("Nota", style="dim")
 
     for s in statuses:
         estado = "[yellow]pendiente[/]" if s.due else "[green]al día[/]"
-        t.add_row(s.source, s.frequency, s.latest_have or "—", s.expected or "—", estado)
+        t.add_row(s.source, s.frequency, s.latest_have or "—", s.expected or "—", estado, s.note)
 
     console.print(t)
 
@@ -1490,6 +1480,101 @@ def catchup(dry_run):
         console.print(f"\n[dim]{pend} objetivo(s) pendiente(s). Ejecuta sin --dry-run para descargar.[/]")
     else:
         console.print(f"\n[green]✓ Catch-up finalizado.[/] [dim]{pend} objetivo(s) estaban pendientes y se procesaron.[/]")
+
+
+# ----------------------------------------------------------
+# build-productos / clean-cache
+# ----------------------------------------------------------
+
+@cli.command(name="build-productos")
+def build_productos():
+    """Reconstruye dim_entidad, dim_producto, proveedor_canal y fact_producto_metricas.
+
+    Lo corre también el catch-up después de cada descarga. Idempotente.
+    """
+    from db.products import rebuild_all
+    from db.entities import issuer_coverage
+    with Database() as db:
+        res = rebuild_all(db)
+        tot, ok = issuer_coverage(db)
+    console.print(f"[green]✓ Entidades:[/] {sum(res['entidades'].values()):,} {res['entidades']}")
+    console.print(f"[green]✓ Productos:[/] {res['productos']:,} · canales de proveedor: {res['proveedores']}")
+    console.print(f"[green]✓ Métricas:[/] {res['metricas']:,} productos con dato en el último corte")
+    console.print(f"  Emisores de renta fija (B.1) con nombre: [bold]{ok} de {tot}[/]")
+
+
+@cli.command(name="clean-cache")
+@click.option("--keep", default=2, show_default=True, help="Archivos más recientes a conservar por fuente")
+@click.option("--dry-run", is_flag=True, help="Solo lista lo que se borraría")
+def clean_cache(keep, dry_run):
+    """Borra descargas crudas ya ingeridas en data/*_raw, conservando las más recientes.
+
+    Se conservan las `keep` más recientes de cada fuente (y de cada ramo / banco / fondo)
+    como evidencia ante correcciones de la CMF. Todo lo borrado se puede volver a descargar.
+    """
+    import re as _re
+    from collections import defaultdict
+    raw = Path("data")
+    groups = defaultdict(list)
+    for d in sorted(raw.glob("*_raw")):
+        for f in d.iterdir():
+            if not f.is_file():
+                continue
+            # Grupo = nombre sin los dígitos de fecha: 'balance_2026_07_001.json' → 'balance_####_##_001'
+            key = _re.sub(r"(19|20)\d{2}[_-]?\d{2}([_-]?\d{2})?", "#", f.name)
+            groups[(d.name, key)].append(f)
+    borrar = []
+    for (_, _), files in groups.items():
+        # Por PERÍODO (el nombre lleva la fecha), no por fecha de descarga: una reingesta de
+        # meses antiguos no debe desplazar a los más recientes.
+        files.sort(key=lambda f: f.name, reverse=True)
+        borrar += files[keep:]
+    total = sum(f.stat().st_size for f in borrar)
+    for f in borrar:
+        console.print(f"  {'(dry-run) ' if dry_run else ''}borrar {f}")
+        if not dry_run:
+            f.unlink()
+    console.print(f"[green]{len(borrar)} archivos · {total / 1e6:,.1f} MB {'por liberar' if dry_run else 'liberados'}[/]")
+
+
+# ----------------------------------------------------------
+# validate
+# ----------------------------------------------------------
+
+@cli.command(name="validate")
+@click.option("--no-save", is_flag=True, help="No guarda el resultado en dq_results")
+@click.option("--all", "show_all", is_flag=True, help="Muestra también los controles que pasaron")
+def validate(no_save, show_all):
+    """Controles de calidad de datos (unicidad, identidad contable, completitud, rangos…).
+
+    Sale con código 1 si algún control de severidad 'error' falla.
+    """
+    from db.quality import run_checks
+
+    with Database(read_only=no_save) as db:
+        res = run_checks(db, persist=not no_save)
+
+    t = Table(title="Controles de calidad", box=box.ROUNDED, border_style="blue")
+    t.add_column("Control")
+    t.add_column("Tabla", style="dim")
+    t.add_column("Período", justify="center")
+    t.add_column("Estado", justify="center")
+    t.add_column("Fallas", justify="right")
+    t.add_column("Detalle", style="dim")
+    color = {"ok": "green", "warn": "yellow", "error": "red"}
+    for r in res:
+        if r["estado"] == "ok" and not show_all:
+            continue
+        t.add_row(r["check_id"], r["tabla"], r["periodo"] or "—",
+                  f"[{color[r['estado']]}]{r['estado']}[/]",
+                  "" if r["n_fallas"] is None else f"{r['n_fallas']:,}", r["detalle"])
+    console.print(t)
+    n_err = sum(r["estado"] == "error" for r in res)
+    n_warn = sum(r["estado"] == "warn" for r in res)
+    n_ok = len({r["check_id"] for r in res if r["estado"] == "ok"})
+    console.print(f"\n[green]{n_ok} controles OK[/] · [yellow]{n_warn} avisos[/] · [red]{n_err} errores[/]")
+    if n_err:
+        sys.exit(1)
 
 
 # ----------------------------------------------------------

@@ -154,8 +154,8 @@ CREATE INDEX IF NOT EXISTS idx_insurer_type_period ON cmf_insurer_statements(ins
 
 -- ============================================================
 -- Cartera de inversiones de Compañías de Seguros (Circular 1.835 — archivos SGSCI)
--- Fuente: ZIP mensual de la CMF, descargado A MANO (la descarga tiene CAPTCHA) y dejado
--- en data/seguros_cartera_raw/. Cada ZIP trae 12 tipos de archivo × compañía, de ancho
+-- Fuente: ZIP mensual de la CMF, descarga automática (`fetch-cartera-seguros`; el CAPTCHA
+-- no se valida del lado servidor) con caché en data/seguros_cartera_raw/. Cada ZIP trae 12 tipos de archivo × compañía, de ancho
 -- fijo y UTF-8. Esta tabla corresponde al archivo B.8 "Información de Control": los
 -- TOTALES por tipo de inversión de cada compañía (composición de cartera).
 -- Layout validado contra los datos: el registro de detalle suma exactamente 138 chars.
@@ -302,7 +302,7 @@ CREATE INDEX IF NOT EXISTS idx_sp_prices_date ON sp_instrument_prices(date);
 CREATE INDEX IF NOT EXISTS idx_sp_prices_instrument ON sp_instrument_prices(instrument_id);
 
 -- ============================================================
--- Fondos Mutuos (CMF API v3)
+-- Fondos Mutuos (CMF, estadísticas del portal web)
 -- ============================================================
 CREATE SEQUENCE IF NOT EXISTS mf_quota_seq START 1;
 
@@ -426,16 +426,7 @@ INSERT OR IGNORE INTO sources (id, name, base_url, notes) VALUES
      'BDE API REST — requiere usuario y contraseña'),
     ('cmf', 'Comision para el Mercado Financiero',
      'https://www.cmfchile.cl',
-     'Portal web — scraping XBRL/HTML, sin API publica'),
-    ('ine', 'Instituto Nacional de Estadisticas',
-     'https://www.ine.gob.cl',
-     'Datos abiertos — sin autenticacion'),
-    ('sii', 'Servicio de Impuestos Internos',
-     'https://www.sii.cl',
-     'Scraping UF/UTM — sin autenticacion'),
-    ('bolsa_stgo', 'Bolsa de Santiago',
-     'https://www.bolsadesantiago.com',
-     'Precios de acciones y datos de mercado'),
+     'Portal web — archivos planos, Excel y ZIP; bancos vía API SBIFv3'),
     ('sp', 'Superintendencia de Pensiones',
      'https://www.spensiones.cl',
      'Portal web — scraping de valores cuota, carteras y precios');
