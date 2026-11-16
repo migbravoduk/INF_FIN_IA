@@ -410,3 +410,82 @@ bcentral:
     unit: porcentaje_anual
     description: Tasa de interés promedio de créditos de vivienda en UF a más de 3 años
 
+
+  # --- Referencias para comparar rentabilidades (D5/D6 del plan, nov-2026) ---
+  # Códigos verificados con SearchSeries de la BDE el 2026-11-16 (no escritos de memoria).
+  - id: F022.CAP.TIN.D089.NO.Z.M
+    name: Tasa de captación 30 a 89 días (pesos)
+    category: tasas_captacion
+    frequency: monthly
+    unit: porcentaje_anual
+    publish_lag_days: 20
+    description: Tasa de interés de captación del sistema bancario, 30 a 89 días, en pesos
+
+  - id: F022.CAP.TIN.AN01.NO.Z.M
+    name: Tasa de captación 90 días a 1 año (pesos)
+    category: tasas_captacion
+    frequency: monthly
+    unit: porcentaje_anual
+    publish_lag_days: 20
+    description: Tasa de interés de captación del sistema bancario, 90 días a 1 año, en pesos
+
+  - id: F022.CAP.TIN.AN01.RE.Z.M
+    name: Tasa de captación 90 días a 1 año (UF)
+    category: tasas_captacion
+    frequency: monthly
+    unit: porcentaje_anual
+    publish_lag_days: 20
+    description: Tasa de interés de captación del sistema bancario, 90 días a 1 año, reajustable en UF
+
+  - id: F022.CAP.TIP.D089.NO.Z.D
+    name: TIP captaciones 30 a 89 días (pesos, diaria)
+    category: tasas_captacion
+    frequency: daily
+    unit: porcentaje_anual
+    description: Tasa de interés promedio de captaciones de 30 a 89 días, en pesos
+
+  - id: F022.BCLP.TIS.AN02.NO.Z.D
+    name: Tasa BCP 2 años (curva soberana pesos)
+    category: curva_soberana
+    frequency: daily
+    unit: porcentaje_anual
+    description: Tasa de mercado secundario de bonos del BCCh en pesos a 2 años
+
+  - id: F022.BUF.TIS.AN02.UF.Z.D
+    name: Tasa BCU 2 años (curva soberana UF)
+    category: curva_soberana
+    frequency: daily
+    unit: porcentaje_anual
+    description: Tasa de mercado secundario de bonos en UF a 2 años (BCU, BTU)
+
+  - id: F013.IBC.IND.N.7.LAC.CL.CLP.BLO.M
+    name: IPSA (mensual)
+    category: mercado_accionario
+    frequency: monthly
+    unit: indice
+    publish_lag_days: 50
+    description: Índice de Precios Selectivo de Acciones, base 30-dic-2002 = 1000. La BDE no lo publica diario.
+
+  - id: F013.IBG.IND.N.7.LAC.CL.CLP.BLO.M
+    name: IGPA (mensual)
+    category: mercado_accionario
+    frequency: monthly
+    unit: indice
+    publish_lag_days: 50
+    description: Índice General de Precios de Acciones
+
+  - id: F019.IBC.IND.50.M
+    name: Dow Jones (mensual)
+    category: mercado_accionario
+    frequency: monthly
+    unit: indice
+    publish_lag_days: 50
+    description: Índice de bolsa Dow Jones, EE.UU., en dólares
+
+  - id: F019.IBC.IND.51.M
+    name: Nasdaq (mensual)
+    category: mercado_accionario
+    frequency: monthly
+    unit: indice
+    publish_lag_days: 50
+    description: Índice de bolsa Nasdaq, EE.UU., en dólares

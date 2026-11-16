@@ -19,15 +19,19 @@ fija de la cartera de seguros: 7,9M filas por sí solo).
 .\.venv\Scripts\python.exe main.py <comando>
 ```
 
-Comandos clave: `status`, `fetch --all`, `catchup [--dry-run]`, `serve [--with-scheduler]`,
+Comandos clave: `status`, `fetch --all`, `catchup [--dry-run] [--source KIND]`, `validate`,
+`build-productos`, `clean-cache [--dry-run]`, `serve [--with-scheduler]`,
 `web-preview`, `eeff-export [-p YYYYMM]`, `query-cmf`, `query-banks`, `query-sp-cuotas`,
 `fetch-sp-cartera -p YYYYMM`, `fetch-seguros`, `fetch-intermediarios`,
 `fetch-cartera-seguros [--latest | --period YYYYMM | --history --since YYYYMM]`.
-Backtest de modelos: `python -m models.backtest`.
+Backtest de modelos: `python -m models.backtest`. Tests: `.\.venv\Scripts\python.exe -m pytest -q`
+(los que necesitan la base se saltan solos si no existe o la tiene tomada un escritor).
 Actualización de datos: `actualizar.py` (menú por fuente + `--todo`/`--catchup`/`--source`/
-`--cartera-seguros`), que es lo que empaqueta `Actualizar_Datos.exe`. Al agregar una fuente
-nueva hay que tocar **tres** lugares: la sonda en `scheduler/freshness.py`, el dispatch en
-`scheduler/jobs.py` y el menú (`CATCHUP_KINDS` + `MENU_FUENTES`) en `actualizar.py`.
+`--cartera-seguros`), que es lo que empaqueta `Actualizar_Datos.exe`. **Para agregar una fuente
+se toca UN lugar**: una entrada `Source(kind, titulo, source_id, probe, fetch, refresh)` en
+`scheduler/sources.py`, más su modo manual en `actualizar.MANUAL`. Sonda, dispatch y menú se
+generan desde ese registro, y `tests/test_registry.py` falla si falta alguna pieza (antes
+eran tres lugares y un nombre que no calzaba dejó el catch-up caído con un NameError).
 Para shell scripts en este repo se usa el Bash tool con heredoc (evita problemas de quoting).
 Nota de encoding: al correr scripts que imprimen Δ/acentos, anteponer `PYTHONIOENCODING=utf-8`
 (la consola de Windows usa cp1252 y revienta con caracteres Unicode).
@@ -38,8 +42,10 @@ Nota de encoding: al correr scripts que imprimen Δ/acentos, anteponer `PYTHONIO
 Fuentes (BCCh BDE API · CMF XBRL plano · CMF/SBIF API · SP scraping)
   → collectors/ (descarga + parseo, con caché en data/*_raw/)
   → processors/normalizer (limpieza macro)
-  → db/database.Database (DuckDB; upserts idempotentes)
-  → CLI (main.py)  +  Web (api/)  +  models/ (proyecciones)  +  scheduler/ (catch-up + jobs)
+  → db/database.Database (DuckDB; upserts idempotentes; métodos por dominio en db/repos/)
+  → capas derivadas: db/entities (dim_entidad) → db/products (dim_producto + métricas)
+  → db/quality (controles, dq_results)
+  → CLI (main.py)  +  Web (api/)  +  models/ (proyecciones)  +  scheduler/ (registro de fuentes + catch-up)
 ```
 
 ## Fuentes y tablas (db/schema.py)
@@ -63,17 +69,34 @@ Fuentes (BCCh BDE API · CMF XBRL plano · CMF/SBIF API · SP scraping)
 | `cmf_mutual_fund_fees` | CMF (`fm.fm_comision.php`, mensual) | Estructura de costos por fondo y serie: comisión de colocación, remuneración anual y gasto operacional. Valores en **fracción** (0,0119 = 1,19%), con IVA. 2.372 filas, cruzan 2.285 con la estadística |
 | `cmf_mutual_fund_agf` | CMF · Comparador (hoja de benchmark por AGF) | 22 administradoras con **RUT**. Única fuente del RUT: la estadística diaria solo trae la razón social |
 | `fetch_log` | — | bitácora de ingestas (todas las fuentes vía catch-up) |
+| `schema_migrations` | — | migraciones aplicadas (`db/migrations.py`) |
+| `dim_dataset` | — | metadatos por tabla: fuente, unidad, moneda, frecuencia, llave. Alimenta `/metodologia` |
+| `dim_entidad` (+ `dim_entidad_alias`) | derivada | maestra por RUT de toda entidad que aparece en alguna fuente, con su tipo y razones sociales históricas. Bancos por `bank_code` vía `config/entidades.yaml` |
+| `dim_producto` | derivada | una fila por serie de fondo mutuo y por fondo AFP, con proveedor, categoría y clase de inversionista |
+| `fact_producto_metricas` | derivada | rentabilidad, riesgo, costo, flujos y posición en la categoría por producto y corte |
+| `proveedor_canal` | `config/proveedores.yaml` | URL verificada de cada proveedor (vacía hasta curarla) |
+| `dq_results` | `db/quality.py` | resultado de cada corrida de controles de calidad |
+| vistas `v_*` | — | convenciones homogéneas: `period` INTEGER AAAAMM, fechas DATE, bancos en pesos (`v_bank_statements.val_total_clp`), cartera FFMM tipada (`v_mutual_fund_holdings`). **Lectores nuevos: usar las vistas** |
 
 ## Dónde está cada cosa
 
 - `collectors/`: `bcentral.py`, `cmf.py` (plano), `cmf_banks.py` (SBIF), `cmf_fecu.py` (**parser
   compartido** de los Excel "FECU tabla"), `cmf_insurers.py` (seguros vida/generales),
   `cmf_brokers.py` (corredores + agentes), `sp_pensions.py`.
-- `db/database.py`: TODA la lógica SQL. Métodos `query_*`, `get_*`, `insert_*`/`upsert_*`.
-- `scheduler/freshness.py`: sondas "qué falta por publicar". `scheduler/jobs.py`: `run_catchup` + jobs.
-- `api/`: `main.py` (app + lifespan con scheduler embebido opcional), `routers/` (macro, cmf,
-  banks, sp, dashboard_kpi, **views** = páginas HTML), `templates/` + `partials/`, `static/app.css`,
-  `eeff_format.py` (organización de EEFF), `preview.py` (export estático).
+- `db/database.py`: fachada `Database` (conexión + esquema + migraciones) que hereda los mixins
+  por dominio de `db/repos/` (`macro`, `panel`, `eeff`, `bancos`, `fecu`, `sp`, `ffmm`). Las
+  utilidades sin conexión (`compute_ratios`, criterio AGF) están en `db/common.py` y se
+  re-exportan desde `db.database`. Capas derivadas: `db/entities.py`, `db/products.py`,
+  `db/cross.py`; controles en `db/quality.py`; migraciones en `db/migrations.py`.
+- `scheduler/sources.py`: registro único de fuentes (sonda + descarga + reingesta).
+  `scheduler/freshness.py`: `FreshnessStatus`, utilidades de fechas y `probe_all`.
+  `scheduler/jobs.py`: `run_catchup` (descarga → reconstruye derivadas → valida) y el scheduler
+  (catch-up horario + reingesta mensual de los 2 últimos períodos).
+- `api/`: `main.py` (app + lifespan con scheduler embebido opcional), `routers/` (REST: macro,
+  cmf, banks, sp, dashboard_kpi; HTML: `views.py` agrega `routers/web/*` por dominio y
+  `productos.py`), `templates/` + `partials/`, `static/app.css` + `static/vendor/` (HTMX y Plotly
+  locales), `freshness_banner.py` ("datos al …" en cada vista), `eeff_format.py`, `preview.py`
+  (export estático: se mantiene pero no se amplía).
 - `models/`: capa de proyecciones (Fase 6). `macro_path.py` (senda de factores anclada a
   encuestas EEE+EOF, con vintage `as_of`), `structural.py` (activos→rotación→margen),
   `forecast.py` (SARIMAX), `hybrid.py` (modelo de producción + bandas empíricas), `backtest.py`
@@ -412,11 +435,57 @@ Fuentes (BCCh BDE API · CMF XBRL plano · CMF/SBIF API · SP scraping)
   (por defecto `--ramo ambos`). La clave de borrado-reinserción idempotente es
   (`insurance_type`, `period`, `report_freq`).
 
+- **"El período existe" NO es "el período está completo".** La CMF publica por goteo: el
+  EEFF 202606 se ingirió temprano con 200 de ~380 empresas y la sonda antigua lo daba por
+  cargado. Las sondas por entidad (`scheduler/sources.completeness`) comparan el número de
+  entidades del último período con la mediana de los 4 comparables (mismo mes del año en
+  las trimestrales) y, bajo 90%, lo vuelven a pedir con `force` hasta 120 días después de la
+  fecha esperada. El mismo control corre en `validate` (`completitud_*`).
+- **Cartera de seguros: el RUT del encabezado puede ser el de OTRA compañía.** Compañías
+  absorbidas siguen reportando en su propio archivo pero con el RUT de la absorbente
+  (`c240630g.99061000` declara 99231000 HDI; `c202412.76632384` Zurich Rentas Vitalicias declara
+  99185000 Chilena Consolidada). Eso duplicaba a la absorbente con dos juegos de cifras
+  (llaves repetidas en 202406 y 202411→202507). Regla en `seguros_cartera._resolve_rut`: si el
+  RUT declarado es el de otro archivo del mismo ZIP, manda el del nombre del archivo y la
+  razón social queda vacía. Fuera de ese caso sigue mandando el declarado.
+- **Cartera de seguros: `valor_final = repr + no_repr` falla en ~116 filas**, casi todas código
+  J00 de 13 compañías de generales, con cifras del propio informante que no cuadran (BCI
+  202608: 2.219.634 contra 62.219.624). No es el parser: `validate` lo reporta como aviso.
+- **Bancos: la API SBIFv3 puede repetir cuentas dentro de un mismo reporte.** El de resultados
+  de 2023-08 trajo cada cuenta dos veces con el mismo valor (19.664 llaves repetidas, sumas
+  al doble). `insert_bank_records` descarta la repetición exacta; si una cuenta viniera dos
+  veces con valores distintos se conserva y `validate` la marca.
+- **Cartera SP: rezago real ~4 meses.** El 2026-11-16 el último publicado era 202606; un mes
+  no publicado responde un volcado `<pre>Array…` en vez del ZIP. La sonda antigua (40 días)
+  pedía un mes inexistente y, como solo pedía ese, nunca rellenó 202602→202606. Ahora las
+  sondas mensuales piden TODOS los meses faltantes y paran en el primero no publicado.
+- **Métricas de productos: cada tipo en su propio corte.** Las AFP publican a diario y los
+  fondos mutuos se cargan por corte mensual; con un corte común uno de los dos quedaba sin
+  dato. Las consultas toman el último `fecha_corte` de CADA producto, no el máximo global.
+- **Tasa libre de riesgo** de Sharpe/Sortino y del "exceso sobre depósito": tasa de captación
+  bancaria 30-89 días en pesos (`F022.CAP.TIN.D089.NO.Z.M`); si no estuviera cargada, la TPM.
+- **Códigos de series nuevas del BCCh: sacarlos de `SearchSeries`, no de memoria.** La función
+  `search` del CLI solo filtra el YAML local. La API sí lista todo con
+  `function=SearchSeries&frequency=DAILY|MONTHLY` (decodificar la respuesta como latin-1).
+  El IPSA en la BDE es solo mensual.
+- **RUT de bancos y AFP: no vienen en sus fuentes.** Los de bancos están en
+  `config/entidades.yaml` con su evidencia (el RUT aparece como emisor de bonos BB/LH/DPC en la
+  cartera B.1 y el prefijo del nemotécnico identifica al banco). China Construction Bank,
+  Bank of China y las 7 AFP quedan pendientes: no hay evidencia en los datos cargados.
+- **FastAPI 0.141 anida los routers incluidos** (`_IncludedRouter`): `app.routes` no lista las
+  rutas hijas. Para inventariarlas hay que recorrer `original_router`.
+
 ## Cómo hacer tareas comunes
 
 - **Agregar una serie BCCh**: editar `config/series_catalog.yaml` y `fetch --id <code> --from-date`.
-- **Nueva vista web**: ruta en `api/routers/views.py` + plantilla en `api/templates/` (extiende
-  `base.html`); patrón HTMX = `hx-get` a un endpoint que devuelve un fragmento `partials/`.
+- **Nueva vista web**: ruta en el módulo de su dominio en `api/routers/web/` (o un router nuevo
+  incluido desde `views.py`) + plantilla en `api/templates/` (extiende `base.html`); patrón
+  HTMX = `hx-get` a un endpoint que devuelve un fragmento `partials/`. Si la vista lee una
+  fuente nueva, agregar su prefijo a `api/freshness_banner.ROUTE_SOURCES` y la ruta a
+  `tests/test_web.py`.
+- **Nueva fuente de datos**: entrada en `scheduler/sources.SOURCES` + modo manual en
+  `actualizar.MANUAL` + fila en `dim_dataset` (migración) + control de unicidad en `db/quality.py`.
+- **Nueva tabla derivada o vista**: migración numerada en `db/migrations.py` (idempotente).
 - **Nueva clasificación de EEFF**: agregar entrada a `EEFF_CLASSES` (views.py) → aparece en el hub
   `/eeff`. Si comparte el formato FECU (seguros/intermediarios), reusar `fecu_entidad.html` +
   `partials/fecu_statements.html` y un método `get_*_evolution` sobre `_fecu_evolution`.

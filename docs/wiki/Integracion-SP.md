@@ -128,10 +128,18 @@ CREATE TABLE IF NOT EXISTS sp_instrument_prices (
 
 ## Scheduler automático
 
-| Job | Trigger | Acciones |
+Desde nov-2026 no hay jobs fijos de la SP: las tres fuentes están en el registro único
+`scheduler/sources.py` y las cubre el catch-up horario (`sp_cuotas`, `sp_precios`,
+`sp_cartera`).
+
+| Fuente | Rezago esperado | Qué baja el catch-up |
 |-----|---------|----------|
-| `sp_daily_fetch` | Lun–Vie 18:30 (Santiago) | Cinta de precios del día + valores cuota del año en curso |
-| `sp_monthly_fetch` | Día 15 de cada mes 20:00 | Cartera desagregada del mes anterior |
+| `sp_cuotas` | día hábil anterior | Valores cuota del año (o de los dos años si cruza el cambio de año) |
+| `sp_precios` | día hábil anterior | Hasta 30 días hábiles de cinta por corrida |
+| `sp_cartera` | ~4 meses (130 días) | Todos los meses faltantes desde el último cargado; se detiene en el primero no publicado |
+
+La cartera desagregada sale con ~4 meses de rezago: pedir un mes no publicado devuelve un
+volcado de error (`<pre>Array…`) en vez del ZIP, que el colector trata como "no publicado".
 
 ---
 

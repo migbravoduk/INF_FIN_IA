@@ -1,0 +1,19 @@
+name: tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt
+      # La base de datos no se versiona: los tests que la necesitan se saltan solos y
+      # el resto (registro de fuentes, controles de calidad sobre base en memoria) corre.
+      - run: python -m pytest -q
