@@ -35,6 +35,9 @@ import pandas as pd
 logger = logging.getLogger(__name__)
 
 TPM = "F022.TPM.TIN.D001.NO.Z.D"
+# Tasa de captación bancaria 30-89 días en pesos: lo que obtiene un ahorrante en un depósito
+# a plazo. Es la tasa libre de riesgo preferida; si no está cargada se usa la TPM.
+DEPOSITO = "F022.CAP.TIN.D089.NO.Z.M"
 UF = "F073.UFF.PRE.Z.D"
 
 # Escala de riesgo 1–7 por volatilidad anualizada (umbrales de la escala SRRI europea).
@@ -161,7 +164,9 @@ def _monthly_panel(db) -> pd.DataFrame:
 def _uf_tpm(db) -> tuple[pd.Series, pd.Series]:
     uf = db.conn.execute(
         f"SELECT date, value FROM observations WHERE series_id = '{UF}' ORDER BY date").fetchdf()
-    tpm = db.conn.execute(
+    dep = db.conn.execute(
+        f"SELECT date, value FROM observations WHERE series_id = '{DEPOSITO}' ORDER BY date").fetchdf()
+    tpm = dep if len(dep) >= 12 else db.conn.execute(
         f"SELECT date, value FROM observations WHERE series_id = '{TPM}' ORDER BY date").fetchdf()
     uf = pd.Series(uf["value"].values, index=pd.to_datetime(uf["date"]))
     tpm = pd.Series(tpm["value"].values, index=pd.to_datetime(tpm["date"]))
@@ -286,6 +291,11 @@ def _compute_metrics(db, panel, fecha_corte=None) -> int:
             dvol = float(np.sqrt(((down - rf / 12) ** 2).sum() / len(r36)) * math.sqrt(12)) if len(down) else None
             rec["sortino"] = (ann - rf) / dvol if dvol else None
         rec["escala_riesgo"] = risk_scale(vol)
+        # ¿Le ganó al depósito a plazo? Rentabilidad 12m menos la tasa compuesta del período.
+        r12 = rec.get("rent_nom_12m")
+        rf12 = tpm_m.reindex(v.index[-12:]).dropna()
+        if r12 is not None and len(rf12) >= 10:
+            rec["exceso_deposito_12m"] = (r12 - (float(np.prod(1 + rf12 / 12)) - 1)) * 100
 
         if pid in fees.index:
             f = fees.loc[pid]

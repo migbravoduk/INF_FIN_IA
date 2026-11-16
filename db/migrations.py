@@ -240,6 +240,14 @@ WHERE portfolio_type IN ('NACI', 'EXTR');
 """
 
 
+# ------------------------------------------------------------------
+# 007 · exceso sobre depósito a plazo (pp), con la tasa de captación 30-89 días
+# ------------------------------------------------------------------
+M007 = """
+ALTER TABLE fact_producto_metricas ADD COLUMN IF NOT EXISTS exceso_deposito_12m DOUBLE;
+"""
+
+
 MIGRATIONS: list[tuple[str, str, str]] = [
     ("001", "dq_results: controles de calidad", M001),
     ("002", "dim_dataset: metadatos de unidades, frecuencia y fuente", M002),
@@ -247,6 +255,7 @@ MIGRATIONS: list[tuple[str, str, str]] = [
     ("004", "dim_producto, proveedor_canal, fact_producto_metricas", M004),
     ("005", "vistas v_* con período INTEGER y fechas DATE", M005),
     ("006", "v_mutual_fund_holdings: cartera FFMM tipada", M006),
+    ("007", "fact_producto_metricas.exceso_deposito_12m", M007),
 ]
 
 # Migraciones que se reaplican siempre (contenido de referencia o vistas): son idempotentes.
