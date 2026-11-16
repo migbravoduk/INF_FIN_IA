@@ -55,7 +55,7 @@ LAG_SP_CARTERA = 130
 LAG_FFMM_CUOTAS = 3            # la estadística es diaria: el corte de fin de mes sale al día siguiente
 LAG_FFMM_CARTERA = 40
 LAG_FFMM_COMISIONES = 20
-LAG_FFMM_COMPARADOR = 45       # el comparador se actualiza por trimestre
+LAG_FFMM_COMPARADOR = 75       # trimestral; el corte de septiembre aún no estaba el 16-nov (>45 días)
 
 COMPLETENESS_MIN = 0.90        # bajo 90% de la mediana de comparables = período incompleto
 COMPLETENESS_GRACE_DAYS = 120  # se reintenta hasta 120 días después de la fecha esperada

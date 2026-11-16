@@ -30,6 +30,14 @@
 </div>
 {% endif %}
 
+{% if m and m.serie_anomala %}
+<div class="warn-box">
+    El valor cuota de esta serie tiene saltos de más de 50% en un mes (típico de series con muy
+    pocos partícipes o con eventos de capital). Sus rentabilidades no son comparables y la serie
+    no aparece en los rankings ni en las estadísticas de su categoría.
+</div>
+{% endif %}
+
 {% if not m %}
 <p class="loading">Sin métricas para el último corte (el producto no tiene dato en esa fecha).</p>
 {% else %}

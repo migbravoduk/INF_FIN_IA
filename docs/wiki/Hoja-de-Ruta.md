@@ -1,6 +1,44 @@
 # Hoja de Ruta (Roadmap)
 
-> Situación actual y plan. Última actualización: agosto 2026 (rama `feature/web-api-skeleton`).
+> Situación actual y plan. Última actualización: noviembre 2026 (rama `feature/web-api-skeleton`).
+
+---
+
+## 0. Auditoría y plan de mejoras (nov-2026)
+
+Plan completo y diagnóstico en [`docs/PLAN_MEJORAS.md`](../PLAN_MEJORAS.md). Ejecutado:
+
+- [x] **Fase 0** — trabajo confirmado en git; catch-up reparado (`NameError`); tests (`pytest`);
+  `requirements.lock`; `.gitattributes`.
+- [x] **Fase 1** — bancos 202308 sin duplicados; EEFF 202606 reingerido; cartera de seguros
+  sin RUT duplicados (10 períodos reingeridos); series huérfanas y semillas sin uso eliminadas;
+  `agf_rut` completado; todas las fuentes puestas al día.
+- [x] **Fase 2** — registro único de fuentes (`scheduler/sources.py`); completitud por período;
+  sondas de fondos mutuos y cartera de seguros; `main.py validate` + `dq_results`; "datos al …"
+  en cada vista; jobs cron antiguos eliminados; reingesta mensual de correcciones; rotación de logs.
+- [x] **Fase 3** — migraciones numeradas; `dim_dataset`, `dim_entidad`, `dim_producto`,
+  `fact_producto_metricas`, `proveedor_canal`; vistas `v_*` con convenciones homogéneas.
+- [x] **Fase 4** — `/productos`, ficha, comparador con traslape, `/metodologia`, salida al
+  proveedor con registro anónimo; emisores en común seguros–fondos mutuos; series BCCh de
+  referencia (captación, curva 2 años, IPSA/IGPA, índices globales); backfills (sección 3).
+- [x] **Fase 5** — `db/database.py` y `views.py` divididos por dominio; API `/api/v1`; JS local;
+  CI; export a Parquet.
+
+Pendiente que requiere decisión o curaduría humana:
+
+- [ ] **Revisión legal** antes de publicar (PLAN §8: asesoría de inversión — Ley 21.521,
+  conflicto de interés, datos personales — Ley 21.719, términos de uso de las fuentes y la
+  descarga de la Circular 1.835 que salta el CAPTCHA).
+- [ ] **`config/proveedores.yaml`**: URL verificada de cada AGF y AFP (sin eso no hay botón
+  "ir al proveedor").
+- [ ] **RUT de las 7 AFP, China Construction Bank y Bank of China** en `config/entidades.yaml`.
+- [ ] **Factor de reparto de dividendos** de fondos mutuos: no hay fuente identificada; los
+  fondos afectados se marcan en su ficha y muestran la cifra oficial.
+- [ ] **Fondos de inversión públicos (D7), APV y Cuenta 2 (D8), reclamos (D11)**: requieren
+  explorar fuentes nuevas de la CMF y la SP.
+- [ ] **Cuotas FFMM diarias (D2)**: decidir si vale el volumen (~700 mil filas/año) para
+  medir volatilidad intra-mes.
+- [ ] **Separar ingesta y servicio** (copia de solo lectura publicada) cuando haya servidor.
 
 ---
 

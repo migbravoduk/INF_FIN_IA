@@ -5,6 +5,21 @@
 > Este documento está escrito para ejecutarse por fases con un asistente (Opus). Cada tarea
 > trae qué hacer, dónde y cómo comprobar que quedó bien.
 
+> **Estado (2026-11-16): ejecutado.** Detalle de lo hecho y de lo que queda pendiente de una
+> decisión o curaduría humana en [`docs/wiki/Hoja-de-Ruta.md`](wiki/Hoja-de-Ruta.md), sección 0.
+> Desvíos respecto de este plan, decididos durante la ejecución:
+> - 5.5 Convenciones: en vez de reescribir columnas (8 M de filas en B.1) se crearon vistas
+>   `v_*` con `period` INTEGER y fechas DATE; los lectores nuevos usan las vistas.
+> - 5.4 Comisiones y comparador ya conservaban historia (la idempotencia era por corte);
+>   solo faltaba cargar más cortes.
+> - 5.6 Se agregó `export-parquet`; la tabla agregada de B.1 no fue necesaria (la consulta
+>   de emisores responde rápido con zonemaps).
+> - D6 La BDE solo publica el IPSA mensual; no hay serie diaria.
+> - D3, D7, D8, D11 y la curaduría de proveedores y RUT de AFP quedan pendientes: requieren
+>   fuentes nuevas o verificación humana.
+> - Hallazgos nuevos durante la ejecución (en CONTEXTO.md): RUT de absorbente en la cartera
+>   de seguros, identidad B.8 rota por el informante, rezago real de la cartera SP.
+
 **Objetivo del producto** (lo que ordena las prioridades): entregar información de inversiones
 confiable a personas y, más adelante, derivarlas a los proveedores de los instrumentos que
 aparecen (AGF, AFP, corredoras, aseguradoras). Eso exige tres cosas que hoy no están:

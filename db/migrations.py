@@ -248,6 +248,14 @@ ALTER TABLE fact_producto_metricas ADD COLUMN IF NOT EXISTS exceso_deposito_12m 
 """
 
 
+# ------------------------------------------------------------------
+# 008 · marca de serie anómala (saltos de valor cuota > ±50% en un mes)
+# ------------------------------------------------------------------
+M008 = """
+ALTER TABLE fact_producto_metricas ADD COLUMN IF NOT EXISTS serie_anomala BOOLEAN;
+"""
+
+
 MIGRATIONS: list[tuple[str, str, str]] = [
     ("001", "dq_results: controles de calidad", M001),
     ("002", "dim_dataset: metadatos de unidades, frecuencia y fuente", M002),
@@ -256,6 +264,7 @@ MIGRATIONS: list[tuple[str, str, str]] = [
     ("005", "vistas v_* con período INTEGER y fechas DATE", M005),
     ("006", "v_mutual_fund_holdings: cartera FFMM tipada", M006),
     ("007", "fact_producto_metricas.exceso_deposito_12m", M007),
+    ("008", "fact_producto_metricas.serie_anomala", M008),
 ]
 
 # Migraciones que se reaplican siempre (contenido de referencia o vistas): son idempotentes.

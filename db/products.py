@@ -158,6 +158,11 @@ def _monthly_panel(db) -> pd.DataFrame:
     df = pd.concat([ffmm, afp], ignore_index=True)
     df["fecha"] = pd.to_datetime(df["fecha"])
     df["mes"] = df["fecha"].dt.to_period("M")
+    # Solo meses CERRADOS: el valor del 13 de noviembre no es el "corte de noviembre". Se
+    # descarta el último mes de cada producto si su dato queda a más de 5 días del fin de mes.
+    fin_mes = df["mes"].dt.to_timestamp(how="end").dt.normalize()
+    ultimo = df.groupby("producto_id")["mes"].transform("max")
+    df = df[~((df["mes"] == ultimo) & (df["fecha"] < fin_mes - pd.Timedelta(days=5)))]
     return df.sort_values(["producto_id", "mes"])
 
 
@@ -291,6 +296,11 @@ def _compute_metrics(db, panel, fecha_corte=None) -> int:
             dvol = float(np.sqrt(((down - rf / 12) ** 2).sum() / len(r36)) * math.sqrt(12)) if len(down) else None
             rec["sortino"] = (ann - rf) / dvol if dvol else None
         rec["escala_riesgo"] = risk_scale(vol)
+        # Serie anómala: algún mes con variación de más de ±50% del valor cuota. Medido
+        # (nov-2026): series de un solo partícipe cuyo valor cuota salta ×10 y ×0,1 entre
+        # meses (p. ej. 9414-S). No es rentabilidad real: se excluye de rankings y de las
+        # estadísticas de su categoría, y la ficha lo advierte.
+        rec["serie_anomala"] = bool((r.iloc[-36:].abs() > 0.5).any())
         # ¿Le ganó al depósito a plazo? Rentabilidad 12m menos la tasa compuesta del período.
         r12 = rec.get("rent_nom_12m")
         rf12 = tpm_m.reindex(v.index[-12:]).dropna()
@@ -332,6 +342,9 @@ def _compute_metrics(db, panel, fecha_corte=None) -> int:
     num = [c for c in cols if c not in ("producto_id", "fecha_corte")]
     m[num] = m[num].apply(pd.to_numeric, errors="coerce")
     m["categoria"] = m["producto_id"].map(cat)
+    m["serie_anomala"] = m["serie_anomala"].fillna(False).astype(bool)
+    # Las series anómalas no entran en mediana, percentiles ni costo relativo.
+    m.loc[m["serie_anomala"], "categoria"] = None
 
     # Posición en la categoría (12m) y costo relativo.
     g = m.groupby("categoria")
@@ -443,7 +456,7 @@ def product_filters(db) -> dict:
 def list_products(db, tipo="", categoria="", clase="", moneda="", proveedor="", q="",
                   orden="rent_12m", limit=100) -> tuple[list[dict], int]:
     col, direction = ORDENES.get(orden, ORDENES["rent_12m"])
-    where, params = ["p.vigente", "m.fecha_corte = (SELECT MAX(x.fecha_corte) FROM fact_producto_metricas x WHERE x.producto_id = m.producto_id)"], []
+    where, params = ["p.vigente", "NOT coalesce(m.serie_anomala, false)", "m.fecha_corte = (SELECT MAX(x.fecha_corte) FROM fact_producto_metricas x WHERE x.producto_id = m.producto_id)"], []
     for val, sql in ((tipo, "p.tipo = ?"), (categoria, "p.categoria = ?"), (moneda, "p.moneda = ?"),
                      (proveedor, "p.rut_proveedor = ?")):
         if val:

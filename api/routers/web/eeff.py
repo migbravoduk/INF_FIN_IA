@@ -25,12 +25,19 @@ def eeff_hub(request: Request):
 
 @router.get("/eeff/corporativos")
 @router.get("/eeff/agf")
-def eeff(request: Request, db: Database = Depends(get_db)):
-    """Vista EEFF del archivo plano CMF, según la clasificación de la ruta."""
+def eeff(request: Request, rut: str = Query(""), db: Database = Depends(get_db)):
+    """Vista EEFF del archivo plano CMF, según la clasificación de la ruta.
+
+    `?rut=` preselecciona la empresa (lo usa la ficha de producto para enlazar a los EEFF
+    de la administradora).
+    """
     scope = "agf" if request.url.path.endswith("/agf") else "corporativos"
     cfg = _EEFF_SCOPES[scope]
+    companies = records(db.get_cmf_companies(agf=cfg["agf"]))
+    if rut:
+        companies.sort(key=lambda c: str(c.get("rut")) != rut)  # la pedida queda primera
     return templates.TemplateResponse(request, "eeff.html", {
-        "companies": records(db.get_cmf_companies(agf=cfg["agf"])),
+        "companies": companies,
         "periods": db.get_cmf_periods(),
         "scope": scope,
         "page_title": cfg["title"],
