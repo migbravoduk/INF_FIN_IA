@@ -58,6 +58,7 @@ bcentral:
     frequency: monthly
     unit: porcentaje
     description: Tasa de desocupación nacional mensual INE
+    publish_lag_days: 35   # el INE publica el desempleo ~fin del mes siguiente
 
   # --- Tipo de Cambio (Diario y Mensual) ---
   - id: F073.TCO.PRE.Z.D
@@ -127,6 +128,7 @@ bcentral:
     frequency: monthly
     unit: indice
     description: Imacec a costo de factores, serie empalmada (índice 2018=100)
+    publish_lag_days: 35   # el IMACEC sale ~el día 1 del mes subsiguiente
 
   # ============================================================
   # Fase 6 — Encuesta de Expectativas Económicas (EEE, medianas)
@@ -289,6 +291,7 @@ bcentral:
     frequency: daily
     unit: porcentaje_anual
     description: Expectativa de TPM en la próxima RPM (mediana EOF, quincenal)
+    publish_lag_days: 16   # EOF es quincenal
 
   - id: F089.EOF.TPM.3MS.D
     name: EOF TPM 3 meses (2 reuniones)
@@ -296,6 +299,7 @@ bcentral:
     frequency: daily
     unit: porcentaje_anual
     description: Expectativa de TPM a 2 reuniones / 3 meses (mediana EOF)
+    publish_lag_days: 16   # EOF es quincenal
 
   - id: F089.EOF.TPM.6MS.D
     name: EOF TPM 6 meses (4 reuniones)
@@ -303,6 +307,7 @@ bcentral:
     frequency: daily
     unit: porcentaje_anual
     description: Expectativa de TPM a 4 reuniones / 6 meses (mediana EOF)
+    publish_lag_days: 16   # EOF es quincenal
 
   - id: F089.EOF.TPM.12MS.D
     name: EOF TPM 12 meses
@@ -310,6 +315,7 @@ bcentral:
     frequency: daily
     unit: porcentaje_anual
     description: Expectativa de TPM a 12 meses (mediana EOF)
+    publish_lag_days: 16   # EOF es quincenal
 
   - id: F089.EOF.TPM.24MS.D
     name: EOF TPM 24 meses
@@ -317,6 +323,7 @@ bcentral:
     frequency: daily
     unit: porcentaje_anual
     description: Expectativa de TPM a 24 meses (mediana EOF)
+    publish_lag_days: 16   # EOF es quincenal
 
   - id: F089.EOF.VII.12MS.D
     name: EOF Inflación 12 meses (var. IPC)
@@ -324,6 +331,7 @@ bcentral:
     frequency: daily
     unit: porcentaje
     description: Expectativa de inflación siguientes 12 meses (mediana EOF)
+    publish_lag_days: 16   # EOF es quincenal
 
   - id: F089.EOF.VII.S12M.D
     name: EOF Inflación 13-24 meses (var. IPC)
@@ -331,6 +339,7 @@ bcentral:
     frequency: daily
     unit: porcentaje
     description: Expectativa de inflación de los 12 meses subsiguientes (mediana EOF)
+    publish_lag_days: 16   # EOF es quincenal
 
   - id: F089.EOF.TC.28DA.D
     name: EOF Tipo de cambio 28 días
@@ -338,6 +347,7 @@ bcentral:
     frequency: daily
     unit: CLP_por_USD
     description: Expectativa del tipo de cambio a 28 días (mediana EOF)
+    publish_lag_days: 16   # EOF es quincenal
 
   - id: F089.EOF.TC.7MA.D
     name: EOF Tipo de cambio 3 meses
@@ -346,6 +356,7 @@ bcentral:
     unit: CLP_por_USD
     discontinued: true   # descontinuada desde 2018-01; la sonda la salta
     description: Expectativa del tipo de cambio a 3 meses (mediana EOF)
+    publish_lag_days: 16   # EOF es quincenal
 
   - id: F032.IMC.IND.Z.Z.EP18.03.Z.0.M
     name: IMACEC Minero (Base 2018)
@@ -353,6 +364,7 @@ bcentral:
     frequency: monthly
     unit: indice
     description: Imacec minero, serie empalmada (índice 2018=100)
+    publish_lag_days: 35   # el IMACEC sale ~el día 1 del mes subsiguiente
 
   - id: F032.IMC.IND.Z.Z.EP18.N03.Z.0.M
     name: IMACEC No Minero (Base 2018)
@@ -360,6 +372,7 @@ bcentral:
     frequency: monthly
     unit: indice
     description: Imacec no minero, serie empalmada (índice 2018=100)
+    publish_lag_days: 35   # el IMACEC sale ~el día 1 del mes subsiguiente
 
   - id: F022.BCLP.TIS.AN05.NO.Z.D
     name: Tasa BCP 5 años (curva soberana pesos)

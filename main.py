@@ -98,6 +98,19 @@ def cli():
 
     Sistema de ingestion y consulta de datos macroeconomicos y financieros.
     """
+
+
+@cli.result_callback()
+def _despues_de_comando(*_args, **_kwargs):
+    """Tras un fetch-*/import-* exitoso: borrar los crudos que alimentaron la carga.
+
+    Si el comando falla (sys.exit) este callback no corre y los crudos quedan para
+    reintentar sin volver a descargar.
+    """
+    sub = click.get_current_context().invoked_subcommand or ""
+    if sub.startswith(("fetch", "import")):
+        from scheduler.housekeeping import limpiar_crudos
+        limpiar_crudos()
     _setup_file_logging()
 
 
@@ -1548,37 +1561,41 @@ def export_parquet(output):
 
 
 @cli.command(name="clean-cache")
-@click.option("--keep", default=2, show_default=True, help="Archivos más recientes a conservar por fuente")
-@click.option("--dry-run", is_flag=True, help="Solo lista lo que se borraría")
-def clean_cache(keep, dry_run):
-    """Borra descargas crudas ya ingeridas en data/*_raw, conservando las más recientes.
+@click.option("--dry-run", is_flag=True, help="Solo informa cuánto se borraría")
+def clean_cache(dry_run):
+    """Borra las descargas crudas de data/*_raw (ya están en la base).
 
-    Se conservan las `keep` más recientes de cada fuente (y de cada ramo / banco / fondo)
-    como evidencia ante correcciones de la CMF. Todo lo borrado se puede volver a descargar.
+    Corre solo después de cada recarga exitosa; este comando es para hacerlo a mano.
     """
-    import re as _re
-    from collections import defaultdict
-    raw = Path("data")
-    groups = defaultdict(list)
-    for d in sorted(raw.glob("*_raw")):
-        for f in d.iterdir():
-            if not f.is_file():
-                continue
-            # Grupo = nombre sin los dígitos de fecha: 'balance_2026_07_001.json' → 'balance_####_##_001'
-            key = _re.sub(r"(19|20)\d{2}[_-]?\d{2}([_-]?\d{2})?", "#", f.name)
-            groups[(d.name, key)].append(f)
-    borrar = []
-    for (_, _), files in groups.items():
-        # Por PERÍODO (el nombre lleva la fecha), no por fecha de descarga: una reingesta de
-        # meses antiguos no debe desplazar a los más recientes.
-        files.sort(key=lambda f: f.name, reverse=True)
-        borrar += files[keep:]
-    total = sum(f.stat().st_size for f in borrar)
-    for f in borrar:
-        console.print(f"  {'(dry-run) ' if dry_run else ''}borrar {f}")
-        if not dry_run:
-            f.unlink()
-    console.print(f"[green]{len(borrar)} archivos · {total / 1e6:,.1f} MB {'por liberar' if dry_run else 'liberados'}[/]")
+    from scheduler.housekeeping import limpiar_crudos
+    n, size = limpiar_crudos(dry_run=dry_run)
+    console.print(f"[green]{n} archivos · {size / 1e6:,.1f} MB {'por liberar' if dry_run else 'liberados'}[/]")
+
+
+@cli.command(name="compactar")
+@click.option("--respaldo/--sin-respaldo", default=True, show_default=True,
+              help="Copiar la base a data/backups antes (se conserva solo el más reciente)")
+def compactar_cmd(respaldo):
+    """Reescribe la base para recuperar el espacio de las filas borradas por reingestas.
+
+    DuckDB no devuelve al disco ese espacio. Requiere que nadie más tenga la base abierta
+    (cerrar la web). Verifica que los conteos de todas las tablas coincidan antes de
+    reemplazar el archivo.
+    """
+    from scheduler.housekeeping import compactar, respaldar
+    if respaldo:
+        dst = respaldar()
+        console.print(f"[dim]Respaldo: {dst}[/]")
+    antes, despues = compactar()
+    console.print(f"[green]✓ Base compactada:[/] {antes / 1e6:,.0f} MB → {despues / 1e6:,.0f} MB")
+
+
+@cli.command(name="respaldar")
+@click.option("--keep", default=1, show_default=True, help="Respaldos a conservar")
+def respaldar_cmd(keep):
+    """Copia la base a data/backups/ y borra los respaldos más antiguos que `keep`."""
+    from scheduler.housekeeping import respaldar
+    console.print(f"[green]✓ Respaldo:[/] {respaldar(keep=keep)}")
 
 
 # ----------------------------------------------------------

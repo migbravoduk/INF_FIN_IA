@@ -91,6 +91,19 @@ def show_diagnostics(statuses: list[FreshnessStatus]):
     console.print(t)
     Prompt.ask("\n[dim]Presiona ENTER para continuar[/]")
 
+def _post_carga(db: Database) -> None:
+    """Tras descargar: reconstruir capas derivadas, controles de calidad y borrar crudos."""
+    from db.products import rebuild_all
+    from db.quality import run_checks
+    from scheduler.housekeeping import despues_de_cargar
+    for paso, fn in (("productos y métricas", rebuild_all), ("controles de calidad", run_checks)):
+        try:
+            fn(db)
+        except Exception as e:
+            console.print(f"[yellow]⚠ {paso}: {e}[/]")
+    despues_de_cargar(db)
+
+
 def run_catchup_for_kind(db: Database, statuses: list[FreshnessStatus], kind: str) -> int:
     """Ejecuta catchup filtrado por un tipo específico."""
     targets = [s for s in statuses if s.kind == kind and s.due]
@@ -107,7 +120,8 @@ def run_catchup_for_kind(db: Database, statuses: list[FreshnessStatus], kind: st
             total_updated += n
         except Exception as e:
             console.print(f"  [bold red]❌ Error en {st.source}:[/] {e}")
-            
+
+    _post_carga(db)
     return total_updated
 
 def run_global_catchup(db: Database, statuses: list[FreshnessStatus]):
@@ -130,6 +144,7 @@ def run_global_catchup(db: Database, statuses: list[FreshnessStatus]):
         except Exception as e:
             console.print(f"  [bold red]❌ Error en {st.source}:[/] {e}")
             
+    _post_carga(db)
     console.print("\n[bold green]✓ Catch-up global completado.[/]")
 
 # ============================================================
@@ -706,6 +721,10 @@ def run_menu():
                 Prompt.ask("\n[dim]Presiona ENTER para volver al menú[/]")
             elif opt == "2":
                 manual_fn()
+                # Los modos manuales abren y cierran su propia conexión: la rutina
+                # posterior (derivadas, controles, borrar crudos) usa una nueva.
+                with Database() as db:
+                    _post_carga(db)
 
 # ============================================================
 # Modo Argumentos (CLI no interactivo)
@@ -754,6 +773,8 @@ def run_cli_args(args):
             ctrl, fi = actualizar_cartera_seguros(objetivo)
             console.print(f"[bold green]✓ Cartera actualizada.[/] "
                           f"Control: {ctrl:,} filas · Renta fija: {fi:,} instrumentos.")
+            with Database() as db:
+                _post_carga(db)
 
 
 if __name__ == "__main__":

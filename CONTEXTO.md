@@ -475,6 +475,22 @@ Fuentes (BCCh BDE API · CMF XBRL plano · CMF/SBIF API · SP scraping)
 - **FastAPI 0.141 anida los routers incluidos** (`_IncludedRouter`): `app.routes` no lista las
   rutas hijas. Para inventariarlas hay que recorrer `original_router`.
 
+- **Disco: los crudos se borran después de cada carga** (`scheduler/housekeeping.py`, regla
+  pedida por el usuario en nov-2026). Llegaron a ocupar 1,65 GB contra 1,0 GB de la base. Se
+  llama desde `run_catchup`, desde `main.py` (result_callback de la CLI para `fetch-*` e
+  `import-*` exitosos) y desde `actualizar.py`. Consecuencia: `import-cartera-seguros` solo
+  sirve para ZIP que se dejen a mano en la carpeta; ya no hay caché de descargas entre corridas.
+  Colectores nuevos: escribir sus crudos bajo `data/<fuente>_raw/` para quedar cubiertos.
+- **`compactar` usa EXPORT/IMPORT DATABASE, no `COPY FROM DATABASE`**: este último copia las
+  tablas en un orden que viola las claves foráneas (observations antes que series) y falla.
+  Se verifica que los conteos de todas las tablas coincidan antes de reemplazar el archivo, y
+  las secuencias quedan bien (el siguiente `nextval` sigue al máximo id). 1.060 → 967 MB la
+  primera vez. Requiere la base cerrada por todos los demás procesos.
+- **El catch-up solo recalcula derivadas y controles si llegaron filas nuevas**: corre cada hora
+  y casi siempre no hay nada publicado; antes gastaba ~20 s por corrida en vano.
+- **`publish_lag_days` también rige en series diarias**: la EOF es quincenal aunque su código
+  termine en `.D`; sin rezago aparecía siempre atrasada.
+
 ## Cómo hacer tareas comunes
 
 - **Agregar una serie BCCh**: editar `config/series_catalog.yaml` y `fetch --id <code> --from-date`.

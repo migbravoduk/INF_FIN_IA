@@ -162,7 +162,10 @@ def probe_bcentral(db, today):
         latest = db.get_latest_value(sid)
         latest_d = _to_date(latest["date"]) if latest else None
         if freq == "daily":
-            expected_d = _last_business_day_before(today)
+            # `publish_lag_days` también rige en diarias: la EOF es quincenal aunque su
+            # código termine en .D, y sin rezago aparecía siempre atrasada.
+            expected_d = _last_business_day_before(
+                today - dt.timedelta(days=int(meta.get("publish_lag_days") or 0)))
             due, expected_s = (latest_d is None or latest_d < expected_d), expected_d.isoformat()
         elif freq == "quarterly":
             ey, eq = _expected_quarter(today, lag)

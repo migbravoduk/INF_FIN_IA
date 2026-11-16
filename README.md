@@ -32,7 +32,26 @@ Encima de las fuentes se construyen:
 - **Controles de calidad** (`dq_results`): unicidad, identidad contable, completitud,
   continuidad, rangos y cruces entre tablas.
 
-Base local: `data/finanzas_chile.duckdb` (DuckDB, no versionada).
+Base local: `data/finanzas_chile.duckdb` (DuckDB, no versionada): **~15,8 millones de filas,
+967 MB** al 16-11-2026.
+
+| Tabla | Filas | Cobertura |
+|---|---:|---|
+| `cmf_insurer_portfolio_fixed_income` | 8.216.035 | 2020-01 → 2026-09 |
+| `cmf_bank_statements` | 1.959.738 | 2019-01 → 2026-09 |
+| `cmf_financial_statements` | 1.534.346 | 2015-03 → 2026-06 |
+| `sp_instrument_prices` | 1.093.373 | 2016-11 → 2026-11 (diaria los últimos 5 años, semanal antes) |
+| `cmf_mutual_fund_portfolio` | 933.087 | 2024-07 → 2026-09 |
+| `cmf_insurer_statements` | 736.622 | 2015-03 → 2026-06 (trimestral + anual auditada) |
+| `sp_portfolio_holdings` | 356.177 | 2015-01 → 2026-06 |
+| `cmf_mutual_fund_quota_values` | 308.973 | 2018-01 → 2026-10 (corte mensual) |
+| `cmf_broker_statements` | 213.325 | 2015-03 → 2026-06 |
+| `sp_quota_values` | 212.600 | 2008-04 → 2026-11 |
+| `observations` (61 series BCCh) | 85.068 | 1975 → 2026-11 |
+| `cmf_insurer_portfolio_control` | 75.045 | 2020-01 → 2026-09 |
+| `cmf_mutual_fund_fees` | 65.897 | 2024-07 → 2026-09 |
+| `cmf_mutual_fund_returns` | 3.963 | cortes 2026-03 y 2026-06 |
+| `dim_producto` / `fact_producto_metricas` | 2.868 vigentes | métricas al 31-10-2026 |
 
 ---
 
@@ -82,8 +101,17 @@ Comandos de carga histórica por fuente: `fetch`, `fetch-cmf`, `fetch-banks`, `f
 `fetch-ffmm-comisiones`, `fetch-ffmm-comparador`, `fetch-sp-cuotas`, `fetch-sp-cartera`,
 `fetch-sp-precios`. Cada uno documenta sus opciones con `--help`.
 
-Mantenimiento: `clean-cache [--dry-run]` borra descargas crudas ya ingeridas (conserva las dos
-más recientes por fuente); `export-parquet` exporta la renta fija de seguros a Parquet.
+**Eficiencia de disco** (automático):
+
+- Después de cada carga exitosa (catch-up, comandos `fetch-*`/`import-*`, actualizador) se
+  **borran las descargas crudas** de `data/*_raw`: ya están en la base y se pueden volver a
+  bajar. Si una carga falla, se conservan para reintentar.
+- Las capas derivadas y los controles solo se recalculan si llegaron filas nuevas.
+- `dq_results` guarda las últimas 30 corridas y `fetch_log` un año.
+
+A mano: `clean-cache [--dry-run]`, `compactar` (recupera el espacio que dejan las reingestas;
+cerrar la web antes), `respaldar --keep N` (copia la base a `data/backups/`, conserva N) y
+`export-parquet` (renta fija de seguros a Parquet).
 
 ---
 

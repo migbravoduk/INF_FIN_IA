@@ -74,9 +74,11 @@ def run_catchup(dry_run: bool = False, today: dt.date = None, kinds: list[str] |
         logger.info(f"Frescura: {len(due)}/{len(statuses)} objetivos pendientes (due).")
         if dry_run:
             return statuses
+        nuevos = 0
         for st in due:
             try:
                 status, n = _dispatch_catchup(db, st)
+                nuevos += n or 0
                 logger.info(f"  {st.source}: {status} (+{n})")
             except Exception as e:
                 logger.error(f"  {st.source}: error — {e}")
@@ -85,18 +87,24 @@ def run_catchup(dry_run: bool = False, today: dt.date = None, kinds: list[str] |
                                  "error", error_msg=str(e))
                 except Exception:
                     pass
-        if due:
+        # Las capas derivadas y los controles cuestan ~20 s: solo si llegaron filas nuevas
+        # (el catch-up corre cada hora y la mayoría de las veces no hay nada publicado).
+        if nuevos:
             try:
                 from db.products import rebuild_all
                 rebuild_all(db)
             except Exception as e:
                 logger.error(f"Reconstrucción de entidades/productos/métricas falló: {e}")
-        if validate and due:
+        if validate and nuevos:
             try:
                 from db.quality import run_checks
                 run_checks(db)
             except Exception as e:
                 logger.error(f"Controles de calidad fallaron: {e}")
+        if due:
+            # Regla del proyecto: tras cada recarga se borran los crudos que la alimentaron.
+            from scheduler.housekeeping import despues_de_cargar
+            despues_de_cargar(db)
     return statuses
 
 
@@ -110,6 +118,8 @@ def refresh_recent(n: int = 2) -> None:
                     logger.info(f"Reingesta de correcciones: {src.kind} OK")
                 except Exception as e:
                     logger.error(f"Reingesta de correcciones {src.kind}: {e}")
+        from scheduler.housekeeping import despues_de_cargar
+        despues_de_cargar(db)
 
 
 # ============================================================
