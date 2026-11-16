@@ -56,6 +56,21 @@ def build():
         print("Instalando PyInstaller...")
         subprocess.check_call([sys.executable, "-m", "pip", "install", "pyinstaller"])
 
+    # Versión embebida: commit y fecha de compilación (`Actualizar_Datos.exe --version`).
+    # Así se sabe si el .exe quedó desfasado respecto del código (pasó en nov-2026: el de
+    # agosto no traía fondos mutuos ni el arreglo del catch-up).
+    import datetime as _dt
+    try:
+        commit = subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], cwd=ROOT, text=True).strip()
+        sucio = bool(subprocess.check_output(["git", "status", "--porcelain"], cwd=ROOT, text=True).strip())
+    except Exception:
+        commit, sucio = "desconocido", False
+    (ROOT / "_build_info.py").write_text(
+        f'COMMIT = "{commit}{"+cambios" if sucio else ""}"
+'
+        f'FECHA = "{_dt.datetime.now():%Y-%m-%d %H:%M}"
+', encoding="utf-8")
+
     work = ROOT / "build" / NOMBRE.lower()
     if work.exists():
         shutil.rmtree(work)
@@ -75,6 +90,7 @@ def build():
         "--exclude-module", "statsmodels",
         "--exclude-module", "matplotlib",
         "--exclude-module", "scipy",
+        "--hidden-import", "_build_info",
         str(ROOT / "actualizar.py"),
     ]
     subprocess.check_call(cmd)
@@ -85,7 +101,8 @@ def build():
     print("\nUso:")
     print(f"  • Doble clic en {NOMBRE}.exe            → menú interactivo por fuente")
     print(f"  • {NOMBRE}.exe --status                 → qué fuentes tienen datos pendientes")
-    print(f"  • {NOMBRE}.exe --catchup                → lleva las 9 fuentes a su período esperado")
+    print(f"  • {NOMBRE}.exe --catchup                → lleva todas las fuentes a su período esperado")
+    print(f"  • {NOMBRE}.exe --version                → commit con que se compiló")
     print(f"  • {NOMBRE}.exe --todo                   → catch-up + huecos históricos de cartera")
     print("\n⚠️  Cerrar la web (iniciar_web.bat) antes de actualizar: DuckDB no admite")
     print("    un proceso escribiendo y otro leyendo el mismo archivo.")

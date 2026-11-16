@@ -790,8 +790,17 @@ if __name__ == "__main__":
     parser.add_argument("--todo", action="store_true",
                         help="Equivale a --catchup --cartera-seguros: actualiza todas las fuentes")
     parser.add_argument("--status", action="store_true", help="Muestra el diagnóstico de frescura y sale")
+    parser.add_argument("--version", action="store_true", help="Commit y fecha con que se compiló el .exe")
 
     args = parser.parse_args()
+
+    if args.version:
+        try:
+            import _build_info
+            console.print(f"Actualizador compilado desde el commit {_build_info.COMMIT} ({_build_info.FECHA})")
+        except ImportError:
+            console.print("Ejecución desde el código fuente (sin compilar).")
+        sys.exit(0)
 
     if args.todo:
         args.catchup = True

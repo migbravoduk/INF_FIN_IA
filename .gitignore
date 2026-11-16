@@ -32,3 +32,6 @@ dist/
 .vscode/
 .idea/
 .claude/
+
+# Generado por build_actualizador.py
+_build_info.py
