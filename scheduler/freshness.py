@@ -5,8 +5,9 @@ Cada fuente expone su "último período que tengo" (vía la capa DB) y se calcul
 "siguiente esperado" según la frecuencia y un rezago de publicación. Si el dato falta y
 ya estamos dentro de su ventana de publicación, queda marcado como `due` (pendiente).
 
-El orquestador `run_catchup` (scheduler/jobs.py) consume `probe_all()` y descarga solo
-lo que esté `due`, reusando los collectors y los inserts idempotentes existentes.
+Las sondas de cada fuente están en `scheduler/sources.py` (registro único); este módulo
+aporta el tipo `FreshnessStatus`, las utilidades de fechas y `probe_all()`, que recorre
+el registro. El orquestador `run_catchup` (scheduler/jobs.py) descarga solo lo `due`.
 
 No descarga nada: este módulo es de SOLO LECTURA sobre la BD + cálculo de fechas.
 """
@@ -18,35 +19,29 @@ from typing import Optional
 
 import yaml
 
-from config.settings import settings
-from collectors.cmf_banks import CMFBankCollector
 
 logger = logging.getLogger(__name__)
 
 # Rezago de publicación por defecto, en días, según frecuencia.
 LAG_DEFAULTS = {"daily": 1, "monthly": 8, "quarterly": 85}
 
-# Overrides conocidos para fuentes no-BCCh (días tras el cierre del período).
-LAG_CMF_EMPRESAS = 60   # EEFF trimestrales XBRL (plazo regulatorio ~60 días)
-LAG_CMF_BANCOS = 35     # Estados bancarios mensuales SBIF (~30-40 días)
-LAG_CMF_SEGUROS = 60    # FECU trimestral de seguros de vida (~2 meses tras el cierre)
-LAG_CMF_INTERMEDIARIOS = 60  # FECU trimestral de corredores de bolsa / agentes de valores
-LAG_SP_CARTERA = 40     # Cartera desagregada mensual SP
+# Los rezagos propios de cada fuente viven junto a su sonda, en scheduler/sources.py.
 
 # Tope de días hábiles a recuperar de una vez para fuentes diarias (evita loops largos).
-MAX_DAILY_BACKFILL = 10
+MAX_DAILY_BACKFILL = 30  # días hábiles por corrida (antes 10: un atraso de 3 meses tomaba 6 corridas)
 
 
 @dataclass
 class FreshnessStatus:
     """Estado de frescura de un objetivo de ingesta."""
     source: str                       # etiqueta legible de la fuente
-    kind: str                         # 'bcentral'|'cmf_emp'|'cmf_bank'|'sp_cuotas'|'sp_precios'|'sp_cartera'
+    kind: str                         # clave de la fuente en scheduler/sources.SOURCES
     frequency: str                    # 'daily'|'monthly'|'quarterly'
     latest_have: Optional[str]        # último período/fecha que hay en BD (str)
     expected: Optional[str]           # siguiente período/fecha esperado (str)
     due: bool                         # True si falta y ya está en ventana de publicación
     params: dict = field(default_factory=dict)  # datos para que run_catchup despache el fetch
+    note: str = ""                    # p. ej. "incompleto: 200 entidades (53% de lo habitual)"
 
 
 # ============================================================
@@ -111,188 +106,26 @@ def _to_date(value) -> Optional[dt.date]:
 
 
 # ============================================================
-# Sondas por fuente
+# Sondeo de todas las fuentes
 # ============================================================
 
-def _bcentral_lag(meta: dict) -> int:
-    """Rezago de una serie BCCh: override `publish_lag_days` o default por frecuencia."""
-    if meta.get("publish_lag_days") is not None:
-        return int(meta["publish_lag_days"])
-    return LAG_DEFAULTS.get(meta.get("frequency", "monthly"), 8)
+def probe_all(db, today: Optional[dt.date] = None, kinds: Optional[list[str]] = None) -> list[FreshnessStatus]:
+    """Estado de frescura de todas las fuentes registradas (solo lectura, sin red).
 
-
-def _probe_bcentral(db, today: dt.date) -> list[FreshnessStatus]:
-    out: list[FreshnessStatus] = []
-    if not settings.has_bcentral_credentials:
-        return out  # sin credenciales no se puede descargar BCCh
-
-    with open(settings.CATALOG_PATH, encoding="utf-8") as f:
-        catalog = yaml.safe_load(f) or {}
-    for meta in catalog.get("bcentral", []):
-        sid = meta["id"]
-        freq = meta.get("frequency", "monthly")
-        lag = _bcentral_lag(meta)
-        latest = db.get_latest_value(sid)
-        latest_d = _to_date(latest["date"]) if latest else None
-
-        if freq == "daily":
-            expected_d = _last_business_day_before(today)
-            due = latest_d is None or latest_d < expected_d
-            expected_s = expected_d.isoformat()
-        elif freq == "quarterly":
-            ey, eq = _expected_quarter(today, lag)
-            expected_period = ey * 100 + eq * 3
-            have_period = (latest_d.year * 100 + ((latest_d.month - 1) // 3 + 1) * 3) if latest_d else 0
-            due = have_period < expected_period
-            expected_s = f"{ey}Q{eq}"
-        else:  # monthly
-            ey, em = _expected_month(today, lag)
-            expected_period = ey * 100 + em
-            have_period = (latest_d.year * 100 + latest_d.month) if latest_d else 0
-            due = have_period < expected_period
-            expected_s = f"{ey}-{em:02d}"
-
-        out.append(FreshnessStatus(
-            source=f"BCCh · {meta.get('name', sid)}",
-            kind="bcentral", frequency=freq,
-            latest_have=latest_d.isoformat() if latest_d else None,
-            expected=expected_s, due=due,
-            params={"series_id": sid, "from_date": latest_d.isoformat() if latest_d else None},
-        ))
-    return out
-
-
-def _probe_cmf_empresas(db, today: dt.date) -> FreshnessStatus:
-    ey, eq = _expected_quarter(today, LAG_CMF_EMPRESAS)
-    expected_period = ey * 100 + eq * 3
-    have = db.get_latest_cmf_period()
-    due = have is None or have < expected_period
-    return FreshnessStatus(
-        source="CMF · EEFF empresas", kind="cmf_emp", frequency="quarterly",
-        latest_have=str(have) if have else None, expected=str(expected_period), due=due,
-        params={"period": expected_period},
-    )
-
-
-def _probe_cmf_bancos(db, today: dt.date) -> FreshnessStatus:
-    ey, em = _expected_month(today, LAG_CMF_BANCOS)
-    expected_period = ey * 100 + em
-    have = db.get_latest_bank_period()
-    due = have is None or have < expected_period
-    return FreshnessStatus(
-        source="CMF · EEFF bancos", kind="cmf_bank", frequency="monthly",
-        latest_have=str(have) if have else None, expected=str(expected_period), due=due,
-        params={"year": ey, "month": em, "expected_period": expected_period},
-    )
-
-
-def _probe_cmf_seguros(db, today: dt.date, insurance_type: str) -> FreshnessStatus:
-    ey, eq = _expected_quarter(today, LAG_CMF_SEGUROS)
-    expected_period = ey * 100 + eq * 3   # YYYYMM del cierre trimestral (03/06/09/12)
-    have = db.get_latest_insurer_period(freq="trimestral", insurance_type=insurance_type)
-    due = have is None or have < expected_period
-    return FreshnessStatus(
-        source=f"CMF · EEFF seguros {insurance_type}", kind="cmf_insurer", frequency="quarterly",
-        latest_have=str(have) if have else None, expected=str(expected_period), due=due,
-        params={"year": ey, "month": eq * 3, "freq": "trimestral", "insurance_type": insurance_type},
-    )
-
-
-def _probe_cmf_intermediarios(db, today: dt.date) -> FreshnessStatus:
-    ey, eq = _expected_quarter(today, LAG_CMF_INTERMEDIARIOS)
-    expected_period = ey * 100 + eq * 3
-    have = db.get_latest_broker_period()
-    due = have is None or have < expected_period
-    return FreshnessStatus(
-        source="CMF · EEFF intermediarios de valores", kind="cmf_broker", frequency="quarterly",
-        latest_have=str(have) if have else None, expected=str(expected_period), due=due,
-        params={"year": ey, "month": eq * 3},
-    )
-
-
-def _probe_sp_cuotas(db, today: dt.date) -> FreshnessStatus:
-    expected_d = _last_business_day_before(today)
-    have = db.get_latest_sp_quota_date()
-    have_d = _to_date(have)
-    due = have_d is None or have_d < expected_d
-    return FreshnessStatus(
-        source="SP · valores cuota", kind="sp_cuotas", frequency="daily",
-        latest_have=have_d.isoformat() if have_d else None,
-        expected=expected_d.isoformat(), due=due,
-        params={"year": today.year},
-    )
-
-
-def _probe_sp_precios(db, today: dt.date) -> FreshnessStatus:
-    expected_d = _last_business_day_before(today)
-    have = db.get_latest_sp_price_date()
-    have_d = _to_date(have)
-    due = have_d is None or have_d < expected_d
-    return FreshnessStatus(
-        source="SP · cinta de precios", kind="sp_precios", frequency="daily",
-        latest_have=have_d.isoformat() if have_d else None,
-        expected=expected_d.isoformat(), due=due,
-        params={"from_date": have_d.isoformat() if have_d else None,
-                "to_date": expected_d.isoformat()},
-    )
-
-
-def _probe_sp_cartera(db, today: dt.date) -> FreshnessStatus:
-    ey, em = _expected_month(today, LAG_SP_CARTERA)
-    expected_period = ey * 100 + em
-    db_period = f"{ey}-{em:02d}"
-    have = db.get_latest_sp_portfolio_period()  # 'YYYY-MM'
-    have_cmp = int(have.replace("-", "")) if have else 0
-    due = have_cmp < expected_period
-    return FreshnessStatus(
-        source="SP · cartera mensual", kind="sp_cartera", frequency="monthly",
-        latest_have=have, expected=db_period, due=due,
-        params={"period": expected_period, "db_period": db_period},
-    )
-
-
-
-def _probe_cmf_fm_cartera(db, today) -> FreshnessStatus:
-    # Obtener el último periodo de la cartera insertada
-    res = db.conn.execute("SELECT MAX(period_year), MAX(period_month) FROM cmf_mutual_fund_portfolio").fetchone()
-    latest_y = res[0] if res else None
-    latest_m = res[1] if res else None
-    
-    # El periodo esperado es el mes anterior al actual (se publica a mes vencido)
-    if today.month == 1:
-        expected_y = today.year - 1
-        expected_m = 12
-    else:
-        expected_y = today.year
-        expected_m = today.month - 1
-        
-    latest_have = f"{latest_y}-{latest_m:02d}" if latest_y else None
-    expected = f"{expected_y}-{expected_m:02d}"
-    
-    due = latest_y is None or latest_y < expected_y or (latest_y == expected_y and latest_m < expected_m)
-    
-    return FreshnessStatus(
-        source="CMF Fondos Mutuos (Cartera)",
-        kind="cmf_fm_cartera",
-        frequency="monthly",
-        latest_have=latest_have,
-        expected=expected,
-        due=due,
-        params={"year": expected_y, "month": expected_m}
-    )
-
-def probe_all(db, today: Optional[dt.date] = None) -> list[FreshnessStatus]:
-    """Construye el estado de frescura de todas las fuentes (solo lectura)."""
+    Una sonda que falla no tumba el resto: se registra como pendiente con la nota del error,
+    para que el problema se vea en el menú en vez de esconderse.
+    """
+    from scheduler.sources import SOURCES  # import diferido: sources importa este módulo
     today = today or dt.date.today()
     statuses: list[FreshnessStatus] = []
-    statuses.extend(_probe_bcentral(db, today))
-    statuses.append(_probe_cmf_empresas(db, today))
-    statuses.append(_probe_cmf_bancos(db, today))
-    statuses.append(_probe_cmf_seguros(db, today, "vida"))
-    statuses.append(_probe_cmf_seguros(db, today, "generales"))
-    statuses.append(_probe_cmf_intermediarios(db, today))
-    statuses.append(_probe_sp_cuotas(db, today))
-    statuses.append(_probe_sp_precios(db, today))
-    statuses.append(_probe_sp_cartera(db, today))
-    statuses.append(_probe_cmf_fm(db, today))
+    for src in SOURCES:
+        if kinds and src.kind not in kinds:
+            continue
+        try:
+            statuses.extend(src.probe(db, today))
+        except Exception as e:
+            logger.error(f"Sonda {src.kind} falló: {e}")
+            statuses.append(FreshnessStatus(
+                source=src.titulo, kind=src.kind, frequency="?", latest_have=None,
+                expected=None, due=False, note=f"error de sonda: {e}"))
     return statuses

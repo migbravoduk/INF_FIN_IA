@@ -151,6 +151,35 @@ def _amount(raw: str) -> float | None:
         return None
 
 
+def _rut_from_name(fname: str) -> str:
+    return Path(fname).name.split(".", 1)[-1].strip().lstrip("0")
+
+
+def _resolve_rut(fname, declared, company, rut_from_name, name_ruts) -> tuple[str, str]:
+    """
+    RUT de la compañía de un archivo del ZIP: el declarado en el registro tipo 1, SALVO que
+    choque con el de OTRO archivo del mismo ZIP.
+
+    Regla general: el contenido se autodescribe y prevalece sobre el nombre del archivo.
+    Excepción medida (nov-2026): hay compañías absorbidas que siguen reportando en su propio
+    archivo pero con el RUT y la razón social de la absorbente en el encabezado —
+    `c240630g.99061000` declara 99231000 "HDI SEGUROS", que también tiene su archivo;
+    `c202412.76632384` (Zurich Rentas Vitalicias) declara 99185000, el de Chilena Consolidada.
+    Usar el declarado duplicaba a la absorbente con dos juegos de cifras distintos (control
+    con llaves repetidas en 202406 y 202411→202507). En ese caso manda el nombre del archivo,
+    que asigna el sistema de la CMF y es único por ZIP, y la razón social se deja vacía
+    porque la declarada es la de otra compañía.
+    """
+    if rut_from_name and declared != rut_from_name:
+        if declared in name_ruts:
+            logger.warning(f"{fname}: declara el RUT {declared} ({company or '—'}), que es el de "
+                           f"otro archivo del ZIP; se usa el del nombre ({rut_from_name}).")
+            return rut_from_name, ""
+        logger.warning(f"{fname}: el RUT del nombre ({rut_from_name}) no coincide con el "
+                       f"declarado ({declared} — {company or '—'}). Se usa el declarado.")
+    return declared or rut_from_name, company
+
+
 def parse_zip_control(zip_path: str | Path) -> list[dict]:
     """
     Lee un ZIP mensual y devuelve los registros del archivo de CONTROL (B.8) de todas las
@@ -178,6 +207,7 @@ def parse_zip_control(zip_path: str | Path) -> list[dict]:
             logger.warning(f"{path.name}: no se hallaron archivos de control (c{period}*).")
             return []
 
+        name_ruts = {_rut_from_name(f) for f in control_files}
         for fname in sorted(control_files):
             try:
                 lines = [l for l in z.read(fname).decode("utf-8").split("\n") if l]
@@ -198,12 +228,7 @@ def parse_zip_control(zip_path: str | Path) -> list[dict]:
                     ident = _slice(line, ID_LAYOUT)
                     rut = ident["rut"].strip().lstrip("0")
                     company = ident["nombre"].strip()
-                    if rut_from_name and rut != rut_from_name:
-                        # El contenido se autodescribe (trae RUT y razón social), así que
-                        # prevalece sobre el nombre del archivo; se deja constancia.
-                        logger.warning(f"{fname}: el RUT del nombre ({rut_from_name}) no "
-                                       f"coincide con el declarado dentro ({rut} — {company}). "
-                                       f"Se usa el declarado.")
+                    rut, company = _resolve_rut(fname, rut, company, rut_from_name, name_ruts)
                 elif rtype == "2":
                     if len(line) < B8_RECORD_LEN:
                         logger.warning(f"{fname}: registro corto ({len(line)}), se omite.")
@@ -248,6 +273,7 @@ def parse_zip_fixed_income(zip_path: str | Path) -> list[dict]:
     out: list[dict] = []
     with zipfile.ZipFile(path) as z:
         files = _type_files(z.namelist(), "i", m.group(2).lower())
+        name_ruts = {_rut_from_name(f) for f in files}
         for fname in sorted(files):
             rut_from_name = Path(fname).name.split(".", 1)[-1].strip().lstrip("0")
             rut = None
@@ -262,7 +288,8 @@ def parse_zip_fixed_income(zip_path: str | Path) -> list[dict]:
                     continue
                 rtype = line[0]
                 if rtype == "1":
-                    rut = _slice(line, ID_LAYOUT)["rut"].strip().lstrip("0") or rut_from_name
+                    declared = _slice(line, ID_LAYOUT)["rut"].strip().lstrip("0") or rut_from_name
+                    rut, _ = _resolve_rut(fname, declared, "", rut_from_name, name_ruts)
                 elif rtype == "2":
                     if len(line) not in B1_RECORD_LENS:
                         skipped += 1

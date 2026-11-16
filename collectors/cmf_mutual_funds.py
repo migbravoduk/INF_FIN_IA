@@ -364,6 +364,26 @@ class CMFMutualFundsCollector:
                 "agfs": [{"agf_name": n, "agf_rut": r} for n, r in sorted(agfs.items())],
                 "fecha": fecha}
 
+    def fetch_month_end_stats(self, year: int, month: int, max_tries: int = 8):
+        """
+        Corte de fin de mes: estadística del último día del mes CON publicación.
+
+        No basta con el último día hábil: los feriados chilenos (18-19 de septiembre, 31 de
+        diciembre en algunos años) caen en día hábil y ese día la CMF no publica. Se retrocede
+        hasta encontrar datos, con tope para no barrer el mes entero.
+
+        Devuelve (fecha, {"records": [...], "fund_types": {...}}); fecha es None si no hubo datos.
+        """
+        import datetime as _dt
+        d = _dt.date(year + (month // 12), (month % 12) + 1, 1) - _dt.timedelta(days=1)
+        for _ in range(max_tries):
+            if d.weekday() < 5:
+                res = self.fetch_daily_stats(d)
+                if res["records"]:
+                    return d, res
+            d -= _dt.timedelta(days=1)
+        return None, {"records": [], "fund_types": {}}
+
     @staticmethod
     def normalizar_run(run: str) -> str:
         """

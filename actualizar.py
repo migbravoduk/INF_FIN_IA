@@ -27,19 +27,17 @@ from rich.prompt import Prompt, IntPrompt
 from config.settings import settings
 from db.database import Database
 from scheduler.freshness import probe_all, FreshnessStatus
-from scheduler.jobs import _dispatch_catchup, _SOURCE_OF
+from scheduler.jobs import _dispatch_catchup
+from scheduler.sources import SOURCES, ingest_cartera_zip
 
 console = Console()
 
 def clear_screen():
     os.system('cls' if os.name == 'nt' else 'clear')
 
-# Fuentes cubiertas por el catch-up dirigido por frescura (scheduler/freshness.probe_all).
-# 'cmf_insurer' agrupa dos sondas (vida y generales) y 'bcentral' una por serie del catálogo.
-CATCHUP_KINDS = [
-    "bcentral", "cmf_emp", "cmf_bank", "cmf_insurer", "cmf_broker", "cmf_cartera", "cmf_fm",
-    "sp_cuotas", "sp_precios", "sp_cartera",
-]
+# Fuentes cubiertas por el catch-up: salen del registro único (scheduler/sources.SOURCES).
+# Un kind puede traer varias sondas (una por serie en BCCh, una por ramo en seguros).
+CATCHUP_KINDS = [s.kind for s in SOURCES]
 
 
 def get_status_summary(statuses: list[FreshnessStatus]) -> dict:
@@ -84,10 +82,11 @@ def show_diagnostics(statuses: list[FreshnessStatus]):
     t.add_column("Último en BD", justify="center")
     t.add_column("Siguiente Esperado", justify="center")
     t.add_column("Estado", justify="center")
+    t.add_column("Nota", style="dim")
 
     for s in statuses:
         estado = "[yellow]Pendiente[/]" if s.due else "[green]Al día[/]"
-        t.add_row(s.source, s.frequency, s.latest_have or "—", s.expected or "—", estado)
+        t.add_row(s.source, s.frequency, s.latest_have or "—", s.expected or "—", estado, s.note)
 
     console.print(t)
     Prompt.ask("\n[dim]Presiona ENTER para continuar[/]")
@@ -468,54 +467,61 @@ def manual_intermediarios():
         console.print(f"[bold red]Error:[/] {e}")
 
 
+def _pedir_mes(etiqueta="Período AAAAMM") -> tuple[int, int]:
+    hoy = dt.date.today()
+    y, m = (hoy.year, hoy.month - 1) if hoy.month > 1 else (hoy.year - 1, 12)
+    per = IntPrompt.ask(etiqueta, default=y * 100 + m)
+    return per // 100, per % 100
+
+
 def manual_cmf_fondos_mutuos():
-    """Actualización manual/forzada de CMF Fondos Mutuos (Valores Cuota)."""
+    """Fondos mutuos: corte mensual de valor cuota, cartera, comisiones o comparador."""
     console.print(Panel("[bold cyan]CMF Fondos Mutuos - Actualización Manual[/]",
                         border_style="cyan"))
-    console.print("[1] Cargar para el día de hoy\n"
-                  "[2] Cargar una fecha específica (YYYY-MM-DD)\n"
-                  "[3] Volver")
-    opt = Prompt.ask("Selecciona una opción", choices=["1", "2", "3"])
-    if opt == "3":
+    console.print("[1] Valor cuota: corte de fin de mes (uno o un rango)\n"
+                  "[2] Cartera de un mes\n"
+                  "[3] Comisiones de un mes\n"
+                  "[4] Comparador oficial de rentabilidad (último corte)\n"
+                  "[5] Volver")
+    opt = Prompt.ask("Selecciona una opción", choices=["1", "2", "3", "4", "5"])
+    if opt == "5":
         return
 
     from collectors.cmf_mutual_funds import CMFMutualFundsCollector
-
-    if opt == "1":
-        target_date = dt.date.today()
-    else:
-        date_str = Prompt.ask("Introduce la fecha (YYYY-MM-DD)", default=dt.date.today().isoformat())
-        target_date = dt.date.fromisoformat(date_str)
-
+    c = CMFMutualFundsCollector()
     try:
-        collector = CMFMutualFundsCollector()
-        console.print(f"[bold yellow]Descargando valores cuota de fondos mutuos para {target_date}...[/]")
-        recs = collector.fetch_daily_quotas(target_date)
-        if recs:
-            with Database() as db:
-                res = db.upsert_mutual_fund_quotas(recs)
-            console.print(f"[bold green]✓ Ingesta finalizada. {res['inserted']} registros insertados.[/]")
-        else:
-            console.print("[yellow]No se obtuvieron registros de fondos mutuos para esa fecha.[/]")
+        with Database() as db:
+            if opt == "1":
+                y0, m0 = _pedir_mes("Desde AAAAMM")
+                y1, m1 = _pedir_mes("Hasta AAAAMM")
+                y, m, total = y0, m0, 0
+                while (y, m) <= (y1, m1):
+                    d, res = c.fetch_month_end_stats(y, m)
+                    if res["records"]:
+                        total += db.upsert_mutual_fund_quotas(res["records"])
+                        db.upsert_mutual_fund_types(res["fund_types"])
+                        console.print(f"  • corte {d}: {len(res['records']):,} filas")
+                    else:
+                        console.print(f"  • {y}-{m:02d}: [yellow]sin publicación[/]")
+                    y, m = (y, m + 1) if m < 12 else (y + 1, 1)
+                db.propagar_agf_rut()
+                console.print(f"[bold green]✓ {total:,} filas de valor cuota.[/]")
+            elif opt == "2":
+                y, m = _pedir_mes()
+                n = db.upsert_mutual_fund_portfolio(c.fetch_monthly_portfolio(y, m))["inserted"]
+                console.print(f"[bold green]✓ {n:,} posiciones de cartera {y}-{m:02d}.[/]")
+            elif opt == "3":
+                y, m = _pedir_mes()
+                n = db.upsert_mutual_fund_fees(c.fetch_comisiones(y, m))
+                console.print(f"[bold green]✓ {n:,} filas de comisiones {y}-{m:02d}.[/]")
+            else:
+                datos = c.fetch_comparador()
+                n = db.upsert_mutual_fund_returns(datos["returns"])
+                db.upsert_mutual_fund_agfs(datos["agfs"])
+                db.propagar_agf_rut()
+                console.print(f"[bold green]✓ Comparador corte {datos['fecha']}: {n:,} series.[/]")
     except Exception as e:
         console.print(f"[bold red]Error:[/] {e}")
-
-
-
-def _ingestar_cartera(db, zip_path) -> tuple[int, int]:
-    """Parsea e ingesta un ZIP de cartera: B.8 Control + B.1 Renta Fija."""
-    from collectors.seguros_cartera import parse_zip_control, parse_zip_fixed_income
-
-    n_ctrl = n_fi = 0
-    recs = parse_zip_control(zip_path)
-    if recs:
-        n_ctrl = db.insert_insurer_portfolio_control(
-            recs[0]["period"], recs[0]["insurance_type"], recs)
-    fi = parse_zip_fixed_income(zip_path)
-    if fi:
-        n_fi = db.insert_insurer_portfolio_fixed_income(
-            fi[0]["period"], fi[0]["insurance_type"], fi)
-    return n_ctrl, n_fi
 
 
 def actualizar_cartera_seguros(periodos_por_ramo: dict[str, list[int]]) -> tuple[int, int]:
@@ -536,7 +542,7 @@ def actualizar_cartera_seguros(periodos_por_ramo: dict[str, list[int]]) -> tuple
                 if not zp:
                     console.print(f"    [yellow]⚠ no disponible en la CMF, se omite.[/]")
                     continue
-                n_ctrl, n_fi = _ingestar_cartera(db, zp)
+                n_ctrl, n_fi = ingest_cartera_zip(db, zp)
                 console.print(f"    [green]✓ control {n_ctrl:,} filas · "
                               f"renta fija {n_fi:,} instrumentos.[/]")
                 total_ctrl += n_ctrl
@@ -606,18 +612,29 @@ def menu_cartera_seguros():
 # Menú Principal
 # ============================================================
 
-# opción → (kind de frescura, título, etiqueta del modo manual, función manual)
+# Modo manual de cada fuente (el catch-up y el título salen del registro). Un test verifica
+# que toda fuente registrada tenga su entrada acá.
+_FFMM_MANUAL = ("Valor cuota, cartera, comisiones, comparador", manual_cmf_fondos_mutuos)
+MANUAL = {
+    "bcentral":          ("Descargas manuales / backfills forzados",     manual_bcentral),
+    "cmf_emp":           ("Ingesta manual / forzar período / historial", manual_cmf_empresas),
+    "cmf_bank":          ("Ingesta bancaria manual / historial",         manual_cmf_bancos),
+    "cmf_insurer":       ("Ingesta manual por trimestre / backfill",     manual_seguros),
+    "cmf_broker":        ("Ingesta manual por trimestre / backfill",     manual_intermediarios),
+    "cmf_cartera":       ("Períodos faltantes / último / uno puntual",   menu_cartera_seguros),
+    "cmf_fm_cuotas":     _FFMM_MANUAL,
+    "cmf_fm_cartera":    _FFMM_MANUAL,
+    "cmf_fm_comisiones": _FFMM_MANUAL,
+    "cmf_fm_comparador": _FFMM_MANUAL,
+    "sp_cuotas":         ("Descarga manual por rango de años",           manual_sp_cuotas),
+    "sp_precios":        ("Descarga manual por fecha / histórico",       manual_sp_precios),
+    "sp_cartera":        ("Descarga manual de período específico",       manual_sp_cartera),
+}
+
+# opción → (kind, título, etiqueta del modo manual, función manual)
 MENU_FUENTES = {
-    "1": ("bcentral",   "Banco Central",        "Descargas manuales / backfills forzados",   manual_bcentral),
-    "2": ("cmf_emp",    "CMF Empresas",         "Ingesta manual / forzar período / historial", manual_cmf_empresas),
-    "3": ("cmf_bank",   "CMF Bancos",           "Ingesta bancaria manual / historial",       manual_cmf_bancos),
-    "4": ("cmf_insurer", "CMF Seguros",         "Ingesta manual por trimestre / backfill",   manual_seguros),
-    "5": ("cmf_broker", "CMF Intermediarios",   "Ingesta manual por trimestre / backfill",   manual_intermediarios),
-    "6": ("cmf_cartera", "Cartera de seguros",  "Períodos faltantes / último / uno puntual",  menu_cartera_seguros),
-    "7": ("cmf_fm",     "CMF Fondos Mutuos",    "Ingesta manual por fecha (Valores Cuota)",  manual_cmf_fondos_mutuos),
-    "8": ("sp_cuotas",  "SP Valores Cuota",     "Descarga manual por rango de años",         manual_sp_cuotas),
-    "9": ("sp_precios", "SP Cinta de Precios",  "Descarga manual por fecha / histórico",     manual_sp_precios),
-    "10": ("sp_cartera", "SP Cartera AFP",      "Descarga manual de período específico",     manual_sp_cartera),
+    str(i): (src.kind, src.titulo, *MANUAL[src.kind])
+    for i, src in enumerate(SOURCES, start=1)
 }
 
 
@@ -634,22 +651,16 @@ def run_menu():
         # Contar total pendientes
         pendientes_totales = sum(1 for s in statuses if s.due)
         
+        lineas = [f"[0] ⚡ [bold green]Ejecutar Catch-up Completo[/] (Actualiza lo pendiente "
+                  f"automáticamente: [yellow]{pendientes_totales}[/] objetivos)"]
+        for op, (kind, titulo, _, _) in MENU_FUENTES.items():
+            lineas.append(f"[{op}] [cyan]{titulo}[/] — ({_estado(summary[kind])})")
         console.print(Panel.fit(
-            f"[bold white]Menú de Actualización - Repositorio Financiero Chile[/]\n\n"
-            f"[0] ⚡ [bold green]Ejecutar Catch-up Completo[/] (Actualiza lo pendiente automáticamente: [yellow]{pendientes_totales}[/] fuentes)\n"
-            f"[1] 🏦 [cyan]Banco Central (BCCh)[/] — ({summary['bcentral']['due']} de {summary['bcentral']['total']} series pendientes)\n"
-            f"[2] 🏢 [cyan]CMF Empresas (EEFF)[/] — ({_estado(summary['cmf_emp'])})\n"
-            f"[3] 🏛️ [cyan]CMF Bancos (SBIF)[/] — ({_estado(summary['cmf_bank'])})\n"
-            f"[4] 🛡️ [cyan]CMF Seguros (EEFF FECU)[/] — ({_estado(summary['cmf_insurer'])})\n"
-            f"[5] 🤝 [cyan]CMF Intermediarios de valores[/] — ({_estado(summary['cmf_broker'])})\n"
-            f"[6] 📊 [cyan]Cartera de seguros (Circ. 1.835)[/] — ({_estado(summary['cmf_cartera'])})\n"
-            f"[7] 📈 [cyan]CMF Fondos Mutuos[/] — ({_estado(summary.get('cmf_fm', {'total':0, 'due':0, 'expected':None}))})\n"
-            f"[8] 📈 [cyan]SP Valores Cuota AFP[/] — ({_estado(summary['sp_cuotas'])})\n"
-            f"[9] 💵 [cyan]SP Cinta de Precios[/] — ({_estado(summary['sp_precios'])})\n"
-            f"[10] 📁 [cyan]SP Cartera AFP[/] — ({_estado(summary['sp_cartera'])})\n\n"
+            "[bold white]Menú de Actualización - Repositorio Financiero Chile[/]\n\n"
+            + "\n".join(lineas) + "\n\n"
             # 'd' y 's' van escapados: Rich los leería como los estilos dim y strike.
-            f"\\[d] 🩺 Ver diagnóstico de frescura completo\n"
-            f"\\[s] ❌ Salir del programa",
+            "\\[d] 🩺 Ver diagnóstico de frescura completo\n"
+            "\\[s] ❌ Salir del programa",
             title="🇨🇱 Actualizador de Fuentes",
             border_style="blue",
             padding=(1, 4)
@@ -660,7 +671,7 @@ def run_menu():
             console.print("[bold red]⚠️  ¡ATENCIÓN! No tienes configuradas las credenciales del Banco Central en '.env' (Opción 1 estará limitada).[/]")
 
         opcion = Prompt.ask("\nSelecciona una opción",
-                            choices=[str(i) for i in range(11)] + ["d", "s"])
+                            choices=["0", *MENU_FUENTES, "d", "s"])
 
         if opcion == "s":
             console.print("\n[bold cyan]¡Hasta luego![/]")

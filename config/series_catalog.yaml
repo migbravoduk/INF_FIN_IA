@@ -7,6 +7,9 @@
 # para decidir cuándo empezar a buscar el dato nuevo. Si se omite, se usa el default por
 # frecuencia (daily=1, monthly=8, quarterly=85). Ejemplo: agregar `publish_lag_days: 30`
 # a la tasa de desempleo si el INE la publica más tarde de lo habitual.
+#
+# Campo opcional `discontinued: true`: la serie se conserva (tiene historia) pero el BCCh
+# dejó de publicarla, así que el catch-up no la vuelve a pedir.
 # ============================================================
 
 bcentral:
@@ -178,6 +181,7 @@ bcentral:
     frequency: monthly
     unit: porcentaje_anual
     publish_lag_days: 12
+    discontinued: true   # el BCCh dejó de publicarla (último dato 2010-01); la sonda la salta
     description: Expectativa de TPM dentro de 2 meses (mediana EEE)
 
   - id: F089.TPM.TAS.26.M
@@ -340,6 +344,7 @@ bcentral:
     category: expectativas
     frequency: daily
     unit: CLP_por_USD
+    discontinued: true   # descontinuada desde 2018-01; la sonda la salta
     description: Expectativa del tipo de cambio a 3 meses (mediana EOF)
 
   - id: F032.IMC.IND.Z.Z.EP18.03.Z.0.M
