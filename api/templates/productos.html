@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}Productos de inversión · INF_FIN_IA{% endblock %}
+
+{% block content %}
+<h1>Productos de inversión</h1>
+
+{% if not corte %}
+<div class="warn-box">
+    Aún no hay métricas calculadas. Se generan con <code>main.py build-productos</code>
+    (lo corre también el catch-up después de cada descarga).
+</div>
+{% else %}
+<p class="subtitle">
+    Fondos mutuos (cada serie por separado) y fondos de pensiones, con rentabilidad, riesgo y
+    costo medidos con el mismo método para todos. Corte de las métricas: <strong>{{ corte }}</strong>.
+    <br><span class="lead">El orden depende solo de la métrica elegida. Las cifras no son una
+    recomendación: compara productos de la misma categoría y revisa la
+    <a href="/metodologia">metodología</a>.</span>
+</p>
+
+<form class="eeff-form" id="prod-filtros" hx-get="/productos/tabla" hx-target="#prod-tabla"
+      hx-trigger="load, change, keyup changed delay:400ms from:input[name=q]" hx-include="this">
+    <label>Tipo
+        <select name="tipo">
+            <option value="">Todos</option>
+            <option value="ffmm">Fondos mutuos</option>
+            <option value="afp">Fondos de pensiones</option>
+        </select>
+    </label>
+    <label>Categoría
+        <select name="categoria">
+            <option value="">Todas</option>
+            {% for tipo, cat, n in filtros.categorias %}
+            <option value="{{ cat }}">{{ 'AFP · ' if tipo == 'afp' }}{{ cat }} ({{ n }})</option>
+            {% endfor %}
+        </select>
+    </label>
+    <label>Inversionista
+        <select name="clase">
+            {% for c in filtros.clases %}
+            <option value="{{ c }}" {{ 'selected' if c == 'Retail' }}>{{ c }}</option>
+            {% endfor %}
+            <option value="sin_dato">Sin clasificación CMF</option>
+            <option value="">Todas las clases</option>
+        </select>
+    </label>
+    <label>Moneda
+        <select name="moneda">
+            <option value="">Todas</option><option value="CLP">Pesos</option><option value="USD">Dólares</option>
+        </select>
+    </label>
+    <label>Administradora
+        <select name="proveedor">
+            <option value="">Todas</option>
+            {% for rut, nombre, n in filtros.proveedores %}
+            <option value="{{ rut }}">{{ nombre }} ({{ n }})</option>
+            {% endfor %}
+        </select>
+    </label>
+    <label>Ordenar por
+        <select name="orden">
+            {% for k, v in ordenes.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}
+        </select>
+    </label>
+    <label>Buscar <input type="search" name="q" placeholder="nombre del fondo"></label>
+</form>
+
+<div id="prod-tabla"><p class="loading">Cargando…</p></div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}Metodología · INF_FIN_IA{% endblock %}
+
+{% block content %}
+<h1>Metodología y fuentes</h1>
+<p class="subtitle">De dónde sale cada dato, en qué unidad viene y cómo se calcula cada cifra.</p>
+
+<section class="section-head"><h2>Cómo se calculan las métricas de productos</h2></section>
+<div class="resena">
+<ul>
+  <li><b>Serie base.</b> Un valor cuota por mes y por producto: el último día del mes con publicación.
+      Cada serie de un fondo mutuo se mide por separado, porque tiene su propio valor cuota.</li>
+  <li><b>Pesos.</b> Los fondos en dólares se convierten con el dólar observado publicado el día hábil
+      siguiente al corte (el publicado el día D corresponde a las transacciones del día D−1). Así lo
+      exige la metodología de la CMF y así cuadran nuestras cifras con las oficiales.</li>
+  <li><b>Rentabilidad.</b> Variación del valor cuota. Es neta de la remuneración de la administradora
+      y del gasto operacional, que se descuentan a diario del patrimonio del fondo. La comisión de
+      colocación se cobra aparte al partícipe y se informa por separado. A 3 y 5 años se anualiza.
+      La real descuenta la variación de la UF entre las mismas fechas.</li>
+  <li><b>Categoría.</b> Familia del comparador de la CMF; si la CMF no la informa, el tipo oficial de
+      fondo. Fondos de pensiones: su letra (A a E). La posición es el percentil de la rentabilidad a
+      12 meses dentro de la categoría (100 = mejor).</li>
+  <li><b>Consistencia.</b> Porcentaje de los últimos 36 meses en que la rentabilidad a 12 meses quedó
+      en la mitad superior de su categoría.</li>
+  <li><b>Riesgo.</b> Volatilidad = desviación estándar de los retornos mensuales de 36 meses × √12.
+      Peor caída = máxima pérdida desde un máximo previo (60 meses). Escala 1–7 por volatilidad
+      (umbrales 0,5 / 2 / 5 / 10 / 15 / 25%). Sharpe y Sortino usan como tasa libre de riesgo el
+      promedio de la TPM del período.</li>
+  <li><b>Costo a 10 años.</b> Diferencia entre invertir $1.000.000 durante 10 años sin costos y con
+      ellos, suponiendo la rentabilidad mediana de la categoría. Ilustración, no proyección.</li>
+  <li><b>Flujo neto.</b> Cambio del patrimonio menos lo que explica la rentabilidad: estima aportes
+      menos rescates.</li>
+</ul>
+<p><b>Limitación conocida.</b> Los fondos que reparten beneficios: el valor cuota publicado no incluye
+el factor de reparto, así que su rentabilidad calculada sale menor que la real (nunca mayor). En sus
+fichas se muestra la cifra oficial de la CMF y un aviso.</p>
+<p><b>Qué no es esto.</b> Información para comparar, no asesoría de inversión. El orden de los listados
+depende solo de la métrica elegida; ningún proveedor paga por aparecer o por su posición.</p>
+</div>
+
+<section class="section-head"><h2>Fuentes y unidades</h2></section>
+<div class="table-scroll">
+<table class="eeff-table">
+    <thead><tr><th>Dato</th><th>Fuente</th><th>Frecuencia</th><th>Unidad</th><th>Notas</th></tr></thead>
+    <tbody>
+    {% for d in datasets %}
+    <tr><td>{{ d.titulo }}<br><span class="lead"><code>{{ d.tabla }}</code></span></td>
+        <td>{% if d.url_fuente %}<a href="{{ d.url_fuente }}" target="_blank" rel="noopener">{{ d.fuente }}</a>{% else %}{{ d.fuente }}{% endif %}</td>
+        <td>{{ d.frecuencia }}</td><td>{{ d.unidad }}</td><td><span class="lead">{{ d.notas or '' }}</span></td></tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+
+<section class="section-head"><h2>Controles de calidad</h2></section>
+{% if dq %}
+<p class="eeff-meta">Última corrida {{ dq.run_at }} · {{ dq.total }} controles ·
+   <span class="{{ 'neg' if dq.errores else 'pos' }}">{{ dq.errores }} errores</span> · {{ dq.avisos }} avisos</p>
+{% if dq.detalle %}
+<div class="table-scroll"><table class="eeff-table">
+    <thead><tr><th>Control</th><th>Período</th><th>Estado</th><th>Detalle</th></tr></thead>
+    {% for r in dq.detalle[:40] %}<tr><td>{{ r.check_id }}</td><td>{{ r.periodo or '—' }}</td>
+        <td class="{{ 'neg' if r.estado == 'error' else '' }}">{{ r.estado }}</td><td><span class="lead">{{ r.detalle }} ({{ r.n_fallas }})</span></td></tr>{% endfor %}
+</table></div>
+{% endif %}
+{% else %}
+<p class="loading">Aún no se han corrido los controles (<code>main.py validate</code>).</p>
+{% endif %}
+{% endblock %}

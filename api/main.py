@@ -9,7 +9,8 @@ Monta:
   - Router de vistas HTML (Jinja2 + HTMX) en /
   - Archivos estáticos en /static
 
-ESQUELETO: los endpoints son stubs. Ver cada router para el contrato de datos.
+Los routers REST devuelven JSON para macro, EEFF, bancos, SP y KPIs; las vistas HTML
+cubren todas las fuentes. Ver cada router para el contrato de datos.
 """
 
 import logging
@@ -19,7 +20,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-from api.routers import macro, cmf, banks, sp, dashboard_kpi, views
+from api.routers import macro, cmf, banks, sp, dashboard_kpi, views, productos
 from config.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -57,6 +58,7 @@ app.include_router(dashboard_kpi.router, prefix="/api/kpi", tags=["kpi"])
 
 # Vistas HTML (dashboard)
 app.include_router(views.router, tags=["views"])
+app.include_router(productos.router, tags=["productos"])
 
 # Estáticos
 STATIC_DIR = Path(__file__).parent / "static"

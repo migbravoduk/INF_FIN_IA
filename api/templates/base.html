@@ -16,6 +16,7 @@
         <span class="brand">🇨🇱 INF_FIN_IA</span>
         <nav>
             <a href="/">Panel</a>
+            <a href="/productos">Productos</a>
             <a href="/banco-central">Banco Central</a>
             <a href="/eeff">EEFF</a>
             <a href="/comparar">Comparar</a>
@@ -24,16 +25,21 @@
             <a href="/proyecciones">Proyecciones</a>
             <a href="/inversion-institucional">Inv. institucional</a>
             <a href="/fondos-mutuos">Fondos Mutuos</a>
+            <a href="/metodologia">Metodología</a>
             <a href="/docs" target="_blank">API</a>
         </nav>
     </header>
 
     <main class="container">
+        {{ asof_banner(request.url.path) }}
         {% block content %}{% endblock %}
     </main>
 
     <footer class="footer">
-        <span>Fase web · datos reales desde DuckDB · v0.1.0</span>
+        <span>Fuentes: Banco Central de Chile, CMF y Superintendencia de Pensiones · v0.2.0</span>
+        <span class="disclaimer">Información de carácter informativo, no constituye asesoría ni
+        recomendación de inversión. Las rentabilidades pasadas no garantizan rentabilidades
+        futuras; los valores cuota son variables. Ver la fuente y la fecha de cada dato.</span>
     </footer>
 </body>
 </html>

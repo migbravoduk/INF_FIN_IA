@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block title %}{{ p.nombre }} · INF_FIN_IA{% endblock %}
+
+{% block content %}
+<p class="crumb"><a href="/productos">← Productos</a></p>
+<h1>{{ p.nombre }}{% if p.tipo == 'ffmm' and p.serie %} <span class="lead">serie {{ p.serie }}</span>{% endif %}</h1>
+<p class="subtitle">
+    {{ 'Fondo mutuo' if p.tipo == 'ffmm' else 'Fondo de pensiones' }}
+    · {{ p.categoria or 'sin categoría' }}
+    {% if p.clase_inversionista %} · inversionista {{ p.clase_inversionista }}{% endif %}
+    · {{ 'pesos' if p.moneda == 'CLP' else 'dólares' if p.moneda == 'USD' else p.moneda }}
+    {% if p.tipo == 'ffmm' %}<br><span class="lead">RUN {{ p.codigo_fuente }} · {{ p.tipo_fondo }}</span>{% endif %}
+</p>
+
+<div class="resena">
+    <strong>Administra:</strong> {{ p.proveedor_razon_social or p.proveedor or '—' }}
+    {% if p.tiene_eeff %} · <a href="/eeff/agf?rut={{ p.rut_proveedor }}">ver sus estados financieros</a>{% endif %}
+    {% if p.url_sitio or p.url_contratacion %}
+    <br><a class="btn" href="/ir/{{ p.producto_id | urlencode }}?origen=ficha" rel="nofollow noopener" target="_blank">Ir al sitio de la administradora →</a>
+    <span class="lead">El enlace no implica recomendación. Este sitio no recibe pago por el orden de los productos.</span>
+    {% endif %}
+</div>
+
+{% if reparto %}
+<div class="warn-box">
+    Este fondo reparte beneficios. El valor cuota que publica la CMF no incluye esos repartos,
+    así que nuestra rentabilidad calculada sale <strong>menor</strong> que la real. Para este
+    fondo usa la cifra oficial del comparador de la CMF{% if oficial %}: <strong>{{ "%+.2f"|format(oficial.nominal_1a) }}%</strong> a 1 año (corte {{ oficial.fecha }}){% endif %}.
+</div>
+{% endif %}
+
+{% if not m %}
+<p class="loading">Sin métricas para el último corte (el producto no tiene dato en esa fecha).</p>
+{% else %}
+<p class="eeff-meta">Métricas al {{ m.fecha_corte }} · {{ m.meses_historia }} meses de historia</p>
+
+<div class="kpi-grid">
+    <div class="kpi-card"><h3>Rentabilidad</h3>
+        <div class="kpi-row"><span>1 mes</span><b>{{ m.rent_nom_1m|pct }}</b></div>
+        <div class="kpi-row"><span>12 meses</span><b>{{ m.rent_nom_12m|pct }}</b></div>
+        <div class="kpi-row"><span>12 meses real (sobre UF)</span><b>{{ m.rent_real_12m|pct }}</b></div>
+        <div class="kpi-row"><span>3 años, anual</span><b>{{ m.rent_nom_36m_ann|pct }}</b></div>
+        <div class="kpi-row"><span>5 años, anual</span><b>{{ m.rent_nom_60m_ann|pct }}</b></div>
+        <div class="kpi-sub">Neta de remuneración y gastos; antes de comisión de colocación.</div>
+    </div>
+    <div class="kpi-card"><h3>Frente a su categoría</h3>
+        <div class="kpi-row"><span>Diferencia con la mediana (12m)</span><b>{{ "%+.2f pp"|format(m.exceso_mediana_cat_12m) if m.exceso_mediana_cat_12m is not none else '—' }}</b></div>
+        <div class="kpi-row"><span>Posición (100 = mejor)</span><b>{{ m.percentil_cat_12m|num }}{% if p.n_categoria %} de {{ p.n_categoria }}{% endif %}</b></div>
+        <div class="kpi-row"><span>Consistencia</span><b>{{ m.consistencia_12m|num }}%</b></div>
+        <div class="kpi-sub">Consistencia = % de los últimos 36 meses en que su rentabilidad a 12 meses quedó en la mitad superior de su categoría.</div>
+    </div>
+    <div class="kpi-card"><h3>Riesgo (36 meses)</h3>
+        <div class="kpi-row"><span>Escala 1 a 7</span><b>{{ m.escala_riesgo or '—' }}</b></div>
+        <div class="kpi-row"><span>Volatilidad anual</span><b>{{ m.volatilidad_ann|pct(1, False) }}</b></div>
+        <div class="kpi-row"><span>Peor caída desde un máximo</span><b>{{ m.caida_maxima|pct }}</b></div>
+        <div class="kpi-row"><span>Meses en recuperarse</span><b>{{ m.meses_recuperacion if m.meses_recuperacion is not none else ('no se ha recuperado' if m.caida_maxima else '—') }}</b></div>
+        <div class="kpi-row"><span>Peor mes</span><b>{{ m.peor_mes|pct }}</b></div>
+        <div class="kpi-row"><span>Sharpe</span><b>{{ "%.2f"|format(m.sharpe) if m.sharpe is not none else '—' }}</b></div>
+    </div>
+    {% if p.tipo == 'ffmm' %}
+    <div class="kpi-card"><h3>Costo</h3>
+        <div class="kpi-row"><span>Costo anual (ya descontado)</span><b>{{ m.costo_anual|pct(2, False) }}</b></div>
+        <div class="kpi-row"><span>Comisión de colocación (máx.)</span><b>{{ m.comision_colocacion|pct(2, False) }}</b></div>
+        <div class="kpi-row"><span>Por $1.000.000 a 10 años</span><b>{{ ('$' ~ m.costo_10a_por_millon|num) if m.costo_10a_por_millon is not none else '—' }}</b></div>
+        <div class="kpi-row"><span>Más barato que su categoría (100 = el más)</span><b>{{ m.percentil_costo_cat|num }}</b></div>
+        <div class="kpi-sub">Costo a 10 años: diferencia entre invertir sin costos y con ellos, suponiendo la rentabilidad mediana de su categoría. Es una ilustración, no una proyección.</div>
+    </div>
+    {% endif %}
+    <div class="kpi-card"><h3>Tamaño y flujos</h3>
+        <div class="kpi-row"><span>Patrimonio (MM$)</span><b>{{ m.patrimonio_clp_mm|num }}</b></div>
+        <div class="kpi-row"><span>Flujo neto 12m (MM$)</span><b>{{ m.flujo_neto_12m_mm|num }}</b></div>
+        {% if m.participes is not none %}<div class="kpi-row"><span>Partícipes</span><b>{{ m.participes|num }}</b></div>
+        <div class="kpi-row"><span>Variación de partícipes 12m</span><b>{{ m.var_participes_12m|num }}</b></div>{% endif %}
+        <div class="kpi-sub">Flujo neto = cambio de patrimonio menos lo explicado por la rentabilidad (aportes − rescates estimados).</div>
+    </div>
+</div>
+{% endif %}
+
+{% if serie %}
+<section class="chart-block">
+    <h2>Valor cuota en pesos, base 100, frente a la mediana de su categoría</h2>
+    <div id="prod-chart" class="chart" style="height:340px"></div>
+</section>
+<script>
+(function () {
+  const s = {{ serie | tojson }};
+  const css = getComputedStyle(document.documentElement);
+  Plotly.newPlot('prod-chart', [
+    {x: s.map(r => r.mes), y: s.map(r => r.producto), name: 'Este producto', mode: 'lines', line: {width: 2.5}},
+    {x: s.map(r => r.mes), y: s.map(r => r.mediana), name: 'Mediana de la categoría', mode: 'lines', line: {dash: 'dot', width: 1.5}},
+  ], {paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
+      font: {color: css.getPropertyValue('--ink') || '#e2e8f0'}, margin: {l: 40, r: 10, t: 10, b: 40},
+      legend: {orientation: 'h'}, yaxis: {gridcolor: css.getPropertyValue('--border')}},
+     {displayModeBar: false, responsive: true});
+})();
+</script>
+{% endif %}
+
+{% if cartera %}
+<section class="chart-block">
+    <h2>Cartera del período {{ cartera.period }}</h2>
+    <div class="graf-row">
+        {% for titulo, filas in [('Por tipo de instrumento', cartera.tipo), ('Por país', cartera.pais), ('Principales posiciones', cartera.emisor)] %}
+        <div style="flex:1;min-width:16rem">
+            <h4>{{ titulo }}</h4>
+            <table class="eeff-table">
+                {% for k, v in filas %}<tr><td>{{ k }}</td><td style="text-align:right">{{ "%.1f"|format(v) }}%</td></tr>{% endfor %}
+            </table>
+        </div>
+        {% endfor %}
+    </div>
+    <p class="lead">Solo cartera nacional y extranjera; opciones y futuros no se desglosan.</p>
+</section>
+{% endif %}
+{% endblock %}

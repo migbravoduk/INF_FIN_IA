@@ -373,3 +373,16 @@ h1 { margin: 0 0 0.2rem; }
 .row-click:hover td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 .row-click .go { color: var(--accent); opacity: 0; transition: opacity 0.12s ease; }
 .row-click:hover .go { opacity: 1; }
+
+/* Aviso "Datos al …" bajo el título de cada vista (api/freshness_banner.py) */
+.asof {
+    display: flex; flex-wrap: wrap; gap: 0.4rem 1.2rem;
+    font-size: 0.8rem; color: var(--muted);
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 0.45rem 0.8rem; margin: 0 0 1rem;
+}
+.asof-warn { border-color: var(--warn); }
+.asof-stale { color: var(--warn); }
+
+/* Disclaimer al pie */
+.footer .disclaimer { display: block; max-width: 60rem; margin: 0.4rem auto 0; }

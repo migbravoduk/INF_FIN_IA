@@ -1,0 +1,52 @@
+{#
+  partials/productos_tabla.html — Listado de productos con sus métricas del último corte.
+  Rentabilidades ya netas de remuneración y gastos (están dentro del valor cuota); la
+  comisión de colocación se muestra aparte y no se resta.
+#}
+{% if not rows %}
+<p class="loading">Ningún producto con esos filtros.</p>
+{% else %}
+<div class="eeff-meta" style="margin:.4rem 0 1rem">
+    {{ total|num }} productos · ordenados por <strong>{{ orden_label }}</strong>
+    {% if total > rows|length %} · mostrando los primeros {{ rows|length }}{% endif %}
+    {% if clase == '' %} · <span class="mock-note">ojo: mezcla clases de inversionista (Alto Patrimonio y APV no son para cualquiera)</span>{% endif %}
+    · <span class="lead">marca hasta 4 para compararlos</span>
+</div>
+<form id="cmp-form" action="/productos/comparar" method="get"
+      onsubmit="const ids=[...document.querySelectorAll('.cmp-chk:checked')].map(c=>c.value).slice(0,4);this.ids.value=ids.join(',');">
+    <input type="hidden" name="ids">
+    <button class="btn" type="submit">Comparar seleccionados</button>
+</form>
+<div class="table-scroll">
+<table class="eeff-table">
+    <thead><tr>
+        <th></th><th>Producto</th><th>Categoría</th>
+        <th style="text-align:right">12 meses</th>
+        <th style="text-align:right">Real 12m</th>
+        <th style="text-align:right">3 años (anual)</th>
+        <th style="text-align:right" title="Percentil dentro de su categoría a 12 meses (100 = mejor)">Posición</th>
+        <th style="text-align:right" title="Volatilidad anualizada (36 meses)">Volatilidad</th>
+        <th style="text-align:right" title="Remuneración + gasto operacional anual, ya descontados del valor cuota">Costo anual</th>
+        <th style="text-align:right">Patrimonio MM$</th>
+    </tr></thead>
+    <tbody>
+    {% for r in rows %}
+    <tr>
+        <td><input type="checkbox" class="cmp-chk" value="{{ r.producto_id }}" form="cmp-form"></td>
+        <td><a href="/producto/{{ r.producto_id | urlencode }}">{{ r.nombre }}</a>
+            {% if r.serie and r.tipo == 'ffmm' %}<span class="lead"> · serie {{ r.serie }}</span>{% endif %}
+            <br><span class="lead">{{ r.proveedor_corto or '—' }}{% if r.moneda == 'USD' %} · en dólares{% endif %}</span></td>
+        <td><span class="lead">{{ r.categoria or '—' }}</span></td>
+        <td style="text-align:right" class="{{ 'pos' if (r.rent_nom_12m or 0) >= 0 else 'neg' }}">{{ r.rent_nom_12m|pct }}</td>
+        <td style="text-align:right">{{ r.rent_real_12m|pct }}</td>
+        <td style="text-align:right">{{ r.rent_nom_36m_ann|pct }}</td>
+        <td style="text-align:right">{{ r.percentil_cat_12m|num }}</td>
+        <td style="text-align:right">{{ r.volatilidad_ann|pct(1, False) }}</td>
+        <td style="text-align:right">{{ r.costo_anual|pct(2, False) }}</td>
+        <td style="text-align:right">{{ r.patrimonio_clp_mm|num }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+{% endif %}

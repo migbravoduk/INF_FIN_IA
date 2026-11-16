@@ -45,6 +45,27 @@ except OSError:
     ASSET_VERSION = "0"
 templates.env.globals["asset_version"] = ASSET_VERSION
 
+# "Datos al …" con aviso de atraso, calculado con las mismas sondas del catch-up.
+from api.freshness_banner import asof_banner  # noqa: E402
+templates.env.globals["asof_banner"] = asof_banner
+
+
+def _pct(x, digits: int = 1, signo: bool = True) -> str:
+    """Fracción → porcentaje legible ('—' si falta). 0.0123 → '+1.2%'."""
+    if x is None or x != x:
+        return "—"
+    return f"{x * 100:{'+' if signo else ''},.{digits}f}%"
+
+
+def _num(x, digits: int = 0) -> str:
+    if x is None or x != x:
+        return "—"
+    return f"{x:,.{digits}f}"
+
+
+templates.env.filters["pct"] = _pct
+templates.env.filters["num"] = _num
+
 
 def records(df) -> list[dict]:
     """
