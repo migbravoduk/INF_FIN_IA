@@ -20,9 +20,17 @@ error / error del naive estacional dentro de muestra; < 1 es mejor que repetir e
 | Paso | Qué | Estado |
 |---|---|---|
 | B | Ganancia = operacional + no operacional (reajuste UF, diferencias de cambio) | **Hecho, en producción** |
-| A | Anclas de mercado en la senda (TPM implícita, inflación implícita) | Pendiente |
+| A | Anclas de mercado en la senda (TPM implícita, inflación implícita) | 60%: `models/market_path.py` listo; falta conectarlo y medir |
 | C | Tasa real y pendiente como factores de la ecuación de activos | Pendiente |
 | D | Bancos y aseguradoras con factores de curva | Pendiente |
+
+**Ejecución de lo pendiente:** [`docs/PLAN_SEMANA.md`](PLAN_SEMANA.md) (bloques S1–S6, con la
+regla de adopción programada en `models/compare_bt.py`).
+
+**Matiz sobre B:** restringido a los horizontes donde manda en producción (2–4 trimestres),
+B gana en 51,8% de los pares (z ≈ 1,1), con Δ medio −0,058 y medianas −0,06 a −0,09. La
+evidencia es moderada y descansa en medias y medianas; se revalida en la corrida completa
+del bloque S3.
 
 ---
 

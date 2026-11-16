@@ -24,6 +24,12 @@ Plan completo y diagnóstico en [`docs/PLAN_MEJORAS.md`](../PLAN_MEJORAS.md). Ej
 - [x] **Fase 5** — `db/database.py` y `views.py` divididos por dominio; API `/api/v1`; JS local;
   CI; export a Parquet.
 
+Después de la auditoría (nov-2026): curvas de tasas y `/curvas`, duración efectiva de fondos
+de renta fija, y proyecciones con el resultado no operacional separado. En curso:
+[`docs/PLAN_SEMANA.md`](../PLAN_SEMANA.md) (anclas de mercado, factores de curva, cobertura
+ERNG, bancos y seguros, frontera eficiente opcional), con el detalle de modelos en
+[`docs/PLAN_PROYECCIONES_MACRO.md`](../PLAN_PROYECCIONES_MACRO.md).
+
 Pendiente que requiere decisión o curaduría humana:
 
 - [ ] **Revisión legal** antes de publicar (PLAN §8: asesoría de inversión — Ley 21.521,
