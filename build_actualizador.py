@@ -66,10 +66,8 @@ def build():
     except Exception:
         commit, sucio = "desconocido", False
     (ROOT / "_build_info.py").write_text(
-        f'COMMIT = "{commit}{"+cambios" if sucio else ""}"
-'
-        f'FECHA = "{_dt.datetime.now():%Y-%m-%d %H:%M}"
-', encoding="utf-8")
+        f'COMMIT = "{commit}{"+cambios" if sucio else ""}"\n'
+        f'FECHA = "{_dt.datetime.now():%Y-%m-%d %H:%M}"\n', encoding="utf-8")
 
     work = ROOT / "build" / NOMBRE.lower()
     if work.exists():
