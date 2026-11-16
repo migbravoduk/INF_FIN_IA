@@ -366,3 +366,10 @@ h1 { margin: 0 0 0.2rem; }
     font-size: 0.75rem;
     padding: 1.5rem;
 }
+
+/* Filas de tabla que abren un detalle (patrón "clic en la fila" del dashboard). */
+.row-click { cursor: pointer; transition: background 0.12s ease; }
+.row-click:hover { background: rgba(56, 189, 248, 0.10); }
+.row-click:hover td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+.row-click .go { color: var(--accent); opacity: 0; transition: opacity 0.12s ease; }
+.row-click:hover .go { opacity: 1; }

@@ -777,6 +777,217 @@ def fetch_cartera_seguros(period, latest, history, since, ramo, raw_dir, force):
         sys.exit(1)
 
 
+@cli.command(name="fetch-ffmm-comisiones")
+@click.option("--period", "-p", type=int, default=None,
+              help="Período AAAAMM (por defecto, el mes pasado)")
+def fetch_ffmm_comisiones(period):
+    """Descarga la estructura de comisiones, remuneraciones y gastos de fondos mutuos.
+
+    Sirve para separar lo que YA está descontado del valor cuota (remuneración de la AGF y
+    gasto operacional, que se devengan diariamente del patrimonio) de lo que se le cobra
+    aparte al partícipe (comisión de colocación). Solo lo segundo se resta a la rentabilidad.
+    """
+    import datetime as _dt
+    from collectors.cmf_mutual_funds import CMFMutualFundsCollector
+
+    if period:
+        year, month = divmod(int(period), 100)
+    else:
+        hoy = _dt.date.today()
+        year, month = (hoy.year, hoy.month - 1) if hoy.month > 1 else (hoy.year - 1, 12)
+
+    console.print(Panel(
+        f"[bold green]🚀 Estructura de costos de fondos mutuos[/]\n\n"
+        f"  • Período: [cyan]{year}-{month:02d}[/]",
+        title="📥 Colector FFMM · comisiones", border_style="green"))
+    try:
+        recs = CMFMutualFundsCollector().fetch_comisiones(year, month)
+        if not recs:
+            console.print("[yellow]⚠ Sin datos para ese período.[/]")
+            return
+        with Database() as db:
+            n = db.upsert_mutual_fund_fees(recs)
+            cruzan = db.conn.execute("""
+                SELECT COUNT(*) FROM (
+                    SELECT DISTINCT q.fund_run, q.series
+                    FROM cmf_mutual_fund_quota_values q
+                    JOIN cmf_mutual_fund_fees f
+                      ON f.fund_run = q.fund_run AND f.series = q.series
+                    WHERE q.date = (SELECT MAX(date) FROM cmf_mutual_fund_quota_values))
+            """).fetchone()[0]
+        console.print(f"\n[bold green]✅ Listo![/] {n:,} filas fondo/serie.")
+        console.print(f"  Pares que cruzan con la estadística de valor cuota: [bold]{cruzan:,}[/]")
+    except Exception as e:
+        console.print(f"\n[bold red]❌ Error:[/] {e}")
+        sys.exit(1)
+
+
+@cli.command(name="fetch-ffmm-comparador")
+def fetch_ffmm_comparador():
+    """Descarga las rentabilidades OFICIALES de la CMF (base del Comparador de rentabilidad).
+
+    Trae, por fondo y serie, la rentabilidad nominal y real a 1/3/5/10 años calculada por el
+    regulador según su documento metodológico, más el indicador ajustado por riesgo, la
+    familia y la clase de inversionista. De paso es la única fuente del RUT de cada
+    administradora, que se propaga a la estadística diaria cruzando por RUN del fondo.
+    """
+    from collectors.cmf_mutual_funds import CMFMutualFundsCollector
+
+    console.print(Panel(
+        "[bold green]🚀 Comparador de rentabilidad — rentabilidades oficiales CMF[/]",
+        title="📥 Colector FFMM · comparador", border_style="green"))
+    try:
+        datos = CMFMutualFundsCollector().fetch_comparador()
+        if not datos["returns"]:
+            console.print("[yellow]⚠ No se pudo obtener la base del comparador.[/]")
+            return
+        with Database() as db:
+            n = db.upsert_mutual_fund_returns(datos["returns"])
+            a = db.upsert_mutual_fund_agfs(datos["agfs"])
+            con_rut = db.propagar_agf_rut()
+        console.print(f"\n[bold green]✅ Listo![/] corte [cyan]{datos['fecha']}[/] · "
+                      f"{n:,} series · {a} administradoras con RUT.")
+        console.print(f"  Filas de la estadística diaria con RUT de AGF: [bold]{con_rut:,}[/]")
+    except Exception as e:
+        console.print(f"\n[bold red]❌ Error:[/] {e}")
+        sys.exit(1)
+
+
+@cli.command(name="fetch-ffmm-cuotas")
+@click.option("--months", "-m", type=int, default=24,
+              help="Cuántos cortes de fin de mes cargar hacia atrás (default: 24)")
+@click.option("--from-month", default=None, help="Mes inicial AAAAMM (ej. 202401)")
+@click.option("--to-month", default=None, help="Mes final AAAAMM (default: el mes pasado)")
+@click.option("--date", "-d", "fecha", default=None,
+              help="Día puntual AAAA-MM-DD, para un corte fuera de calendario")
+def fetch_ffmm_cuotas(months, from_month, to_month, fecha):
+    """Estadística de fondos mutuos por CORTE MENSUAL: valor cuota, patrimonio y partícipes.
+
+    La CMF publica esta estadística a diario, pero se guarda un corte por mes (el último día
+    hábil con publicación) para no inflar la base: un año diario son ~700 mil filas contra
+    ~34 mil del mismo año en cortes mensuales, y para leer rendimientos mes a mes basta el
+    corte. Es además la única fuente que enlaza cada fondo con su administradora y su tipo.
+    """
+    import datetime as _dt
+    from collectors.cmf_mutual_funds import CMFMutualFundsCollector
+
+    collector = CMFMutualFundsCollector()
+
+    def corte_del_mes(y, m):
+        """
+        Último día del mes CON publicación.
+
+        No basta con el último día hábil: los feriados chilenos (18-19 de septiembre, 31 de
+        diciembre en algunos años) caen en día hábil y ese día la CMF no publica. Se retrocede
+        hasta encontrar datos, con tope para no quedar barriendo un mes entero.
+        """
+        d = (_dt.date(y + (m // 12), (m % 12) + 1, 1) - _dt.timedelta(days=1))
+        for _ in range(8):
+            if d.weekday() < 5:
+                res = collector.fetch_daily_stats(d)
+                if res["records"]:
+                    return d, res
+            d -= _dt.timedelta(days=1)
+        return None, {"records": [], "fund_types": {}}
+
+    # --- Qué meses se van a pedir ---
+    if fecha:
+        objetivo = [_dt.date.fromisoformat(fecha)]
+        modo = f"día puntual {fecha}"
+    else:
+        hoy = _dt.date.today()
+        fin_y, fin_m = (int(to_month[:4]), int(to_month[4:])) if to_month else \
+            ((hoy.year, hoy.month - 1) if hoy.month > 1 else (hoy.year - 1, 12))
+        if from_month:
+            ini_y, ini_m = int(from_month[:4]), int(from_month[4:])
+        else:
+            idx = fin_y * 12 + (fin_m - 1) - (months - 1)
+            ini_y, ini_m = idx // 12, idx % 12 + 1
+        meses, y, m = [], ini_y, ini_m
+        while (y, m) <= (fin_y, fin_m):
+            meses.append((y, m))
+            y, m = (y, m + 1) if m < 12 else (y + 1, 1)
+        objetivo = meses
+        modo = f"{len(meses)} cortes mensuales ({ini_y}-{ini_m:02d} → {fin_y}-{fin_m:02d})"
+
+    console.print(Panel(
+        f"[bold green]🚀 Fondos mutuos — estadística por corte mensual[/]\n\n"
+        f"  • {modo}",
+        title="📥 Colector FFMM · valor cuota", border_style="green"))
+
+    total, ok, tipos = 0, 0, {}
+    try:
+        with Database() as db:
+            for item in objetivo:
+                if isinstance(item, _dt.date):
+                    d, res = item, collector.fetch_daily_stats(item)
+                else:
+                    d, res = corte_del_mes(*item)
+                if not res["records"]:
+                    etiqueta = item if isinstance(item, _dt.date) else f"{item[0]}-{item[1]:02d}"
+                    console.print(f"  • {etiqueta}: [yellow]sin publicación[/]")
+                    continue
+                n = db.upsert_mutual_fund_quotas(res["records"])
+                tipos.update(res["fund_types"])
+                db.upsert_mutual_fund_types(res["fund_types"])
+                fondos = len({r["fund_run"] for r in res["records"]})
+                console.print(f"  • corte {d}: [green]{n:,} filas[/] · {fondos} fondos")
+                total += n
+                ok += 1
+        console.print(f"\n[bold green]✅ Listo![/] {ok}/{len(objetivo)} cortes · {total:,} filas.")
+        if tipos:
+            console.print(f"  Tipos de fondo (glosa oficial del archivo): {len(tipos)}")
+    except Exception as e:
+        console.print(f"\n[bold red]❌ Error:[/] {e}")
+        sys.exit(1)
+
+
+@cli.command(name="fetch-ffmm")
+@click.option("--period", "-p", type=int, required=True,
+              help="Período AAAAMM de la cartera de fondos mutuos (ej. 202606)")
+def fetch_ffmm(period):
+    """Descarga e ingesta la cartera mensual de fondos mutuos (CMF).
+
+    La carga se hacía a mano y terminó escribiendo en una base distinta de la del proyecto
+    (`db/inf_fin_ia.duckdb` en vez de la de `settings.DB_PATH`), con lo que la web no veía
+    ningún fondo. Este comando usa la conexión estándar, así que siempre escribe en la
+    base configurada.
+    """
+    from collectors.cmf_mutual_funds import CMFMutualFundsCollector
+
+    year, month = divmod(int(period), 100)
+    if not (1 <= month <= 12):
+        console.print(f"[bold red]Período inválido:[/] {period} (se espera AAAAMM).")
+        sys.exit(1)
+
+    console.print(Panel(
+        f"[bold green]🚀 Cartera de fondos mutuos — descarga + ingesta[/]\n\n"
+        f"  • Período: [cyan]{year}-{month:02d}[/]",
+        title="📥 Colector FFMM", border_style="green"))
+
+    try:
+        recs = CMFMutualFundsCollector().fetch_monthly_portfolio(year, month)
+        if not recs:
+            console.print("[yellow]⚠ Sin registros para ese período.[/]")
+            return
+        with Database() as db:
+            # Reusa el upsert del repo: Delete-then-Insert por (año, mes, tipo de cartera),
+            # que es la única idempotencia posible acá — la fuente no tiene llave natural (un
+            # fondo puede repetir una posición idéntica; ver db/schema.py).
+            db.upsert_mutual_fund_portfolio(recs)
+            n = db.conn.execute(
+                "SELECT COUNT(*) FROM cmf_mutual_fund_portfolio "
+                "WHERE period_year = ? AND period_month = ?", [year, month]).fetchone()[0]
+            fondos = db.conn.execute(
+                "SELECT COUNT(DISTINCT fund_run) FROM cmf_mutual_fund_portfolio "
+                "WHERE period_year = ? AND period_month = ?", [year, month]).fetchone()[0]
+        console.print(f"\n[bold green]✅ Ingesta finalizada![/] "
+                      f"{n:,} posiciones · {fondos} fondos en {year}-{month:02d}.")
+    except Exception as e:
+        console.print(f"\n[bold red]❌ Error durante la ingesta de FFMM:[/] {e}")
+        sys.exit(1)
+
+
 @cli.command(name="import-cartera-seguros")
 @click.option("--raw-dir", default="data/seguros_cartera_raw",
               help="Carpeta con los ZIP mensuales ya presentes localmente")

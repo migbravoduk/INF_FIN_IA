@@ -1,0 +1,62 @@
+{#
+  partials/bc_catalogo.html — Catálogo de series macro con cobertura y último dato.
+  filas = [{id, name, cat_label, frequency, unit_label, description, n_obs,
+            first_date, last_date, last_value}], tipo = 'efectivas'|'expectativas'.
+#}
+{% set freq_label = {"daily": "Diaria", "monthly": "Mensual",
+                     "quarterly": "Trimestral", "annual": "Anual"} %}
+
+{% if tipo == "expectativas" %}
+<div class="warn-box">
+    Estas series <strong>no son dato observado</strong>: son la mediana de las encuestas del
+    BCCh — Expectativas Económicas (EEE, economistas, mensual) y Operadores Financieros
+    (EOF, mercado, quincenal). Se usan como anclaje de la senda macro en las proyecciones.
+    Ojo con dos casos: <code>F089.TPM.TAS.13</code> y <code>F089.EOF.TC.7MA</code> están
+    descontinuadas, y <code>F089.TCN.V12.LP</code> es una variación (%), no un nivel.
+</div>
+{% endif %}
+
+{% if filas %}
+<div class="table-scroll">
+    <table class="eeff-table">
+        <thead>
+            <tr>
+                <th>Serie</th>
+                <th>Categoría</th>
+                <th>Frecuencia</th>
+                <th style="text-align:right">Último dato</th>
+                <th>Fecha</th>
+                <th>Cobertura</th>
+                <th style="text-align:right">Obs.</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for f in filas %}
+            <tr>
+                <td title="{{ f.description or '' }}">
+                    {{ f.name }}<br>
+                    <span class="eeff-meta"><code>{{ f.id }}</code></span>
+                </td>
+                <td>{{ f.cat_label }}</td>
+                <td>{{ freq_label.get(f.frequency, f.frequency or "—") }}</td>
+                <td style="text-align:right">
+                    {% if f.last_value is not none %}
+                        {{ "{:,.2f}".format(f.last_value) }}
+                        <span class="eeff-meta">{{ f.unit_label }}</span>
+                    {% else %}—{% endif %}
+                </td>
+                <td>{{ f.last_date or "—" }}</td>
+                <td class="eeff-meta">{{ f.first_date or "—" }} → {{ f.last_date or "—" }}</td>
+                <td style="text-align:right">{{ "{:,}".format(f.n_obs) }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+<p class="eeff-meta" style="margin-top:.5rem">
+    {{ filas | length }} series con datos cargados. Para agregar otra, editar
+    <code>config/series_catalog.yaml</code> y correr el actualizador.
+</p>
+{% else %}
+<p class="loading">No hay series cargadas para esta selección.</p>
+{% endif %}

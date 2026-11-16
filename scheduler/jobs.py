@@ -298,6 +298,21 @@ def _dispatch_catchup(db: Database, st: FreshnessStatus) -> tuple[str, int]:
         db.log_fetch(f"sp_cartera:{db_period}", "sp", "ok" if recs else "no_data", n, started_at=started)
         return ("ok" if recs else "no_data"), n
 
+    if st.kind == "cmf_fm_cartera":
+        from collectors.cmf_mutual_funds import CMFMutualFundsCollector
+        collector = CMFMutualFundsCollector()
+        y = st.params.get("year")
+        m = st.params.get("month")
+        
+        # Opcionalmente se podría iterar por meses faltantes si es necesario
+        records = collector.fetch_monthly_portfolio(y, m)
+        if records:
+            stats = db.upsert_mutual_fund_portfolio(records)
+            db.log_fetch(f"cmf_fm_cartera:{y}-{m:02d}", "cmf", "ok", stats["inserted"], started_at=started)
+            return "ok", stats["inserted"]
+        
+        db.log_fetch(f"cmf_fm_cartera:{y}-{m:02d}", "cmf", "no_data", 0, started_at=started)
+        return "no_data", 0
     return "skip", 0
 
 

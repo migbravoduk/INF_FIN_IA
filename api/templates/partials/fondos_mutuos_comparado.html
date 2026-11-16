@@ -1,0 +1,97 @@
+{#
+  partials/fondos_mutuos_comparado.html — Desempeño comparado en la ventana elegida.
+  paths = [{name, points:[{x, value}], final}]  ·  mediana = [{x, value}]
+  Todo va en BASE 100 al corte inicial: los valores cuota parten de niveles arbitrarios
+  (uno en 1.200 y otro en 45.000), así que sin rebasar no son comparables en un mismo eje.
+#}
+{% if not paths %}
+<p class="loading">Sin fondos con valor cuota en los dos extremos de la ventana.</p>
+{% else %}
+<div class="chart-block" style="margin-top:1rem">
+    <h4>
+        Desempeño comparado · base 100 en {{ desde }}
+        <span class="eeff-meta">
+            3 mejores y 3 peores de {{ "{:,}".format(n_universo) }} fondos
+            {%- if agf %} de {{ agf }}{% endif %}
+            {%- if tipo_label %} · {{ tipo_label }}{% endif %}
+        </span>
+    </h4>
+    <div id="fm-cmp-legend" class="cmp-legend"></div>
+    <div id="fm-cmp-container" class="chart"></div>
+    <p class="afp-hint">
+        <strong>Clic en una línea</strong> para ver la composición y el desempeño de ese fondo.
+        La línea blanca punteada es la <strong>mediana del grupo filtrado</strong>, calculada
+        sobre los {{ "{:,}".format(n_universo) }} fondos que pasan el filtro y no solo sobre
+        los seis dibujados. Es la referencia que importa: una línea que sube solo dice que el
+        fondo subió; contra la mediana dice si le fue mejor o peor que a su categoría.
+    </p>
+</div>
+
+<script>
+(function () {
+    var paths = {{ paths | tojson }};
+    var mediana = {{ mediana | tojson }};
+    var palette = ["#4ade80", "#38bdf8", "#a78bfa", "#fbbf24", "#fb923c", "#f87171"];
+
+    document.getElementById("fm-cmp-legend").innerHTML =
+        paths.map(function (s, i) {
+            var col = palette[i % palette.length];
+            return "<span class='cmp-leg-item'><span class='sw' style='background:" + col +
+                   "'></span>" + s.name + "</span>";
+        }).join("") +
+        "<span class='cmp-leg-item'><span class='sw' style='background:#e2e8f0'></span>" +
+        "Mediana del grupo</span>";
+
+    function draw() {
+        if (!window.Plotly) { return setTimeout(draw, 100); }
+        var traces = paths.map(function (s, i) {
+            return {
+                x: s.points.map(function (p) { return p.x; }),
+                y: s.points.map(function (p) { return p.value; }),
+                type: "scatter", mode: "lines", name: s.name,
+                line: { color: palette[i % palette.length], width: 2 },
+                hovertemplate: "%{x}<br><b>%{y:.1f}</b> (base 100)<extra>" + s.name + "</extra>"
+            };
+        });
+        traces.push({
+            x: mediana.map(function (p) { return p.x; }),
+            y: mediana.map(function (p) { return p.value; }),
+            type: "scatter", mode: "lines", name: "Mediana del grupo",
+            line: { color: "#e2e8f0", width: 2, dash: "dot" },
+            hovertemplate: "%{x}<br><b>%{y:.1f}</b> (mediana)<extra></extra>"
+        });
+
+        Plotly.newPlot("fm-cmp-container", traces, {
+            margin: { t: 10, r: 20, b: 40, l: 60 }, height: 420,
+            paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)",
+            font: { color: "#94a3b8" },
+            showlegend: false,
+            hovermode: "x unified",
+            xaxis: { gridcolor: "#334155" },
+            // Base 100 no arranca en cero a propósito: el eje se ajusta al recorrido real,
+            // y la línea de referencia en 100 marca "sin cambio".
+            yaxis: {
+                gridcolor: "#334155", title: { text: "Base 100" },
+                zeroline: false
+            },
+            shapes: [{
+                type: "line", xref: "paper", x0: 0, x1: 1, yref: "y", y0: 100, y1: 100,
+                line: { color: "#64748b", width: 1, dash: "dash" }
+            }]
+        }, { displayModeBar: false, responsive: true }).then(function (gd) {
+            // Clic en una línea = mismo zoom que clic en una fila. Se dispara vía htmx.ajax
+            // para no duplicar en JS la lógica que ya vive en el endpoint.
+            gd.on("plotly_click", function (ev) {
+                var p = paths[ev.points[0].curveNumber];
+                if (!p || !p.run) { return; }   // la mediana no es un fondo: no abre nada
+                window.htmx.ajax("GET",
+                    "/fondos-mutuos/panel?fund_run=" + encodeURIComponent(p.run) +
+                    "&series=" + encodeURIComponent(p.series),
+                    { target: "#fm-panel", swap: "innerHTML show:#fm-panel:top" });
+            });
+        });
+    }
+    draw();
+})();
+</script>
+{% endif %}

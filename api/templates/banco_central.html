@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block title %}Datos Banco Central · INF_FIN_IA{% endblock %}
+
+{% macro selector_series(nombre, seleccion) -%}
+<select name="{{ nombre }}">
+    {% for cat, filas in grupos.items() %}
+    <optgroup label="{{ cat }}">
+        {% for f in filas %}
+        <option value="{{ f.id }}" {% if f.id == seleccion %}selected{% endif %}>{{ f.name }}</option>
+        {% endfor %}
+    </optgroup>
+    {% endfor %}
+</select>
+{%- endmacro %}
+
+{% block content %}
+<h1>Datos Banco Central</h1>
+<p class="subtitle">
+    Series macroeconómicas de la Base de Datos Estadísticos del BCCh:
+    <strong>{{ n_efectivas }}</strong> series de dato observado y
+    <strong>{{ n_expectativas }}</strong> de expectativas de mercado (encuestas EEE y EOF).
+    Las expectativas se listan aparte porque <em>no son historia efectiva</em>: son la mediana
+    de lo que esperan economistas y operadores, y alimentan la senda macro de
+    <a href="/proyecciones">proyecciones</a>.
+</p>
+
+<!-- ── Explorador de una serie ─────────────────────────────────────────── -->
+<section class="section-head"><h2>Explorar una serie</h2></section>
+
+<form class="eeff-form"
+      hx-get="/banco-central/serie"
+      hx-target="#bc-serie"
+      hx-trigger="load, change"
+      hx-swap="innerHTML">
+    <label>Serie {{ selector_series("series_id", default_serie) }}</label>
+    <label>Rango
+        <select name="rango">
+            {% for r in rangos %}
+            <option value="{{ r }}" {% if r == "5a" %}selected{% endif %}>
+                {{ {"1a": "1 año", "3a": "3 años", "5a": "5 años",
+                    "10a": "10 años", "todo": "Todo"}[r] }}
+            </option>
+            {% endfor %}
+        </select>
+    </label>
+</form>
+
+<section id="bc-serie">
+    <p class="loading">Cargando serie…</p>
+</section>
+
+<!-- ── Comparador ──────────────────────────────────────────────────────── -->
+<section class="section-head"><h2>Comparar dos series</h2></section>
+<p class="subtitle">
+    Cada serie lleva su propio eje cuando las unidades no coinciden (la UF va en decenas de
+    miles y la TPM en unidades: en un eje común la segunda quedaría pegada al cero).
+</p>
+
+<form class="eeff-form"
+      hx-get="/banco-central/comparar"
+      hx-target="#bc-comparar"
+      hx-trigger="load, change"
+      hx-swap="innerHTML">
+    <label>Serie A {{ selector_series("a", default_serie) }}</label>
+    <label>Serie B {{ selector_series("b", default_b) }}</label>
+    <label>Rango
+        <select name="rango">
+            {% for r in rangos %}
+            <option value="{{ r }}" {% if r == "5a" %}selected{% endif %}>
+                {{ {"1a": "1 año", "3a": "3 años", "5a": "5 años",
+                    "10a": "10 años", "todo": "Todo"}[r] }}
+            </option>
+            {% endfor %}
+        </select>
+    </label>
+</form>
+
+<section id="bc-comparar">
+    <p class="loading">Cargando comparación…</p>
+</section>
+
+<!-- ── Catálogo ────────────────────────────────────────────────────────── -->
+<section class="section-head"><h2>Catálogo de series</h2></section>
+
+<form class="eeff-form"
+      hx-get="/banco-central/catalogo"
+      hx-target="#bc-catalogo"
+      hx-trigger="load, change"
+      hx-swap="innerHTML">
+    <label>Mostrar
+        <select name="tipo">
+            <option value="efectivas">Dato observado ({{ n_efectivas }})</option>
+            <option value="expectativas">Expectativas EEE/EOF ({{ n_expectativas }})</option>
+        </select>
+    </label>
+</form>
+
+<section id="bc-catalogo">
+    <p class="loading">Cargando catálogo…</p>
+</section>
+{% endblock %}

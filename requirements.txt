@@ -7,6 +7,9 @@ pydantic-settings>=2.3.0
 # Scraping (collectors SP/CMF — usan BeautifulSoup + parser lxml)
 beautifulsoup4>=4.12.0
 lxml>=5.0.0
+# openpyxl lee .xlsx (FECU de seguros/intermediarios); xlrd lee el .xls OLE2 legado que
+# entrega la estadística diaria de fondos mutuos, único formato que ese endpoint sirve.
+xlrd>=2.0.0
 
 # Database
 duckdb>=0.10.0
@@ -39,3 +42,4 @@ rich>=13.7.0
 fastapi>=0.111.0
 uvicorn[standard]>=0.30.0
 jinja2>=3.1.0
+openpyxl

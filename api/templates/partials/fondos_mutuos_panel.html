@@ -1,0 +1,330 @@
+{#
+  partials/fondos_mutuos_panel.html — Zoom al portafolio de un fondo mutuo.
+  comp = {fund_run, fund_name, n_pos, n_carteras, monto, por_cartera, por_tipo, por_pais, por_moneda}
+  posiciones = [{cartera, tipo, nemotecnico, pais, moneda, monto}]
+  Los % van sobre NÚMERO DE POSICIONES: es la magnitud afirmable sin el diccionario FFM.
+#}
+{% if not comp and not serie %}
+<p class="loading">Elige un fondo para ver su detalle.</p>
+{% else %}
+
+<div class="kpi-grid">
+    <div class="kpi-card">
+        <span class="kpi-sub">Fondo</span>
+        <span class="kpi-big" style="font-size:1.1rem">{{ identidad.fund_name or comp.fund_name }}</span>
+        <span class="kpi-sub">{{ identidad.agf_name or "—" }}</span>
+    </div>
+    <div class="kpi-card">
+        <span class="kpi-sub">Tipo de fondo</span>
+        <span class="kpi-big" style="font-size:.95rem">{{ tipo_label or "—" }}</span>
+        <span class="kpi-sub">clasificación CMF</span>
+    </div>
+    {% if var_pct is not none %}
+    <div class="kpi-card">
+        <span class="kpi-sub">Variación del valor cuota</span>
+        <span class="kpi-big {{ 'pos' if var_pct >= 0 else 'neg' }}">{{ "{:+,.2f}".format(var_pct) }}%</span>
+        <span class="kpi-sub">serie {{ series_sel }} · {{ serie[0].date }} → {{ serie[-1].date }}</span>
+    </div>
+    {% endif %}
+    <div class="kpi-card">
+        <span class="kpi-sub">Posiciones en cartera</span>
+        <span class="kpi-big">{% if comp %}{{ "{:,}".format(comp.n_pos) }}{% else %}—{% endif %}</span>
+        <span class="kpi-sub">período {{ period_label }}</span>
+    </div>
+</div>
+
+{# El panel se puede abrir por el selector, por una fila de la tabla o por una línea del
+   gráfico. Se deja el selector en el fondo mostrado para que la página no quede diciendo
+   dos cosas distintas a la vez. #}
+<script>
+(function () {
+    var sel = document.querySelector('select[name="fund_run"]');
+    if (sel) { sel.value = {{ fund_run | tojson }}; }
+})();
+</script>
+
+{# Costos. El orden importa: primero se dice que la rentabilidad de arriba YA viene neta de
+   la carga interna, porque el error habitual es restarla otra vez. #}
+{% if costos %}
+<div class="chart-block" style="margin-top:1.2rem">
+    <h4>Costos de la serie
+        <span class="eeff-meta">período {{ costos.periodo[:4] }}-{{ costos.periodo[4:] }}</span>
+    </h4>
+    <div class="graf-row" style="display:flex; gap:1.5rem; flex-wrap:wrap; align-items:flex-start">
+        <div style="flex:1; min-width:280px">
+            <table class="eeff-table">
+                <tbody>
+                    <tr>
+                        <td>Remuneración anual de la administradora</td>
+                        <td style="text-align:right">
+                            {% if costos.remuneracion is not none %}{{ "{:,.2f}".format(costos.remuneracion) }}%{% else %}—{% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Gasto operacional anual</td>
+                        <td style="text-align:right">
+                            {% if costos.gasto_operacional is not none %}{{ "{:,.2f}".format(costos.gasto_operacional) }}%{% else %}—{% endif %}
+                        </td>
+                    </tr>
+                    <tr class="total-row">
+                        <td><b>Carga interna anual</b><br><span class="lead">ya descontada del valor cuota</span></td>
+                        <td style="text-align:right"><b>{{ "{:,.2f}".format(costos.carga_interna) }}%</b></td>
+                    </tr>
+                    <tr>
+                        <td>Comisión de colocación<br><span class="lead">se le cobra al partícipe, aparte</span></td>
+                        <td style="text-align:right">
+                            {% if costos.com_colocacion %}<b>{{ "{:,.2f}".format(costos.com_colocacion) }}%</b>
+                            {% elif costos.com_colocacion == 0 %}sin comisión
+                            {% else %}—{% endif %}
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div style="flex:1; min-width:280px">
+            {% if var_pct_neta is not none %}
+            <div class="kpi-card">
+                <span class="kpi-sub">Rentabilidad neta para el partícipe</span>
+                <span class="kpi-big {{ 'pos' if var_pct_neta >= 0 else 'neg' }}">{{ "{:+,.2f}".format(var_pct_neta) }}%</span>
+                <span class="kpi-sub">
+                    {{ "{:+,.2f}".format(var_pct) }}% del valor cuota, menos
+                    {{ "{:,.2f}".format(costos.com_colocacion) }}% de comisión de colocación
+                </span>
+            </div>
+            {% else %}
+            <div class="kpi-card">
+                <span class="kpi-sub">Rentabilidad neta para el partícipe</span>
+                <span class="kpi-big {{ 'pos' if (var_pct or 0) >= 0 else 'neg' }}">
+                    {% if var_pct is not none %}{{ "{:+,.2f}".format(var_pct) }}%{% else %}—{% endif %}
+                </span>
+                <span class="kpi-sub">igual a la del valor cuota: esta serie no cobra comisión de colocación</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    <p class="lead" style="margin-top:.5rem">
+        <strong>Por qué la carga interna no se resta de nuevo.</strong> La remuneración de la
+        administradora y el gasto operacional <em>se devengan diariamente del patrimonio del
+        fondo</em> (nota 2 del archivo de la CMF), así que ya están dentro del valor cuota: la
+        rentabilidad que se muestra arriba <strong>ya viene neta</strong> de ambos. Restarlas
+        otra vez sería contarlas dos veces. La comisión de colocación es distinta: se le cobra
+        al partícipe y no sale del patrimonio, por eso sí se descuenta aparte.
+    </p>
+    <p class="lead">
+        Solo el <strong>12% de las series</strong> (284 de 2.372) cobra comisión de colocación;
+        en el resto, la rentabilidad del valor cuota ya es lo que recibe el inversionista.
+        Cuando la CMF informa un rango en vez de un valor único, se usa el
+        <strong>máximo</strong> —el peor caso para el partícipe— porque el cobro efectivo
+        depende de los días de permanencia. Todos los porcentajes incluyen IVA.
+    </p>
+</div>
+{% endif %}
+
+{# Rentabilidades que publica la propia CMF, calculadas con su metodología. Van primero
+   porque son la cifra autoritativa; lo que calculamos nosotros permite ventanas arbitrarias,
+   que el comparador no ofrece. #}
+{% if oficial %}
+<div class="chart-block" style="margin-top:1.2rem">
+    <h4>Rentabilidad oficial CMF
+        <span class="eeff-meta">
+            corte {{ oficial.fecha[:4] }}-{{ oficial.fecha[4:6] }}-{{ oficial.fecha[6:] }} ·
+            serie {{ oficial.series }} · {{ oficial.familia }} · {{ oficial.clase_inversionista }}
+        </span>
+    </h4>
+    <table class="eeff-table" style="max-width:640px">
+        <thead>
+            <tr>
+                <th>Horizonte</th>
+                <th style="text-align:right">Nominal</th>
+                <th style="text-align:right">Real</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for etiqueta, nom, real in [
+                ("Año en curso (YTD)", oficial.nominal_ytd, oficial.real_ytd),
+                ("1 año", oficial.nominal_1a, oficial.real_1a),
+                ("3 años (anualizada)", oficial.nominal_3a, oficial.real_3a),
+                ("5 años (anualizada)", oficial.nominal_5a, oficial.real_5a),
+                ("10 años (anualizada)", oficial.nominal_10a, oficial.real_10a)] %}
+            <tr>
+                <td>{{ etiqueta }}</td>
+                <td style="text-align:right" class="{{ 'pos' if (nom or 0) >= 0 else 'neg' }}">
+                    {% if nom is not none %}{{ "{:+,.2f}".format(nom) }}%{% else %}—{% endif %}
+                </td>
+                <td style="text-align:right" class="{{ 'pos' if (real or 0) >= 0 else 'neg' }}">
+                    {% if real is not none %}{{ "{:+,.2f}".format(real) }}%{% else %}—{% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <p class="lead" style="margin-top:.5rem">
+        Cifras publicadas por la CMF, no recalculadas acá. La <strong>real</strong> descuenta
+        inflación con la variación de la UF. Los horizontes de 3, 5 y 10 años vienen
+        <strong>anualizados</strong>: no son el acumulado del período.
+        {% if oficial.ind_rar is not none %}
+        Indicador de rentabilidad ajustada por riesgo: <strong>{{ "{:,.2f}".format(oficial.ind_rar) }}</strong>.
+        {% endif %}
+        Un guion significa que el fondo no tiene historia suficiente para ese horizonte.
+    </p>
+</div>
+{% elif serie %}
+<div class="warn-box" style="margin-top:1.2rem">
+    La CMF no publica rentabilidad oficial para esta serie: su comparador cubre 1.922 de los
+    2.861 pares fondo-serie. La cifra de arriba es el cálculo propio sobre los cortes cargados.
+</div>
+{% endif %}
+
+{% if serie %}
+<div class="chart-block">
+    <h4>Valor cuota <span class="eeff-meta">(serie {{ series_sel }}{% if not serie_elegida %}, la de mayor patrimonio{% endif %} · un punto por mes)</span></h4>
+    <div id="fm-vc-chart" class="chart"></div>
+</div>
+<script>
+(function () {
+    var s = {{ serie | tojson }};
+    function draw() {
+        if (!window.Plotly) { return setTimeout(draw, 100); }
+        Plotly.newPlot("fm-vc-chart", [{
+            x: s.map(function (d) { return d.date; }),
+            y: s.map(function (d) { return d.quota_value; }),
+            type: "scatter", mode: "lines", line: { color: "#38bdf8", width: 2 },
+            hovertemplate: "%{x|%Y-%m-%d}<br><b>%{y:,.2f}</b><extra></extra>"
+        }], {
+            margin: { t: 10, r: 10, b: 40, l: 70 }, height: 280,
+            paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)",
+            font: { color: "#94a3b8" },
+            xaxis: { gridcolor: "#334155" },
+            // El valor cuota no arranca en cero: forzarlo aplastaría el movimiento, que es
+            // justamente lo que se quiere leer en una ventana corta.
+            yaxis: { gridcolor: "#334155", rangemode: "normal" }
+        }, { displayModeBar: false, responsive: true });
+    }
+    draw();
+})();
+</script>
+{% else %}
+<div class="warn-box">Este fondo no tiene estadística cargada en los cortes disponibles.</div>
+{% endif %}
+
+{% if not comp %}
+<div class="warn-box">
+    Sin cartera cargada para este fondo en el período {{ period_label }}.
+</div>
+{% else %}
+<div class="chart-block">
+    <h4>Composición por tipo de instrumento <span class="eeff-meta">(% de posiciones)</span></h4>
+    <div id="fm-tipo-chart" class="chart"></div>
+</div>
+
+<div class="graf-row" style="display:flex; gap:1.5rem; flex-wrap:wrap">
+    <div style="flex:1; min-width:260px">
+        <h4>Por tipo de cartera</h4>
+        <table class="eeff-table">
+            <thead><tr><th>Cartera</th><th style="text-align:right">Posiciones</th><th style="text-align:right">%</th></tr></thead>
+            <tbody>
+                {% for c in comp.por_cartera %}
+                <tr>
+                    <td>{{ carteras_label.get(c.clave, c.clave) }}</td>
+                    <td style="text-align:right">{{ "{:,}".format(c.n) }}</td>
+                    <td style="text-align:right">{{ "{:,.1f}".format(c.pct) }}%</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div style="flex:1; min-width:260px">
+        <h4>Por país</h4>
+        <table class="eeff-table">
+            <thead><tr><th>País</th><th style="text-align:right">Posiciones</th><th style="text-align:right">%</th></tr></thead>
+            <tbody>
+                {% for c in comp.por_pais[:8] %}
+                <tr>
+                    <td>{{ c.clave }}</td>
+                    <td style="text-align:right">{{ "{:,}".format(c.n) }}</td>
+                    <td style="text-align:right">{{ "{:,.1f}".format(c.pct) }}%</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div style="flex:1; min-width:260px">
+        <h4>Por moneda</h4>
+        <table class="eeff-table">
+            <thead><tr><th>Moneda</th><th style="text-align:right">Posiciones</th><th style="text-align:right">%</th></tr></thead>
+            <tbody>
+                {% for c in comp.por_moneda[:8] %}
+                <tr>
+                    <td>{{ c.clave }}</td>
+                    <td style="text-align:right">{{ "{:,}".format(c.n) }}</td>
+                    <td style="text-align:right">{{ "{:,.1f}".format(c.pct) }}%</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<h4 style="margin-top:1.6rem">Posiciones más grandes</h4>
+<div class="table-scroll">
+    <table class="eeff-table">
+        <thead>
+            <tr>
+                <th>Nemotécnico</th><th>Tipo</th><th>Cartera</th>
+                <th>País</th><th>Moneda</th>
+                <th style="text-align:right">Monto <span class="lead">(campo FFM de nominal)</span></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in posiciones %}
+            <tr>
+                <td><code>{{ p.nemotecnico or "—" }}</code></td>
+                <td>{{ p.tipo or "—" }}</td>
+                <td>{{ carteras_label.get(p.cartera, p.cartera) }}</td>
+                <td>{{ p.pais or "—" }}</td>
+                <td>{{ p.moneda or "—" }}</td>
+                <td style="text-align:right">
+                    {% if p.monto is not none %}{{ "{:,.0f}".format(p.monto) }}{% else %}—{% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+<p class="lead" style="margin-top:.5rem">
+    Los códigos de tipo de instrumento (BB, BE, DPC, BTP, ACC…) se muestran tal cual vienen: el
+    diccionario oficial de campos FFM de la CMF no está transcrito en el repo y no se inventan
+    glosas. El monto tampoco se suma entre monedas por la misma razón.
+</p>
+<p class="lead">
+    <strong>«Cartera no mapeada»</strong> son las posiciones de opciones y futuros. Cada tipo de
+    cartera usa su propia numeración de campos, y solo están mapeadas la nacional y la
+    extranjera —que cubren el 94% de las posiciones y cuya estructura es paralela y verificada
+    contra los datos—. Opciones y futuros tienen otro layout, así que se cuentan pero no se
+    desglosan, en vez de adivinar la correspondencia.
+</p>
+{% endif %}
+
+<script>
+(function () {
+    var data = {{ comp.por_tipo | tojson }};
+    function draw() {
+        if (!window.Plotly) { return setTimeout(draw, 100); }
+        Plotly.newPlot("fm-tipo-chart", [{
+            x: data.map(function (d) { return d.clave; }),
+            y: data.map(function (d) { return d.pct; }),
+            type: "bar", marker: { color: "#38bdf8" },
+            customdata: data.map(function (d) { return d.n; }),
+            hovertemplate: "<b>%{x}</b><br>%{y:.1f}% · %{customdata:,} posiciones<extra></extra>"
+        }], {
+            margin: { t: 10, r: 10, b: 50, l: 55 }, height: 300,
+            paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)",
+            font: { color: "#94a3b8" },
+            xaxis: { type: "category", gridcolor: "#334155" },
+            yaxis: { gridcolor: "#334155", ticksuffix: "%", rangemode: "tozero" }
+        }, { displayModeBar: false, responsive: true });
+    }
+    draw();
+})();
+</script>
+{% endif %}

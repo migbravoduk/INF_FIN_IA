@@ -95,10 +95,21 @@
     Del detalle instrumento a instrumento (archivo B.1). Se cuenta el número de posiciones y el
     nominal <em>abierto por moneda</em>.
 </p>
-<section id="cartera-emisores"
-         hx-get="/seguros/cartera/emisores?ramo={{ ramo }}"
-         hx-trigger="load"
-         hx-swap="innerHTML">
+<form class="eeff-form"
+      hx-get="/seguros/cartera/emisores"
+      hx-target="#cartera-emisores"
+      hx-trigger="load, change"
+      hx-swap="innerHTML"
+      hx-include="this">
+    <input type="hidden" name="ramo" value="{{ ramo }}">
+    <label>Cartera de
+        <select name="rut">
+            <option value="">Mercado (todas las compañías)</option>
+            {% for c in companies %}<option value="{{ c.rut }}">{{ c.name }}</option>{% endfor %}
+        </select>
+    </label>
+</form>
+<section id="cartera-emisores">
     <p class="loading">Cargando emisores…</p>
 </section>
 {% endblock %}

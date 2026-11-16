@@ -251,6 +251,36 @@ def _probe_sp_cartera(db, today: dt.date) -> FreshnessStatus:
     )
 
 
+
+def _probe_cmf_fm_cartera(db, today) -> FreshnessStatus:
+    # Obtener el último periodo de la cartera insertada
+    res = db.conn.execute("SELECT MAX(period_year), MAX(period_month) FROM cmf_mutual_fund_portfolio").fetchone()
+    latest_y = res[0] if res else None
+    latest_m = res[1] if res else None
+    
+    # El periodo esperado es el mes anterior al actual (se publica a mes vencido)
+    if today.month == 1:
+        expected_y = today.year - 1
+        expected_m = 12
+    else:
+        expected_y = today.year
+        expected_m = today.month - 1
+        
+    latest_have = f"{latest_y}-{latest_m:02d}" if latest_y else None
+    expected = f"{expected_y}-{expected_m:02d}"
+    
+    due = latest_y is None or latest_y < expected_y or (latest_y == expected_y and latest_m < expected_m)
+    
+    return FreshnessStatus(
+        source="CMF Fondos Mutuos (Cartera)",
+        kind="cmf_fm_cartera",
+        frequency="monthly",
+        latest_have=latest_have,
+        expected=expected,
+        due=due,
+        params={"year": expected_y, "month": expected_m}
+    )
+
 def probe_all(db, today: Optional[dt.date] = None) -> list[FreshnessStatus]:
     """Construye el estado de frescura de todas las fuentes (solo lectura)."""
     today = today or dt.date.today()
@@ -264,4 +294,5 @@ def probe_all(db, today: Optional[dt.date] = None) -> list[FreshnessStatus]:
     statuses.append(_probe_sp_cuotas(db, today))
     statuses.append(_probe_sp_precios(db, today))
     statuses.append(_probe_sp_cartera(db, today))
+    statuses.append(_probe_cmf_fm(db, today))
     return statuses

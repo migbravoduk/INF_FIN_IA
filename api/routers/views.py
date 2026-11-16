@@ -40,6 +40,158 @@ def overview(request: Request, db: Database = Depends(get_db)):
 
 
 # ----------------------------------------------------------
+# Datos Banco Central (macro)
+# ----------------------------------------------------------
+
+# Etiquetas legibles de las categorías del catálogo (config/series_catalog.yaml).
+BC_CATEGORIAS = {
+    "actividad": "Actividad",
+    "actividad_mensual": "Actividad mensual",
+    "precios": "Precios",
+    "precios_uf": "UF",
+    "precios_ivp": "IVP",
+    "precios_utm": "UTM",
+    "politica_monetaria": "Política monetaria",
+    "curva_soberana": "Curva soberana",
+    "colocaciones": "Tasas de colocación",
+    "tipo_de_cambio": "Tipo de cambio",
+    "laboral": "Laboral",
+    "sector_externo": "Sector externo",
+    "fiscal": "Fiscal",
+    "materias_primas": "Materias primas",
+    "expectativas": "Expectativas (EEE/EOF)",
+}
+
+# Unidades del catálogo → símbolo corto para ejes y tarjetas.
+BC_UNIDADES = {
+    "porcentaje": "%",
+    "porcentaje_anual": "% anual",
+    "indice": "índice",
+    "CLP": "$",
+    "CLP_por_USD": "$/US$",
+    "USD_por_libra": "US$/lb",
+    "millones_USD": "MM US$",
+    "millones_CLP_2018": "MM$ de 2018",
+}
+
+# Unidades que YA son una tasa: su variación se lee en puntos porcentuales, no en %.
+BC_UNIDADES_TASA = {"porcentaje", "porcentaje_anual"}
+
+
+def _bc_dimension(unit: Optional[str]) -> str:
+    """
+    Dimensión comparable de una unidad, para decidir si dos series comparten eje.
+
+    No basta con igualar el string: `porcentaje` y `porcentaje_anual` son etiquetas
+    distintas de la MISMA magnitud, y separarlas en dos ejes arruina justo la
+    comparación más útil del macro chileno —TPM contra inflación—, donde la distancia
+    vertical entre ambas es la tasa real y por tanto sí tiene significado.
+    """
+    if unit in BC_UNIDADES_TASA:
+        return "pct"
+    return unit or "?"
+
+BC_RANGOS = {"1a": 1, "3a": 3, "5a": 5, "10a": 10, "todo": None}
+
+
+def _bc_desde(rango: str) -> Optional[str]:
+    """Fecha de corte del rango pedido; None = toda la historia."""
+    anos = BC_RANGOS.get(rango, 5)
+    if anos is None:
+        return None
+    hoy = dt.date.today()
+    try:
+        return hoy.replace(year=hoy.year - anos).isoformat()
+    except ValueError:      # 29 de febrero
+        return (hoy - dt.timedelta(days=365 * anos)).isoformat()
+
+
+def _bc_decorar(fila: dict) -> dict:
+    """Agrega a una fila del catálogo sus etiquetas legibles."""
+    return {**fila,
+            "cat_label": BC_CATEGORIAS.get(fila["category"], fila["category"] or "—"),
+            "unit_label": BC_UNIDADES.get(fila["unit"], fila["unit"] or ""),
+            "es_tasa": fila["unit"] in BC_UNIDADES_TASA}
+
+
+@router.get("/banco-central")
+def banco_central(request: Request, db: Database = Depends(get_db)):
+    """Explorador de las series macro del Banco Central (catálogo, serie y comparación)."""
+    catalogo = [_bc_decorar(r) for r in db.get_macro_catalog()]
+    efectivas = [r for r in catalogo if r["category"] != db.EXPECTATIVAS_CATEGORY]
+    expectativas = [r for r in catalogo if r["category"] == db.EXPECTATIVAS_CATEGORY]
+
+    # Agrupadas por categoría para armar los <optgroup> del selector.
+    grupos: dict[str, list] = {}
+    for r in efectivas:
+        grupos.setdefault(r["cat_label"], []).append(r)
+
+    return templates.TemplateResponse(request, "banco_central.html", {
+        "grupos": grupos,
+        "n_efectivas": len(efectivas),
+        "n_expectativas": len(expectativas),
+        "rangos": list(BC_RANGOS),
+        "default_serie": db.KPI_SERIES["ipc_v12"],
+        "default_b": db.KPI_SERIES["tpm"],
+    })
+
+
+@router.get("/banco-central/catalogo")
+def banco_central_catalogo(request: Request, tipo: str = Query("efectivas"),
+                           db: Database = Depends(get_db)):
+    """Fragmento HTMX: catálogo de series con cobertura y último dato."""
+    filas = [_bc_decorar(r) for r in
+             db.get_macro_catalog(expectativas=(tipo == "expectativas"))]
+    return templates.TemplateResponse(request, "partials/bc_catalogo.html", {
+        "filas": filas, "tipo": tipo,
+    })
+
+
+@router.get("/banco-central/serie")
+def banco_central_serie(request: Request, series_id: str = Query(...),
+                        rango: str = Query("5a"), db: Database = Depends(get_db)):
+    """Fragmento HTMX: gráfico de una serie + estadísticas del rango."""
+    meta = db.get_series_meta(series_id)
+    if not meta:
+        return templates.TemplateResponse(request, "partials/bc_serie.html",
+                                          {"meta": None, "serie": [], "stats": None})
+    desde = _bc_desde(rango)
+    serie = records(db.get_series(series_id, from_date=desde))
+    stats = db.get_series_stats(series_id, from_date=desde)
+    return templates.TemplateResponse(request, "partials/bc_serie.html", {
+        "meta": _bc_decorar({**meta, "n_obs": None, "first_date": None,
+                             "last_date": None, "last_value": None}),
+        "serie": serie, "stats": stats, "rango": rango,
+        "es_expectativa": meta["category"] == db.EXPECTATIVAS_CATEGORY,
+    })
+
+
+@router.get("/banco-central/comparar")
+def banco_central_comparar(request: Request, a: str = Query(...), b: str = Query(...),
+                           rango: str = Query("5a"), db: Database = Depends(get_db)):
+    """Fragmento HTMX: dos series superpuestas con eje Y independiente cada una.
+
+    El doble eje no es decoración: la UF va en decenas de miles y la TPM en unidades,
+    así que en un solo eje la segunda serie queda pegada al cero y no se lee.
+    """
+    desde = _bc_desde(rango)
+    out = []
+    for sid in (a, b):
+        meta = db.get_series_meta(sid)
+        if not meta:
+            continue
+        out.append({"meta": _bc_decorar({**meta, "n_obs": None, "first_date": None,
+                                         "last_date": None, "last_value": None}),
+                    "serie": records(db.get_series(sid, from_date=desde))})
+    misma = (len(out) == 2 and
+             _bc_dimension(out[0]["meta"]["unit"]) == _bc_dimension(out[1]["meta"]["unit"]))
+    return templates.TemplateResponse(request, "partials/bc_comparar.html", {
+        "series": out, "misma_unidad": misma,
+        "ambas_tasas": misma and out and out[0]["meta"]["es_tasa"],
+    })
+
+
+# ----------------------------------------------------------
 # Estados financieros corporativos (CMF)
 # ----------------------------------------------------------
 
@@ -845,6 +997,147 @@ def fondos_panel(request: Request, fund: str = Query("A"), db: Database = Depend
     })
 
 
+# ----------------------------------------------------------
+# Fondos mutuos (CMF)
+# ----------------------------------------------------------
+#
+# Dos fuentes distintas y complementarias:
+#   · estadística DIARIA (`cmf_mutual_fund_quota_values`): valor cuota, patrimonio,
+#     partícipes, y el enlace del fondo con su ADMINISTRADORA y su TIPO.
+#   · cartera MENSUAL (`cmf_mutual_fund_portfolio`): en qué está invertido cada fondo.
+# El RUN es la llave entre ambas, siempre SIN dígito verificador (ver CONTEXTO.md).
+
+_FM_CARTERAS = {
+    "NACI": "Inversión nacional",
+    "EXTR": "Inversión extranjera",
+    "OPCI": "Opciones",
+    "FUTU": "Futuros",
+    "OPLA": "Opciones lanzador",
+}
+
+
+def _fm_periodo_label(period) -> str:
+    return f"{period[0]}-{period[1]:02d}" if period else "—"
+
+
+@router.get("/fondos-mutuos")
+def fondos_mutuos(request: Request, db: Database = Depends(get_db)):
+    """Fondos mutuos: rendimientos por administradora/tipo y zoom al portafolio."""
+    fechas = db.get_mutual_fund_quote_dates()
+    periodos = db.get_mutual_fund_periods()
+    return templates.TemplateResponse(request, "fondos_mutuos.html", {
+        "fechas": fechas,
+        "desde_default": fechas[-1] if fechas else "",
+        "hasta_default": fechas[0] if fechas else "",
+        "agfs": db.get_mutual_fund_agfs(),
+        "tipos": db.get_mutual_fund_types_map(),
+        "funds": db.get_mutual_funds_options(periodos[0]) if periodos else [],
+        "period_label": _fm_periodo_label(periodos[0] if periodos else None),
+        "n_fondos": len({f["fund_run"] for f in db.get_mutual_funds_options(periodos[0])}) if periodos else 0,
+    })
+
+
+@router.get("/fondos-mutuos/rendimientos")
+def fondos_mutuos_rendimientos(request: Request, desde: str = Query(""), hasta: str = Query(""),
+                               agf: str = Query(""), tipo: str = Query(""),
+                               db: Database = Depends(get_db)):
+    """Fragmento HTMX: variación del valor cuota entre dos fechas, filtrable."""
+    fechas = db.get_mutual_fund_quote_dates()
+    if not fechas:
+        return templates.TemplateResponse(request, "partials/fondos_mutuos_rend.html",
+                                          {"rows": [], "sin_datos": True})
+    desde = desde if desde in fechas else fechas[-1]
+    hasta = hasta if hasta in fechas else fechas[0]
+    if desde >= hasta:                       # rango invertido o de un solo día
+        desde = fechas[-1]
+
+    tipo_int = int(tipo) if tipo.isdigit() else None
+    rows = db.get_mutual_fund_returns(desde, hasta, agf=agf, fund_type=tipo_int, limit=40)
+    tipos = db.get_mutual_fund_types_map()
+    return templates.TemplateResponse(request, "partials/fondos_mutuos_rend.html", {
+        "rows": rows, "desde": desde, "hasta": hasta,
+        "agf": agf, "tipo_label": tipos.get(tipo_int) if tipo_int else "",
+        "tipos": tipos,
+        "n_total": len(db.get_mutual_fund_returns(desde, hasta, agf=agf,
+                                                  fund_type=tipo_int, limit=99999)),
+    })
+
+
+@router.get("/fondos-mutuos/comparado")
+def fondos_mutuos_comparado(request: Request, desde: str = Query(""), hasta: str = Query(""),
+                            agf: str = Query(""), tipo: str = Query(""),
+                            db: Database = Depends(get_db)):
+    """Fragmento HTMX: trayectorias base 100 de mejores y peores, contra la mediana del grupo."""
+    fechas = db.get_mutual_fund_quote_dates()
+    if not fechas:
+        return templates.TemplateResponse(request, "partials/fondos_mutuos_comparado.html",
+                                          {"paths": []})
+    desde = desde if desde in fechas else fechas[-1]
+    hasta = hasta if hasta in fechas else fechas[0]
+    if desde >= hasta:
+        desde = fechas[-1]
+
+    tipo_int = int(tipo) if tipo.isdigit() else None
+    datos = db.get_mutual_fund_paths(desde, hasta, agf=agf, fund_type=tipo_int, top_n=6)
+    tipos = db.get_mutual_fund_types_map()
+    return templates.TemplateResponse(request, "partials/fondos_mutuos_comparado.html", {
+        **datos, "desde": desde, "hasta": hasta, "agf": agf,
+        "tipo_label": tipos.get(tipo_int) if tipo_int else "",
+    })
+
+
+@router.get("/fondos-mutuos/panel")
+def fondos_mutuos_panel(request: Request, fund_run: str = Query(""),
+                        series: str = Query(""), db: Database = Depends(get_db)):
+    """Fragmento HTMX: zoom a un fondo — valor cuota en el tiempo + composición de cartera.
+
+    `series` llega cuando se entra haciendo clic en una fila de la tabla o en una línea del
+    gráfico, que son pares fondo-serie. Sin ella se cae a la serie de mayor patrimonio, que
+    es la que representa al fondo cuando no se pidió una en particular.
+    """
+    if not fund_run:
+        return templates.TemplateResponse(request, "partials/fondos_mutuos_panel.html",
+                                          {"comp": None, "serie": []})
+
+    identidad = db.get_mutual_fund_identity(fund_run)
+    serie, series_sel = db.get_mutual_fund_quote_series(fund_run, series)
+    periodos = db.get_mutual_fund_periods()
+    comp = db.get_mutual_fund_composition(fund_run, periodos[0]) if periodos else {}
+
+    var_pct = None
+    if len(serie) >= 2 and serie[0]["quota_value"]:
+        var_pct = (serie[-1]["quota_value"] / serie[0]["quota_value"] - 1) * 100
+
+    tipos = db.get_mutual_fund_types_map()
+    # Rentabilidades oficiales de la CMF para ESTA serie. El comparador no cubre todas las
+    # series (67% de los pares), así que puede venir vacío y la vista lo dice.
+    oficial = db.get_mutual_fund_official_returns(fund_run, series_sel)
+
+    # Costos. La remuneración y el gasto operacional se devengan del patrimonio, así que YA
+    # están dentro de `var_pct`: restarlos otra vez sería contarlos dos veces. Solo la
+    # comisión de colocación se le cobra al partícipe y se descuenta aparte.
+    costos = db.get_mutual_fund_fees(fund_run, series_sel)
+    var_pct_neta = None
+    if var_pct is not None and costos.get("com_colocacion"):
+        var_pct_neta = ((1 + var_pct / 100) * (1 - costos["com_colocacion"] / 100) - 1) * 100
+    return templates.TemplateResponse(request, "partials/fondos_mutuos_panel.html", {
+        "comp": comp or None,
+        "fund_run": fund_run,
+        "oficial": oficial,
+        "costos": costos,
+        "var_pct_neta": var_pct_neta,
+        "identidad": identidad,
+        "tipo_label": tipos.get(identidad.get("fund_type")) if identidad else None,
+        "serie": serie, "series_sel": series_sel, "var_pct": var_pct,
+        # Si la serie vino en la URL (clic en fila o línea) NO es "la de mayor
+        # patrimonio": es la que el usuario eligió, y el rótulo debe decirlo.
+        "serie_elegida": bool(series),
+        "carteras_label": _FM_CARTERAS,
+        "posiciones": db.get_mutual_fund_positions(fund_run, periodos[0], limit=20) if periodos and comp else [],
+        "period_label": _fm_periodo_label(periodos[0] if periodos else None),
+    })
+
+
 @router.get("/afp/neta")
 def afp_neta(
     request: Request,
@@ -1553,6 +1846,9 @@ def seguros_cartera_emisores(request: Request, ramo: str = Query("vida"),
     significaría nada. Tampoco es valor de mercado — sirve para ver concentración de emisores,
     no para ponderar la cartera.
     """
+    from api.insurer_glossary import (clean_company_name, tipo_instrumento_label,
+                                      TIPOS_SIN_EMISOR_INSCRITO)
+
     ramo = ramo if ramo in _RAMOS else "vida"
     periods = db.get_insurer_portfolio_periods(insurance_type=ramo)
     if not periods:
@@ -1560,6 +1856,16 @@ def seguros_cartera_emisores(request: Request, ramo: str = Query("vida"),
                                           {"rows": [], "period": None})
     period = period if period in periods else periods[0]
     rut = (rut or "").strip()
+
+    # A quién corresponde la cartera que se está mirando. Sin esto la tabla es ambigua:
+    # los mismos emisores salen tanto para el agregado del mercado como para una compañía.
+    companias = db.get_insurer_portfolio_companies(period, ramo)
+    opciones = [{"rut": str(c.rut), "name": clean_company_name(c.company_name, str(c.rut))}
+                for c in companias.itertuples()]
+    opciones.sort(key=lambda o: o["name"])
+    sel = next((o for o in opciones if o["rut"] == rut), None) if rut else None
+    if rut and sel is None:
+        rut = ""   # RUT que no existe en el período: se cae al mercado en vez de mostrar vacío
 
     df = db.get_insurer_issuer_exposure(period, ramo, rut or None, limit=15)
     agrupado: dict[str, dict] = {}
@@ -1569,6 +1875,10 @@ def seguros_cartera_emisores(request: Request, ramo: str = Query("vida"),
             "rut": key,
             "name": (r.nombre if isinstance(r.nombre, str) and r.nombre.strip() else ""),
             "total": int(r.total_instr or 0), "monedas": [],
+            "tipo": tipo_instrumento_label(r.tipo_principal),
+            "tipo_code": (r.tipo_principal or ""),
+            "solo_un_tipo": int(r.n_tipos_distintos or 0) <= 1,
+            "sin_emisor_inscrito": (r.tipo_principal or "") in TIPOS_SIN_EMISOR_INSCRITO,
         })
         try:
             nominal = float(r.nominal)
@@ -1582,5 +1892,9 @@ def seguros_cartera_emisores(request: Request, ramo: str = Query("vida"),
         e["monedas"].sort(key=lambda m: m["n"], reverse=True)
 
     return templates.TemplateResponse(request, "partials/seguros_cartera_emisores.html", {
-        "rows": rows, "period": period, "ramo_label": _RAMOS[ramo],
+        "rows": rows, "period": period, "ramo_label": _RAMOS[ramo], "ramo": ramo,
+        "opciones": opciones, "sel_rut": rut,
+        "sel_nombre": sel["name"] if sel else None,
+        "total_emisores": db.count_insurer_issuers(period, ramo, rut or None),
+        "n_companias": len(opciones),
     })

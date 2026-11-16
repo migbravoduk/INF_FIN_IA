@@ -1,0 +1,85 @@
+{#
+  partials/fondos_mutuos_rend.html — Variación del valor cuota entre dos fechas.
+  rows = [{fund_run, fund_name, agf_name, fund_type, series, currency,
+           vc_ini, vc_fin, var_pct, patrimonio, participes}]
+  Una fila por FONDO Y SERIE: el valor cuota es propio de cada serie (comisiones distintas),
+  así que promediarlas escondería justamente la diferencia que el partícipe paga.
+#}
+{% if sin_datos %}
+<p class="loading">Sin estadística de fondos mutuos cargada.</p>
+{% elif rows %}
+<div class="eeff-meta" style="margin:.4rem 0 1rem">
+    {{ desde }} → {{ hasta }}
+    {%- if agf %} · <strong>{{ agf }}</strong>{% endif %}
+    {%- if tipo_label %} · {{ tipo_label }}{% endif %}
+    · mostrando {{ rows|length }} de {{ "{:,}".format(n_total) }} pares fondo-serie
+    · <span class="lead">clic en una fila para ver su composición y desempeño</span>
+</div>
+
+<div class="table-scroll">
+    <table class="eeff-table">
+        <thead>
+            <tr>
+                <th>Fondo</th>
+                <th>Serie</th>
+                <th>Administradora</th>
+                <th>Tipo</th>
+                <th style="text-align:right">Valor cuota inicio</th>
+                <th style="text-align:right">Valor cuota fin</th>
+                <th style="text-align:right">Variación</th>
+                <th style="text-align:right">Patrimonio</th>
+                <th style="text-align:right">Partícipes</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for r in rows %}
+            {# Clic en la fila = zoom a ESE par fondo-serie. `show:` hace que HTMX desplace
+               la vista al panel tras el swap; si no, el detalle se carga fuera de pantalla. #}
+            <tr class="row-click"
+                hx-get="/fondos-mutuos/panel?fund_run={{ r.fund_run }}&series={{ r.series | urlencode }}"
+                hx-target="#fm-panel"
+                hx-swap="innerHTML show:#fm-panel:top"
+                title="Ver composición y desempeño de {{ r.fund_name }} · serie {{ r.series }}">
+                <td>{{ r.fund_name }} <span class="go">→</span><br><span class="lead">RUN {{ r.fund_run }}</span></td>
+                <td>{{ r.series }}</td>
+                <td><span class="lead">{{ r.agf_name }}</span></td>
+                <td><span class="lead">{{ tipos.get(r.fund_type, r.fund_type) }}</span></td>
+                <td style="text-align:right">{{ "{:,.2f}".format(r.vc_ini) }}</td>
+                <td style="text-align:right">{{ "{:,.2f}".format(r.vc_fin) }}</td>
+                <td style="text-align:right" class="{{ 'pos' if r.var_pct >= 0 else 'neg' }}">
+                    <b>{{ "{:+,.2f}".format(r.var_pct) }}%</b>
+                </td>
+                <td style="text-align:right">
+                    {% if r.patrimonio is not none %}{{ "{:,.0f}".format(r.patrimonio) }}{% else %}—{% endif %}
+                </td>
+                <td style="text-align:right">
+                    {% if r.participes is not none %}{{ "{:,}".format(r.participes) }}{% else %}—{% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<p class="lead" style="margin-top:.5rem">
+    <strong>Qué es esta cifra.</strong> Rentabilidad <em>nominal acumulada</em> entre los dos
+    cortes elegidos, calculada según el Documento Metodológico de Rentabilidades de la CMF
+    (fórmulas 1 y 3): los fondos en moneda extranjera se convierten a pesos, y se exige que la
+    serie exista en <em>ambos</em> cortes. No está anualizada ni descontada por inflación.
+</p>
+<p class="lead">
+    <strong>Validado contra las cifras oficiales de la CMF</strong> (base del Comparador de
+    rentabilidad, corte 2026-03-31): de 1.968 pares fondo-serie comparables, el
+    <strong>93,4% calza dentro de 0,5 pp</strong> y la mediana de la diferencia es 0,000 pp.
+    La excepción son <strong>27 fondos de 429</strong> que reparten beneficios: la fórmula de
+    la CMF incluye un <em>factor de reparto</em> que aquí no se tiene, así que en esos fondos
+    la cifra queda <strong>subestimada</strong> (mediana −5 pp). Nunca sobrestimada.
+</p>
+<p class="lead">
+    El patrimonio va en <strong>millones</strong> de la moneda en que contabiliza el fondo — lo
+    declara el propio archivo de la CMF al pie («Cifras en millones de pesos o de la moneda que
+    corresponda»), así que <strong>no es sumable entre fondos de distinta moneda</strong>.
+</p>
+{% else %}
+<p class="loading">Ningún fondo tiene valor cuota en los dos cortes elegidos con ese filtro.</p>
+{% endif %}

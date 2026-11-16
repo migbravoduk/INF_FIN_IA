@@ -1,0 +1,79 @@
+{#
+  partials/bc_comparar.html — Dos series macro superpuestas.
+  series = [{meta, serie}] (1 o 2), misma_unidad = bool.
+  Con unidades distintas cada una lleva su eje; con la misma unidad comparten eje,
+  que es lo correcto para leer la brecha entre ambas (p. ej. BCP 5 y 10 años).
+#}
+{% if series | length < 2 %}
+<p class="loading">Elige dos series para comparar.</p>
+{% elif not series[0].serie or not series[1].serie %}
+<p class="loading">Alguna de las dos series no tiene datos en el rango elegido.</p>
+{% else %}
+<div class="chart-block">
+    <h4>{{ series[0].meta.name }} <span class="eeff-meta">vs.</span> {{ series[1].meta.name }}</h4>
+    <p class="eeff-meta">
+        {% if misma_unidad %}
+            Misma magnitud ({{ series[0].meta.unit_label }}): comparten eje, así que la
+            distancia vertical entre las líneas es la brecha real.
+            {% if ambas_tasas %}
+            Con la TPM y la inflación, esa brecha es la <strong>tasa de política real</strong>.
+            {% endif %}
+        {% else %}
+            Unidades distintas ({{ series[0].meta.unit_label or "—" }} y
+            {{ series[1].meta.unit_label or "—" }}): cada serie usa su propio eje, de modo
+            que <strong>los cruces entre las líneas no significan nada</strong> — solo se
+            pueden comparar las formas, no los niveles.
+        {% endif %}
+    </p>
+    <div id="bc-cmp-chart" class="chart"></div>
+</div>
+
+<script>
+(function () {
+    var a = {{ series[0].serie | tojson }};
+    var b = {{ series[1].serie | tojson }};
+    var mismaUnidad = {{ 'true' if misma_unidad else 'false' }};
+    var nombreA = {{ series[0].meta.name | tojson }};
+    var nombreB = {{ series[1].meta.name | tojson }};
+
+    function draw() {
+        if (!window.Plotly) { return setTimeout(draw, 100); }
+        var traceA = {
+            x: a.map(function (d) { return d.date; }),
+            y: a.map(function (d) { return d.value; }),
+            name: nombreA, type: "scatter", mode: "lines",
+            line: { color: "#38bdf8", width: 2 },
+            hovertemplate: "%{x|%Y-%m-%d}<br><b>%{y:,.2f}</b><extra>" + nombreA + "</extra>"
+        };
+        var traceB = {
+            x: b.map(function (d) { return d.date; }),
+            y: b.map(function (d) { return d.value; }),
+            name: nombreB, type: "scatter", mode: "lines",
+            line: { color: "#f472b6", width: 2 },
+            hovertemplate: "%{x|%Y-%m-%d}<br><b>%{y:,.2f}</b><extra>" + nombreB + "</extra>"
+        };
+        if (!mismaUnidad) { traceB.yaxis = "y2"; }
+
+        var layout = {
+            margin: { t: 10, r: mismaUnidad ? 10 : 60, b: 40, l: 70 }, height: 360,
+            paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)",
+            font: { color: "#94a3b8" },
+            legend: { orientation: "h", y: -0.18 },
+            hovermode: "x unified",
+            xaxis: { gridcolor: "#334155" },
+            yaxis: { gridcolor: "#334155", title: { text: nombreA, font: { color: "#38bdf8" } } }
+        };
+        if (!mismaUnidad) {
+            layout.yaxis2 = {
+                overlaying: "y", side: "right", showgrid: false,
+                title: { text: nombreB, font: { color: "#f472b6" } },
+                tickfont: { color: "#f472b6" }
+            };
+        }
+        Plotly.newPlot("bc-cmp-chart", [traceA, traceB], layout,
+                       { displayModeBar: false, responsive: true });
+    }
+    draw();
+})();
+</script>
+{% endif %}

@@ -300,6 +300,123 @@ CREATE TABLE IF NOT EXISTS sp_instrument_prices (
 
 CREATE INDEX IF NOT EXISTS idx_sp_prices_date ON sp_instrument_prices(date);
 CREATE INDEX IF NOT EXISTS idx_sp_prices_instrument ON sp_instrument_prices(instrument_id);
+
+-- ============================================================
+-- Fondos Mutuos (CMF API v3)
+-- ============================================================
+CREATE SEQUENCE IF NOT EXISTS mf_quota_seq START 1;
+
+CREATE TABLE IF NOT EXISTS cmf_mutual_fund_quota_values (
+    id              BIGINT PRIMARY KEY DEFAULT nextval('mf_quota_seq'),
+    date            DATE NOT NULL,
+    agf_rut         VARCHAR,                      -- el archivo diario NO trae RUT de la AGF
+    agf_name        VARCHAR,                      -- Administradora (viene en el archivo)
+    fund_run        VARCHAR NOT NULL,             -- RUN SIN dígito verificador (ver gotchas)
+    fund_name       VARCHAR NOT NULL,
+    fund_type       INTEGER,                      -- 1..8, glosa oficial al pie del archivo
+    series          VARCHAR,                      -- Serie de las cuotas (A, B, CLASICA...)
+    currency        VARCHAR,                      -- moneda en que contabiliza el fondo
+    quota_value     DOUBLE,                       -- Valor cuota
+    net_asset_value DOUBLE,                       -- Patrimonio, en MILLONES (lo dice el pie)
+    participants    INTEGER,                      -- Número de partícipes
+    fetched_at      TIMESTAMP DEFAULT now()
+);
+-- SIN índices ni UNIQUE, aunque (date, fund_run, series) sí es llave natural (verificado:
+-- 0 duplicados en 2.864 filas). El motivo es el mismo gotcha de la cartera de seguros: un
+-- índice ART cuya columna líder está masivamente duplicada —acá 2.864 filas comparten `date`—
+-- hace FALLAR el DELETE de la reingesta por fecha e invalida la base. Idempotencia por
+-- Delete-then-Insert por `date`.
+
+-- Glosa oficial del tipo de fondo. NO se transcribe a mano: viene al pie del propio
+-- archivo de la CMF ("(2) Tipo de fondo: 1: FM DE INV.EN INST.DE DEUDA...") y se guarda
+-- en cada ingesta, igual que el resto de las glosas del regulador.
+CREATE TABLE IF NOT EXISTS cmf_mutual_fund_types (
+    code    INTEGER PRIMARY KEY,
+    label   VARCHAR NOT NULL
+);
+
+-- Rentabilidades OFICIALES de la CMF (base del Comparador de rentabilidad).
+-- Es una foto por corte (`fecha`), no una serie histórica: cada ingesta reemplaza el corte
+-- completo. Los porcentajes vienen ya calculados por el regulador según su Documento
+-- Metodológico, así que NO se recalculan acá: son la referencia contra la cual se valida
+-- nuestro propio cálculo (ver CONTEXTO.md).
+CREATE TABLE IF NOT EXISTS cmf_mutual_fund_returns (
+    fecha                VARCHAR NOT NULL,     -- AAAAMMDD del corte
+    fund_run             VARCHAR NOT NULL,     -- SIN dígito verificador, como el resto
+    series               VARCHAR NOT NULL,
+    fund_name            VARCHAR,
+    agf_name             VARCHAR,              -- nombre CORTO ('BANCHILE'), no la razón social
+    familia              VARCHAR,              -- familia del visualizador (11 categorías)
+    familia_rar          VARCHAR,              -- familia fina, usada para el indicador de riesgo
+    clase_inversionista  VARCHAR,              -- Retail | Alto Patrimonio | APV
+    serie_digital        INTEGER,
+    rent_nominal_1a      DOUBLE,
+    rent_real_1a         DOUBLE,
+    rent_nominal_3a_ann  DOUBLE,               -- anualizada
+    rent_real_3a_ann     DOUBLE,
+    rent_nominal_5a_ann  DOUBLE,
+    rent_real_5a_ann     DOUBLE,
+    rent_nominal_10a_ann DOUBLE,
+    rent_real_10a_ann    DOUBLE,
+    rent_nominal_ytd     DOUBLE,
+    rent_real_ytd        DOUBLE,
+    ind_rar              DOUBLE,               -- rentabilidad ajustada por riesgo (ponderada)
+    fetched_at           TIMESTAMP DEFAULT now()
+);
+
+-- Administradoras con su RUT. El RUT solo aparece en la hoja de benchmark por AGF del
+-- comparador; la estadística diaria trae la razón social larga y ningún identificador.
+CREATE TABLE IF NOT EXISTS cmf_mutual_fund_agf (
+    agf_rut   VARCHAR PRIMARY KEY,
+    agf_name  VARCHAR NOT NULL
+);
+
+-- Estructura de costos por fondo y serie (CMF, mensual).
+--
+-- OJO CON EL DOBLE DESCUENTO: la remuneración de la AGF y el gasto operacional se devengan
+-- DIARIAMENTE sobre el patrimonio del fondo (nota (2) del archivo), así que ya están dentro
+-- del valor cuota: la rentabilidad calculada desde el valor cuota YA es neta de ambos.
+-- La comisión de colocación, en cambio, se le cobra al partícipe y NO sale del patrimonio:
+-- esa sí hay que restarla aparte. Todos los valores son FRACCIÓN anual (0,0119 = 1,19%).
+CREATE TABLE IF NOT EXISTS cmf_mutual_fund_fees (
+    periodo              VARCHAR NOT NULL,     -- AAAAMM
+    fund_run             VARCHAR NOT NULL,     -- SIN dígito verificador
+    series               VARCHAR NOT NULL,
+    fund_name            VARCHAR,
+    agf_name             VARCHAR,
+    currency             VARCHAR,
+    com_colocacion_max   DOUBLE,               -- al partícipe; min/max varían por permanencia
+    com_colocacion_min   DOUBLE,
+    com_colocacion_unico DOUBLE,
+    remuneracion_max     DOUBLE,               -- ya descontada del valor cuota
+    remuneracion_min     DOUBLE,
+    remuneracion_unico   DOUBLE,
+    gasto_operacional    DOUBLE,               -- ya descontado del valor cuota
+    fetched_at           TIMESTAMP DEFAULT now()
+);
+
+CREATE SEQUENCE IF NOT EXISTS mf_portfolio_seq START 1;
+
+CREATE TABLE IF NOT EXISTS cmf_mutual_fund_portfolio (
+    id              BIGINT PRIMARY KEY DEFAULT nextval('mf_portfolio_seq'),
+    period_year     INTEGER NOT NULL,
+    period_month    INTEGER NOT NULL,
+    portfolio_type  VARCHAR NOT NULL,             -- NACI, EXTR, etc.
+    fund_run        VARCHAR NOT NULL,
+    fund_name       VARCHAR NOT NULL,
+    raw_data        JSON,                         -- Todo el registro restante de las columnas FFM_*
+    fetched_at      TIMESTAMP DEFAULT now()
+);
+-- SIN llave natural a propósito: un fondo puede tener DOS posiciones idénticas del mismo
+-- instrumento (dos compras con las mismas características) y el archivo de la CMF no trae
+-- columna que las distinga. Medido sobre 2026-06: 1.506 grupos con 3.006 filas repetidas,
+-- que son posiciones reales, no basura. La idempotencia se logra con Delete-then-Insert por
+-- (period_year, period_month, portfolio_type), como en el resto de los cargadores del repo.
+--
+-- SIN índices secundarios, por la misma razón que la cartera de seguros (ver CONTEXTO.md):
+-- en DuckDB un índice ART sobre una columna con claves muy duplicadas —acá TODAS las filas
+-- comparten período— hace FALLAR el DELETE de la reingesta e invalida la base para todo el
+-- proceso. DuckDB es columnar con zonemaps: el filtro por período no necesita ese índice.
 """
 
 SEED_SOURCES_SQL = """

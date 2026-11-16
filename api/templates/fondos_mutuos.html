@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+
+{% block title %}Fondos mutuos · INF_FIN_IA{% endblock %}
+
+{% block content %}
+<h1>Fondos mutuos</h1>
+
+{% if not fechas %}
+<div class="warn-box">
+    No hay estadística de fondos mutuos cargada. Se ingesta con
+    <code>main.py fetch-ffmm-cuotas --months 24</code>.
+</div>
+{% else %}
+
+<p class="subtitle">
+    Dos fuentes de la CMF. La <strong>estadística por corte mensual</strong>
+    ({{ fechas|length }} cortes, {{ fechas[-1] }} → {{ fechas[0] }}) trae valor cuota,
+    patrimonio y partícipes, y enlaza cada fondo con su administradora y su tipo. La
+    <strong>cartera</strong> (período {{ period_label }}, {{ n_fondos }} fondos) dice en qué
+    está invertido cada uno.
+    <br><span class="lead">La CMF publica la estadística a diario; se guarda un corte por mes
+    (último día hábil con publicación) para no inflar la base.</span>
+</p>
+
+<!-- ── Rendimientos ────────────────────────────────────────────────────── -->
+<section class="section-head"><h2>Rendimiento por fondo</h2></section>
+
+<form class="eeff-form" id="fm-filtros"
+      hx-get="/fondos-mutuos/rendimientos"
+      hx-target="#fm-rend"
+      hx-trigger="load, change"
+      hx-swap="innerHTML"
+      hx-include="this">
+    <label>Administradora
+        <select name="agf">
+            <option value="">Todas ({{ agfs|length }})</option>
+            {% for a in agfs %}
+            <option value="{{ a.agf }}">{{ a.agf }} · {{ a.n_fondos }}</option>
+            {% endfor %}
+        </select>
+    </label>
+    <label>Tipo de fondo
+        <select name="tipo">
+            <option value="">Todos</option>
+            {% for code, label in tipos.items() %}
+            <option value="{{ code }}">{{ label }}</option>
+            {% endfor %}
+        </select>
+    </label>
+    <label>Corte inicial
+        <select name="desde">
+            {% for f in fechas | reverse %}
+            <option value="{{ f }}" {% if f == desde_default %}selected{% endif %}>{{ f }}</option>
+            {% endfor %}
+        </select>
+    </label>
+    <label>Corte final
+        <select name="hasta">
+            {% for f in fechas %}
+            <option value="{{ f }}" {% if f == hasta_default %}selected{% endif %}>{{ f }}</option>
+            {% endfor %}
+        </select>
+    </label>
+</form>
+
+<!-- El gráfico escucha el mismo formulario: es el bloque principal, la tabla queda
+     como el detalle numérico debajo. -->
+<section id="fm-comparado"
+         hx-get="/fondos-mutuos/comparado"
+         hx-trigger="load, change from:#fm-filtros"
+         hx-include="#fm-filtros"
+         hx-swap="innerHTML">
+    <p class="loading">Dibujando desempeño comparado…</p>
+</section>
+
+<h3 style="margin-top:1.8rem">Detalle por fondo y serie</h3>
+<section id="fm-rend">
+    <p class="loading">Calculando rendimientos…</p>
+</section>
+
+<hr style="margin:2.2rem 0; border:0; border-top:1px solid var(--border)">
+
+<!-- ── Zoom a un fondo ─────────────────────────────────────────────────── -->
+<section class="section-head"><h2>Zoom a un fondo</h2></section>
+<p class="subtitle" style="margin-top:0">
+    Evolución del valor cuota y composición de la cartera del fondo elegido.
+</p>
+
+<form class="eeff-form"
+      hx-get="/fondos-mutuos/panel"
+      hx-target="#fm-panel"
+      hx-trigger="load, change"
+      hx-swap="innerHTML"
+      hx-include="this">
+    <label>Fondo
+        <select name="fund_run">
+            {% for f in funds %}
+            <option value="{{ f.fund_run }}">{{ f.fund_name }}</option>
+            {% endfor %}
+        </select>
+    </label>
+</form>
+
+<section id="fm-panel">
+    <p class="loading">Cargando fondo…</p>
+</section>
+{% endif %}
+{% endblock %}

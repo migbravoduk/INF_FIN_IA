@@ -1,0 +1,93 @@
+{#
+  partials/bc_serie.html — Serie macro: tarjetas de estadísticas + gráfico de línea.
+  meta = {name, cat_label, unit_label, es_tasa, description}, serie = [{date, value}],
+  stats = {last, last_date, yoy_pct, yoy_abs, min, max, n_obs}.
+#}
+{% if not meta %}
+<p class="loading">Serie no encontrada.</p>
+{% elif not serie %}
+<p class="loading">Sin observaciones en el rango elegido.</p>
+{% else %}
+
+{% if es_expectativa %}
+<div class="warn-box">
+    Serie de <strong>expectativas</strong>, no de dato observado: es la mediana de una
+    encuesta del BCCh sobre el futuro. No la leas como historia efectiva.
+</div>
+{% endif %}
+
+<div class="kpi-grid">
+    <div class="kpi-card">
+        <span class="kpi-sub">Último dato</span>
+        <span class="kpi-big">{{ "{:,.2f}".format(stats.last) }}</span>
+        <span class="kpi-sub">{{ meta.unit_label }} · {{ stats.last_date }}</span>
+    </div>
+
+    <div class="kpi-card">
+        <span class="kpi-sub">Variación 12 meses</span>
+        {# Una tasa se compara en puntos porcentuales: decir que la TPM "cayó 5,3%"
+           al pasar de 4,75 a 4,50 confunde la variación relativa con la efectiva. #}
+        {% if meta.es_tasa %}
+            {% if stats.yoy_abs is not none %}
+            <span class="kpi-big {{ 'pos' if stats.yoy_abs >= 0 else 'neg' }}">
+                {{ "{:+,.2f}".format(stats.yoy_abs) }} pp
+            </span>
+            <span class="kpi-sub">puntos porcentuales</span>
+            {% else %}<span class="kpi-big">—</span><span class="kpi-sub">sin dato comparable</span>{% endif %}
+        {% else %}
+            {% if stats.yoy_pct is not none %}
+            <span class="kpi-big {{ 'pos' if stats.yoy_pct >= 0 else 'neg' }}">
+                {{ "{:+,.1f}".format(stats.yoy_pct) }}%
+            </span>
+            <span class="kpi-sub">vs. mismo mes del año anterior</span>
+            {% else %}<span class="kpi-big">—</span><span class="kpi-sub">sin dato comparable</span>{% endif %}
+        {% endif %}
+    </div>
+
+    <div class="kpi-card">
+        <span class="kpi-sub">Rango del período</span>
+        <span class="kpi-big">{{ "{:,.2f}".format(stats.min) }} – {{ "{:,.2f}".format(stats.max) }}</span>
+        <span class="kpi-sub">mínimo y máximo</span>
+    </div>
+
+    <div class="kpi-card">
+        <span class="kpi-sub">Observaciones</span>
+        <span class="kpi-big">{{ "{:,}".format(stats.n_obs) }}</span>
+        <span class="kpi-sub">en el rango mostrado</span>
+    </div>
+</div>
+
+<div class="chart-block">
+    <h4>{{ meta.name }}{% if meta.unit_label %} <span class="eeff-meta">({{ meta.unit_label }})</span>{% endif %}</h4>
+    {% if meta.description %}<p class="eeff-meta">{{ meta.description }}</p>{% endif %}
+    <div id="bc-serie-chart" class="chart"></div>
+</div>
+
+<script>
+(function () {
+    var data = {{ serie | tojson }};
+    var esTasa = {{ 'true' if meta.es_tasa else 'false' }};
+    function draw() {
+        if (!window.Plotly) { return setTimeout(draw, 100); }
+        Plotly.newPlot("bc-serie-chart", [{
+            x: data.map(function (d) { return d.date; }),
+            y: data.map(function (d) { return d.value; }),
+            type: "scatter", mode: "lines",
+            line: { color: "#38bdf8", width: 2 },
+            fill: esTasa ? "none" : "tozeroy",
+            fillcolor: "rgba(56,189,248,0.10)",
+            hovertemplate: "%{x|%Y-%m-%d}<br><b>%{y:,.2f}</b><extra></extra>"
+        }], {
+            margin: { t: 10, r: 10, b: 40, l: 70 }, height: 340,
+            paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)",
+            font: { color: "#94a3b8" },
+            xaxis: { gridcolor: "#334155" },
+            // Las tasas no arrancan en cero: hacerlo aplasta el movimiento, que es lo que
+            // interesa. Los niveles sí, para que la magnitud se lea bien.
+            yaxis: { gridcolor: "#334155", rangemode: esTasa ? "normal" : "tozero" }
+        }, { displayModeBar: false, responsive: true });
+    }
+    draw();
+})();
+</script>
+{% endif %}
