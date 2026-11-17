@@ -24,6 +24,43 @@ def inversion_institucional_emisores(request: Request, db: Database = Depends(ge
     return templates.TemplateResponse(request, "institucional_emisores.html", common_issuers(db))
 
 
+_OPCIONES_EMISOR: dict = {}   # cache por proceso: el selector cuesta ~1,5 s y cambia al cargar datos
+
+
+@router.get("/inversion-institucional/emisor")
+def inversion_institucional_emisor(request: Request, rut: str = Query(""),
+                                   db: Database = Depends(get_db)):
+    """Inversión de los institucionales en un emisor: nivel y variación mes a mes."""
+    from db.cross import issuer_options
+    clave = db.conn.execute("SELECT MAX(period) FROM cmf_insurer_portfolio_fixed_income").fetchone()[0]
+    if _OPCIONES_EMISOR.get("clave") != clave:
+        _OPCIONES_EMISOR.update(clave=clave, opciones=issuer_options(db))
+    return templates.TemplateResponse(request, "institucional_emisor.html", {
+        "opciones": _OPCIONES_EMISOR["opciones"], "rut": rut.strip(),
+    })
+
+
+@router.get("/inversion-institucional/emisor/panel")
+def inversion_institucional_emisor_panel(request: Request, rut: str = Query(""),
+                                         db: Database = Depends(get_db)):
+    """Fragmento HTMX: tenencias de seguros y fondos mutuos en el emisor elegido."""
+    from db.cross import issuer_holdings
+    # El selector manda "Nombre · RUT 12345678"; también se acepta el RUT solo, con o sin DV.
+    import re
+    m = re.findall(r"\d[\d.]*(?:-[\dkK])?", rut or "")
+    if not m and (rut or "").strip():
+        texto = rut.strip().lower()
+        hit = next((o for o in _OPCIONES_EMISOR.get("opciones") or []
+                    if o["nombre"] and texto in o["nombre"].lower()), None)
+        m = [hit["rut"]] if hit else []
+    if not m:
+        return templates.TemplateResponse(request, "partials/institucional_emisor_panel.html",
+                                          {"h": None, "q": rut})
+    h = issuer_holdings(db, m[-1])
+    return templates.TemplateResponse(request, "partials/institucional_emisor_panel.html",
+                                      {"h": h, "q": rut})
+
+
 @router.get("/inversion-institucional")
 def inversion_institucional(request: Request):
     """Hub de inversionistas institucionales: AFP y compañías de seguros."""

@@ -36,7 +36,7 @@
             {% endfor %}
         </select>
     </label>
-    <label>Inversionista
+    <label title="Clasificación de la CMF; aplica solo a fondos mutuos (los fondos de pensiones siempre se muestran)">Inversionista
         <select name="clase">
             {% for c in filtros.clases %}
             <option value="{{ c }}" {{ 'selected' if c == 'Retail' }}>{{ c }}</option>

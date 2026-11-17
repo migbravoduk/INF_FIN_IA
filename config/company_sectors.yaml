@@ -1,0 +1,221 @@
+# ============================================================
+# Macro-sector curado por RUT (sin DV). Lo lee api/company_profiles.get_profile.
+#
+# Manda sobre la inferencia por nombre (los patrones de _INFER), que dejaba 199 de 579
+# emisores vigentes en "Otros / No Clasificado" en nov-2026: Falabella, Copec, Cencosud,
+# CMPC, Colbún, Latam, Bicecorp, Consorcio Financiero… El nombre de esas empresas no dice
+# a qué se dedican, así que no hay patrón que las clasifique.
+#
+# Criterio: el negocio que domina los ingresos consolidados. Los holdings cuyo activo
+# principal es un banco o una aseguradora (Bicecorp, Consorcio Financiero, Grupo Security,
+# BCI Group, Penta Financiero) van a Servicios Financieros, no a Holdings e Inversiones.
+# Las empresas sin certeza sobre su giro se dejan fuera (siguen sin clasificar).
+#
+# OJO: el sector también es el grupo de shrinkage de las betas de activos del modelo
+# estructural (models/structural.py). Cambios aquí se validan con el backtest.
+# ============================================================
+
+Servicios Financieros:
+  - 76663590  # A5 Capital
+  - 76139506  # Autofin
+  - 76148326  # Banagro
+  - 96882560  # Banvida (controla parte de Consorcio Financiero)
+  - 96530900  # BCI Asset Management AGF
+  - 78423465  # BCI Group
+  - 85741000  # Bicecorp
+  - 96572920  # Cámara de Compensación
+  - 99533410  # CFC Capital
+  - 96826700  # Compass Group
+  - 79619200  # Consorcio Financiero
+  - 91717000  # Empresas Juan Yarur (controlador de BCI)
+  - 96861280  # Eurocapital
+  - 76141388  # Fondo Esperanza
+  - 96678790  # Forum Servicios Financieros
+  - 76238714  # Gama Servicios Financieros
+  - 94050000  # General Motors Financial
+  - 96972200  # Gerens Capital
+  - 76120857  # Global Soluciones Financieras
+  - 96604380  # Grupo Security
+  - 96626570  # Incofin
+  - 76499726  # Invexor Capital
+  - 94405000  # Julius Baer
+  - 77726203  # nuam (bolsa)
+  - 99501480  # Penta Financiero
+  - 76360977  # Primus Capital
+  - 76002293  # Santander Consumer Finance
+  - 90146000  # Servicios Financieros Progreso
+  - 96783540  # Servihabit
+  - 76555835  # ST Capital
+  - 96667560  # Tanner Servicios Financieros
+  - 96689310  # Transbank
+  - 77513567  # Xcala
+
+Holdings e Inversiones:
+  - 94270000  # Almendral
+  - 96556310  # AntarChile
+  - 96761990  # Duncan Fox
+  - 96708470  # Invercap
+  - 96872980  # Invernova
+  - 96566900  # Navarino
+  - 96529340  # Norte Grande
+  - 96532830  # Pampa Investments
+  - 76165311  # Potasios Investments
+  - 96640360  # Quemchi
+  - 91705000  # Quiñenco
+
+Comercio y Retail:
+  - 96874030  # ABC
+  - 93834000  # Cencosud
+  - 96947020  # Empresas Hites
+  - 76266594  # Empresas Tricot
+  - 90749000  # Falabella
+  - 86963200  # Forus
+  - 96621750  # Hipermarc
+  - 99530250  # Ripley Chile
+  - 99579730  # Ripley Corp
+  - 76012676  # SMU
+  - 96792430  # Sodimac
+
+Energía y Servicios Básicos:
+  - 76187228  # Celeo Redes
+  - 96813520  # Chilquinta Distribución
+  - 96505760  # Colbún
+  - 76411321  # CGE
+  - 77590896  # Conexión Kimal Lo Aguirre
+  - 76306442  # Eletrans II
+  - 76763747  # Eletrans III
+  - 76230505  # Eletrans
+  - 92604000  # ENAP
+  - 87756500  # ENAP Refinerías
+  - 96579730  # ENAP Sipetrol
+  - 90690000  # Empresas Copec (combustibles dominan los ingresos)
+  - 90310000  # Empresas Gasco
+  - 96928510  # Empresas Lipigas
+  - 94271000  # Enel Américas
+  - 76536353  # Enel Chile
+  - 96783910  # Enel Colina
+  - 96800570  # Enel Distribución Chile
+  - 76412562  # Enel Green Power Chile
+  - 79588870  # Esmax Distribución
+  - 76257379  # Interchile
+  - 77794815  # Interconexiones del Norte
+  - 96884450  # Luzlinares
+  - 96866680  # Luzparral
+  - 76574680  # Novaguas
+  - 76850128  # Nueva Atacama
+  - 86915400  # Sacyr Agua Chacabuco
+  - 76303510  # Sacyr Agua Lampa
+  - 96706220  # Sacyr Agua Norte
+  - 76073162  # SAESA
+  - 81095400  # Sonacol
+  - 76524463  # Transelec Concesiones
+  - 76555400  # Transelec
+  - 76954578  # Transquinta
+
+Alimentos y Agroindustria:
+  - 80860400  # Blumar
+  - 93711000  # Camanchaca
+  - 76143636  # Carozzi
+  - 96686870  # Coagra
+  - 93281000  # Coca-Cola Embonor
+  - 90413000  # CCU
+  - 91144000  # Embotelladora Andina
+  - 76129263  # Agrosuper
+  - 86247400  # AquaChile
+  - 96591040  # Empresas Carozzi
+  - 91550000  # Empresas Iansa
+  - 91237000  # Feria de Osorno
+  - 91482000  # IPAL
+  - 76672100  # Multiexport Foods
+  - 77729737  # Soprole
+  - 76455830  # Watt's
+
+Industria y Recursos Naturales:
+  - 61106000  # ASMAR
+  - 91297000  # CAP
+  - 60806000  # Casa de Moneda
+  - 92544000  # Cintac
+  - 90081000  # Compañía Chilena de Fósforos
+  - 90320000  # Elecmetal
+  - 90209000  # Cía. Industrial El Volcán
+  - 93830000  # Compañías CIC
+  - 90331000  # Cristalerías de Chile
+  - 61113000  # ENAER
+  - 90222000  # Empresas CMPC
+  - 90266000  # Enaex
+  - 89996200  # Envases del Pacífico
+  - 61105000  # FAMAE
+  - 96802690  # Masisa
+  - 93628000  # Molymet
+  - 76184068  # Nitratos de Chile
+  - 80326500  # Oxiquim
+  - 99598300  # Sigdo Koppers
+  - 92108000  # Soprocal
+  - 92147000  # Wenco
+
+Infraestructura y Construcción:
+  - 92434000  # Besalco
+  - 76005049  # Echeverría Izquierdo
+  - 76984428  # Fondo de Infraestructura
+  - 76960261  # Infraestructura Alpha
+  - 76016541  # Ingevec
+  - 76109779  # Melón
+  - 99554390  # Saba Estacionamientos
+  - 96885880  # Salfacorp
+  - 76320186  # Tecno Fast
+  - 96814430  # Vías Chile
+
+Inmobiliaria y Construcción:
+  - 76433310  # Cencosud Shopping
+  - 94627000  # Parque Arauco
+  - 76488180  # Paz Corp
+  - 76017019  # Plaza
+  - 94840000  # Socovesa
+
+Transporte y Logística:
+  - 99597320  # Administrador Financiero de Transantiago
+  - 90160000  # CSAV
+  - 76158513  # DP World San Antonio
+  - 96769070  # EFE Arica - La Paz
+  - 96756320  # EFE Central
+  - 96756300  # EFE Servicios Logísticos Integrados
+  - 96756310  # EFE Sur
+  - 96766340  # EFE Valparaíso
+  - 60503000  # Correos de Chile
+  - 61216000  # EFE
+  - 96684580  # Ferrocarril del Pacífico
+  - 96756330  # Infraestructura y Tráfico Ferroviario
+  - 89862200  # LATAM Airlines
+  - 77532096  # RBU Santiago
+  - 77532011  # Santiago Transporte Urbano
+  - 99554700  # Su-Bus Chile
+  - 76177481  # Talcahuano Terminal Portuario
+  - 96908870  # Terminal Pacífico Sur Valparaíso
+  - 77513405  # Terminal Portuario de Valparaíso
+
+Tecnología y Telecomunicaciones:
+  - 94727000  # GTD Grupo Teleductos
+  - 93737000  # GTD Manquehue
+  - 83628100  # Sonda
+  - 76160214  # Telcordia Technologies
+
+Entretenimiento y Turismo:
+  - 91400000  # Andacor
+  - 91126000  # Automovilismo y Turismo
+  - 96872800  # Club de Deportes Valle Escondido
+  - 90659000  # Club Español de Valparaíso
+  - 77755044  # Dalmacia Gamming
+  - 76033514  # Dreams
+  - 76604887  # Entretenimientos Iquique
+  - 92411000  # Estadio Croata
+  - 99599080  # Latin Gaming Calama
+  - 99599120  # Latin Gaming Osorno
+  - 76361688  # Marina del Sol Chillán
+  - 99599350  # Marina del Sol
+  - 61604000  # Polla Chilena de Beneficencia
+  - 91262000  # Sociedad de Deportes Palestina
+  - 96790570  # Unión El Golf
+  - 90414000  # Valparaíso Sporting Club
+
+Salud y Educación:
+  - 76719853  # Nexus Chile Health

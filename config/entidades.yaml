@@ -29,6 +29,23 @@ bancos:
   # PENDIENTE (sin evidencia en los datos): "060" China Construction Bank y
   # "061" Bank of China. Tomar el RUT de su ficha en cmfchile.cl antes de agregarlos.
 
+# Emisores de renta fija que no reportan EEFF a la CMF (Estado, Banco Central, cooperativas)
+# pero sí aparecen como `rut_emisor` en B.1 y en la cartera de fondos mutuos.
+# Evidencia (2026-11-17): prefijo del nemotécnico en ambas carteras, período 202609.
+emisores:
+  "60805000": {nombre: "Tesorería General de la República (Fisco de Chile)", corto: "Fisco (Tesorería)",
+               tipo: "estado", evidencia: "bonos BTP… (pesos) y BTU… (UF) de la Tesorería"}
+  "97029000": {nombre: "Banco Central de Chile", corto: "Banco Central",
+               tipo: "estado", evidencia: "bonos BCP…/BCU… y pagarés descontables PDBC"}
+  "82878900": {nombre: "Cooperativa del Personal de la Universidad de Chile (Coopeuch)", corto: "Coopeuch",
+               tipo: "emisor", evidencia: "bonos BCOO… y depósitos FNCOO…"}
+  # Mismos instrumentos que Itaú (97023000): BITA…, FNITA…, BCORA…. Es el RUT del ex Banco
+  # Itaú Chile, que algunas carteras siguen informando después de la fusión con Corpbanca.
+  "97041000": {nombre: "Itaú Chile (RUT del ex Banco Itaú Chile)", corto: "Itaú (RUT antiguo)",
+               tipo: "banco", evidencia: "nemotécnicos BITA…/FNITA…/BCORA…, iguales a 97023000"}
+  # PENDIENTE: 77844703 (bonos BTBD… y depósitos FNTBD…). Parece un banco nuevo, pero no está
+  # en cmf_bank_statements; confirmar en el registro de la CMF antes de nombrarlo.
+
 # AFP: la SP las identifica por nombre (`afp_name`), sin RUT.
 # PENDIENTE: ninguna fuente cargada trae el RUT de las AFP. Agregarlo desde la ficha de
 # cada AFP en spensiones.cl, con este formato:

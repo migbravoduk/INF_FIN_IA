@@ -8,8 +8,8 @@
 {% elif multi %}
 {% if latest %}
 <div class="afp-stats">
-    <div><span>Valor cuota</span><b>{{ "{:,.2f}".format(latest.quota_value) }}</b></div>
-    <div><span>Patrimonio</span><b>{{ "{:,.0f}".format(latest.equity_value) }}</b></div>
+    <div><span>Valor cuota ($)</span><b>{{ "{:,.2f}".format(latest.quota_value).replace(',', 'X').replace('.', ',').replace('X', '.') }}</b></div>
+    <div><span>Patrimonio (MMM$)</span><b>{{ "{:,.0f}".format(latest.equity_value / 1e9).replace(',', '.') }}</b></div>
     <div><span>Al</span><b>{{ latest.date[:10] }}</b></div>
 </div>
 {% endif %}

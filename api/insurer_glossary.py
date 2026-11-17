@@ -14,7 +14,9 @@ from pathlib import Path
 
 import yaml
 
-_CONFIG = Path(__file__).resolve().parents[1] / "config" / "insurer_investment_codes.yaml"
+from config.settings import config_path
+
+_CONFIG = config_path("insurer_investment_codes.yaml")
 
 
 @lru_cache(maxsize=1)

@@ -508,6 +508,26 @@ Fuentes (BCCh BDE API · CMF XBRL plano · CMF/SBIF API · SP scraping)
   y casi siempre no hay nada publicado; antes gastaba ~20 s por corrida en vano.
 - **`publish_lag_days` también rige en series diarias**: la EOF es quincenal aunque su código
   termine en `.D`; sin rezago aparecía siempre atrasada.
+- **Las AFP no llegan al mismo día** (nov-2026: Capital al 15, las demás al 12). Toda
+  comparación entre AFP va a `sp_common_date()` (mínimo de los máximos). Sin eso la
+  participación del Fondo A sumaba 412%, el "líder" 12m salía mal y el explorador de productos
+  marcaba como no vigentes a 6 de las 7 AFP (vigente era `MAX(date) = máximo global`; ahora
+  es "informó en los últimos 7 días", `db/products.VIGENCIA_DIAS`).
+- **Cartera SP: secciones en MAYÚSCULAS, subtotales en minúscula** ("TOTAL INSTITUCIONES
+  ESTATALES" contiene "Total Tesorería General"). Filtrar `LIKE 'TOTAL %'` sensible a
+  mayúsculas; con `UPPER()` se contaban dos veces (sumaba 100,9%).
+- **Cartera de fondos mutuos (NACI) trae RUT del emisor y valor de mercado**: `FFM_6010211` =
+  RUT emisor (en cuotas de fondos es el RUN del fondo), `FFM_6011200` = valorización en
+  **miles de la moneda del fondo** (no del instrumento; verificado contra el patrimonio),
+  `FFM_6011513` = % del activo del fondo. La vista `v_mutual_fund_holdings.monto` es el
+  NOMINAL (`FFM_6010900`), no el valor. Lo usa `db/cross.issuer_holdings`.
+- **Sector: dos clasificaciones.** La web usa la curada (`config/company_sectors.yaml` por
+  RUT, luego nombre): "Otros" bajó de 199 a 18 empresas. El modelo estructural sigue con la de
+  nombre (`models.structural.SECTOR_FUENTE = "nombre"`) porque la curada perdió el A/B
+  (`backtest --sectores`, 17-nov: 45% de pares, z −3,8/−4,9). No unificar sin re-medir.
+- **Emisores sin EEFF curados en `config/entidades.yaml` › `emisores`** (Fisco/Tesorería
+  60805000, Banco Central 97029000, Coopeuch, RUT antiguo de Itaú), con el nemotécnico como
+  evidencia. 77844703 (BTBD/FNTBD) queda pendiente.
 
 ## Cómo hacer tareas comunes
 

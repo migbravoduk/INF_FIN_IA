@@ -70,11 +70,14 @@ def risk_scale(vol: float | None) -> int | None:
 # Catálogo
 # ============================================================
 
+VIGENCIA_DIAS = 7
+
+
 def rebuild_products(db) -> int:
     from db.entities import load_config
     afp_cfg = load_config().get("afp") or {}
 
-    ffmm = db.conn.execute("""
+    ffmm = db.conn.execute(f"""
         WITH last_ret AS (
             SELECT fund_run, series, arg_max(familia, fecha) familia,
                    arg_max(clase_inversionista, fecha) clase
@@ -89,16 +92,20 @@ def rebuild_products(db) -> int:
                q.agf_rut, q.agf_name, q.fund_run, q.series, q.nombre,
                coalesce(r.familia, t.label), t.label, r.clase,
                CASE q.currency WHEN 'PESOS' THEN 'CLP' WHEN 'DOLAR' THEN 'USD' ELSE q.currency END,
-               q.d1 = (SELECT MAX(date) FROM cmf_mutual_fund_quota_values), q.d0, q.d1
+               q.d1 >= (SELECT MAX(date) FROM cmf_mutual_fund_quota_values) - INTERVAL {VIGENCIA_DIAS} DAY,
+               q.d0, q.d1
         FROM q
         LEFT JOIN last_ret r USING (fund_run, series)
         LEFT JOIN cmf_mutual_fund_types t ON t.code = q.fund_type
     """).fetchall()
 
-    afp = db.conn.execute("""
+    # Vigente = informó en la última semana del dato más reciente. Con igualdad exacta
+    # bastaba que UNA AFP trajera un día más (Capital al 15-nov, el resto al 12-nov) para
+    # que las otras seis quedaran fuera del explorador de productos.
+    afp = db.conn.execute(f"""
         SELECT afp_name, fund_type, MIN(date), MAX(date),
-               MAX(date) = (SELECT MAX(date) FROM sp_quota_values)
-        FROM sp_quota_values GROUP BY 1, 2
+               MAX(date) >= (SELECT MAX(date) FROM sp_quota_values) - INTERVAL {VIGENCIA_DIAS} DAY
+        FROM sp_quota_values WHERE afp_name <> 'TOTAL' GROUP BY 1, 2
     """).fetchall()
     afp_rows = []
     for name, fondo, d0, d1, vig in afp:
@@ -126,7 +133,8 @@ def load_providers(db) -> int:
     """Carga `proveedor_canal` desde config/proveedores.yaml (curado a mano)."""
     from pathlib import Path
     import yaml
-    p = Path(__file__).resolve().parents[1] / "config" / "proveedores.yaml"
+    from config.settings import config_path
+    p = config_path("proveedores.yaml")
     if not p.exists():
         return 0
     data = yaml.safe_load(p.read_text(encoding="utf-8")) or {}
@@ -504,10 +512,13 @@ def product_filters(db) -> dict:
     """).fetchall()
     clases = [r[0] for r in db.conn.execute(
         "SELECT DISTINCT clase_inversionista FROM dim_producto WHERE clase_inversionista IS NOT NULL ORDER BY 1").fetchall()]
+    # Clave de administradora: el RUT, o el nombre cuando la fuente no trae RUT (AFP).
     provs = db.conn.execute("""
-        SELECT rut_proveedor, any_value(coalesce(e.nombre_corto, p.proveedor)), COUNT(*)
+        SELECT coalesce(p.rut_proveedor, p.proveedor),
+               any_value(coalesce(e.nombre_corto, p.proveedor)), COUNT(*)
         FROM dim_producto p LEFT JOIN dim_entidad e ON e.rut = p.rut_proveedor
-        WHERE p.vigente AND p.rut_proveedor IS NOT NULL GROUP BY 1 ORDER BY 2
+        WHERE p.vigente AND coalesce(p.rut_proveedor, p.proveedor) IS NOT NULL
+        GROUP BY 1 ORDER BY 2
     """).fetchall()
     return {"categorias": cats, "clases": clases, "proveedores": provs}
 
@@ -517,13 +528,15 @@ def list_products(db, tipo="", categoria="", clase="", moneda="", proveedor="", 
     col, direction = ORDENES.get(orden, ORDENES["rent_12m"])
     where, params = ["p.vigente", "NOT coalesce(m.serie_anomala, false)", "m.fecha_corte = (SELECT MAX(x.fecha_corte) FROM fact_producto_metricas x WHERE x.producto_id = m.producto_id)"], []
     for val, sql in ((tipo, "p.tipo = ?"), (categoria, "p.categoria = ?"), (moneda, "p.moneda = ?"),
-                     (proveedor, "p.rut_proveedor = ?")):
+                     (proveedor, "coalesce(p.rut_proveedor, p.proveedor) = ?")):
         if val:
             where.append(sql); params.append(val)
+    # La clase de inversionista es de la CMF y solo existe para fondos mutuos: los fondos
+    # de pensiones no la tienen y el filtro por defecto ("Retail") los dejaba fuera.
     if clase == "sin_dato":
-        where.append("p.clase_inversionista IS NULL")
+        where.append("p.tipo = 'ffmm' AND p.clase_inversionista IS NULL")
     elif clase:
-        where.append("p.clase_inversionista = ?"); params.append(clase)
+        where.append("(p.tipo <> 'ffmm' OR p.clase_inversionista = ?)"); params.append(clase)
     if q:
         where.append("(p.nombre ILIKE ? OR p.proveedor ILIKE ?)"); params += [f"%{q}%", f"%{q}%"]
     w = " AND ".join(where)

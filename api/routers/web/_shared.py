@@ -385,6 +385,10 @@ INST_CLASSES = [
     {"url": "/fondos", "icon": "📊", "title": "Fondos de pensiones",
      "desc": "Retornos multi-horizonte y composición de cada fondo por AFP.",
      "meta": "Superintendencia de Pensiones · mensual"},
+    {"url": "/inversion-institucional/emisor", "icon": "🔎", "title": "Inversión por emisor",
+     "desc": "Elige un emisor (empresa, banco, Fisco…) y ve cuánto tienen invertido en él las "
+             "compañías de seguros y los fondos mutuos, y cómo cambió mes a mes.",
+     "meta": "CMF · Circular 1.835 + cartera FFMM · mensual"},
     {"url": "/inversion-institucional/emisores", "icon": "🔗", "title": "Emisores en común",
      "desc": "Emisores que están a la vez en la cartera de las aseguradoras y de los fondos "
              "mutuos, cruzando instrumento por instrumento.",

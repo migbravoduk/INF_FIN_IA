@@ -26,7 +26,7 @@
     <tbody>
     {% for r in rows %}
     <tr>
-        <td>{{ r.emisor or 'Sin nombre en las fuentes' }}<br><span class="lead">RUT {{ r.rut }}{% if r.tipo %} · {{ r.tipo }}{% endif %}</span></td>
+        <td><a href="/inversion-institucional/emisor?rut={{ r.rut }}">{{ r.emisor or 'Sin nombre en las fuentes' }}</a><br><span class="lead">RUT {{ r.rut }}{% if r.tipo %} · {{ r.tipo|replace('_', ' ') }}{% endif %}</span></td>
         <td style="text-align:right">{{ r.instrumentos|num }}</td>
         <td style="text-align:right">{{ r.cias_seg|num }}</td>
         <td style="text-align:right">{{ r.fondos_ffm|num }}</td>

@@ -63,8 +63,17 @@ def _num(x, digits: int = 0) -> str:
     return f"{x:,.{digits}f}"
 
 
+def _es(x, digits: int = 1, signo: bool = False) -> str:
+    """Número con separadores chilenos (miles '.', decimal ','). '—' si falta."""
+    if x is None or x != x:
+        return "—"
+    s = f"{x:{'+' if signo else ''},.{digits}f}"
+    return s.replace(",", "X").replace(".", ",").replace("X", ".")
+
+
 templates.env.filters["pct"] = _pct
 templates.env.filters["num"] = _num
+templates.env.filters["es"] = _es
 
 
 def records(df) -> list[dict]:

@@ -15,6 +15,195 @@ Límites (se dicen en pantalla):
 
 from __future__ import annotations
 
+UF_SERIE = "F073.UFF.PRE.Z.D"
+USD_SERIE = "F073.TCO.PRE.Z.D"
+
+# Cartera nacional de fondos mutuos (NACI): RUT del emisor y valorización al cierre. La
+# valorización viene en MILES de la moneda del FONDO (no del instrumento): verificado en
+# 202609 contra el patrimonio informado — la suma por fondo da ~1.000 × patrimonio en MM.
+_FFM_RUT = "ltrim(json_extract_string(p.raw_data, '$.FFM_6010211'), '0')"
+_FFM_VAL = "try_cast(json_extract_string(p.raw_data, '$.FFM_6011200') AS DOUBLE)"
+_FFM_NEMO = "json_extract_string(p.raw_data, '$.FFM_6010100')"
+
+TIPO_LABEL = {"estado": "Estado", "banco": "Banco", "emisor": "Emisor con EEFF",
+              "agf": "Administradora de fondos", "aseguradora_vida": "Seguros de vida",
+              "aseguradora_generales": "Seguros generales", "corredora": "Corredora",
+              "agente_valores": "Agente de valores", "afp": "AFP",
+              "fondo_mutuo": "Fondo mutuo"}
+
+
+def _fx_cte(periods_sql: str) -> str:
+    """CTE `fx(period, uf, usd)`: UF y dólar observado al último dato de cada mes."""
+    return f"""
+        meses AS ({periods_sql}),
+        fx AS (
+            SELECT m.period,
+                   (SELECT arg_max(o.value, o.date) FROM observations o WHERE o.series_id = '{UF_SERIE}'
+                      AND o.date <= last_day(make_date(m.period // 100, m.period % 100, 1))) AS uf,
+                   (SELECT arg_max(o.value, o.date) FROM observations o WHERE o.series_id = '{USD_SERIE}'
+                      AND o.date <= last_day(make_date(m.period // 100, m.period % 100, 1))) AS usd
+            FROM meses m)"""
+
+
+def issuer_options(db, limit: int = 600) -> list[dict]:
+    """
+    Emisores para el selector: los que tienen posiciones en el último período de seguros
+    (B.1) o de fondos mutuos, con nombre cuando se conoce. Ordenados por presencia.
+    """
+    per_seg = db.conn.execute("SELECT MAX(period) FROM cmf_insurer_portfolio_fixed_income").fetchone()[0]
+    per_ffm = db.conn.execute(
+        "SELECT MAX(period_year * 100 + period_month) FROM cmf_mutual_fund_portfolio").fetchone()[0]
+    if not per_seg and not per_ffm:
+        return []
+    rows = db.conn.execute(f"""
+        WITH seg AS (
+            SELECT ltrim(rut_emisor, '0') rut, COUNT(*) n FROM cmf_insurer_portfolio_fixed_income
+            WHERE period = ? AND rut_emisor IS NOT NULL GROUP BY 1),
+        ffm AS (
+            SELECT {_FFM_RUT} rut, COUNT(*) n FROM cmf_mutual_fund_portfolio p
+            WHERE p.portfolio_type = 'NACI' AND p.period_year * 100 + p.period_month = ?
+            GROUP BY 1),
+        fondos AS (SELECT fund_run rut, arg_max(fund_name, date) nombre
+                   FROM cmf_mutual_fund_quota_values GROUP BY 1),
+        u AS (SELECT rut, SUM(n) n FROM (SELECT * FROM seg UNION ALL SELECT * FROM ffm)
+              WHERE rut IS NOT NULL AND rut NOT IN ('', '0') GROUP BY 1)
+        SELECT u.rut, coalesce(e.nombre_corto, e.nombre_canonico,
+                               CASE WHEN f.nombre IS NOT NULL THEN 'Fondo mutuo ' || f.nombre END) nombre,
+               u.n
+        FROM u LEFT JOIN dim_entidad e ON e.rut = u.rut LEFT JOIN fondos f ON f.rut = u.rut
+        ORDER BY (nombre IS NULL), u.n DESC
+        LIMIT ?
+    """, [per_seg or 0, per_ffm or 0, limit]).fetchall()
+    return [{"rut": r[0], "nombre": r[1], "n": int(r[2])} for r in rows]
+
+
+def issuer_holdings(db, rut: str, n_periods: int = 13) -> dict:
+    """
+    Cuánto tienen invertido los institucionales en un emisor, mes a mes.
+
+    - Seguros (B.1, renta fija): nominal VIGENTE convertido a pesos con la UF y el dólar
+      del cierre de cada mes. Es valor par, no de mercado (B.1 no trae valorización
+      reconciliada); sirve para ver tamaño y variación. Instrumentos en otras monedas sin
+      tipo de cambio cargado (euro) se cuentan pero no se suman.
+    - Fondos mutuos (cartera nacional): valorización de mercado al cierre, en MM$; los
+      fondos en dólares se pasan a pesos con el dólar observado del mes.
+    - AFP: la SP publica la cartera agregada por categoría, sin emisor. No entran.
+
+    Devuelve {rut, nombre, tipo, periodos, seguros: {serie, por_tenedor}, ffmm: {...}}.
+    """
+    rut = str(rut).strip().replace(".", "").split("-")[0].lstrip("0")
+    ent = db.conn.execute("""SELECT coalesce(nombre_corto, nombre_canonico), nombre_canonico, tipo
+                             FROM dim_entidad WHERE rut = ?""", [rut]).fetchone()
+    fondo = db.conn.execute("""SELECT arg_max(fund_name, date), arg_max(agf_name, date)
+                               FROM cmf_mutual_fund_quota_values WHERE fund_run = ?""", [rut]).fetchone()
+    if ent:
+        nombre, razon, tipo = ent
+    elif fondo and fondo[0]:
+        nombre, razon, tipo = f"Fondo mutuo {fondo[0]}", fondo[1], "fondo_mutuo"
+    else:
+        nombre, razon, tipo = None, None, None
+
+    seg_per = [r[0] for r in db.conn.execute(
+        "SELECT DISTINCT period FROM cmf_insurer_portfolio_fixed_income ORDER BY 1 DESC LIMIT ?",
+        [n_periods]).fetchall()]
+    ffm_per = [r[0] for r in db.conn.execute(
+        """SELECT DISTINCT period_year * 100 + period_month FROM cmf_mutual_fund_portfolio
+           ORDER BY 1 DESC LIMIT ?""", [n_periods]).fetchall()]
+    periodos = sorted(set(seg_per) | set(ffm_per))[-n_periods:]
+    if not periodos:
+        return {"rut": rut, "nombre": nombre, "periodos": [], "seguros": None, "ffmm": None}
+    lista = ",".join(str(int(p)) for p in periodos)
+    meses = f"SELECT unnest([{lista}]) AS period"
+
+    # --- Seguros: por compañía y mes ---------------------------------------------------
+    seg = db.conn.execute(f"""
+        WITH {_fx_cte(meses)},
+        b AS (
+            SELECT fi.period, fi.rut AS tenedor, fi.insurance_type AS ramo,
+                   fi.unidad_monetaria AS mon,
+                   CASE WHEN coalesce(fi.valor_nominal_vig, 0) > 0 THEN fi.valor_nominal_vig
+                        ELSE fi.valor_nominal END AS nominal
+            FROM cmf_insurer_portfolio_fixed_income fi
+            WHERE ltrim(fi.rut_emisor, '0') = ? AND fi.period IN ({lista}))
+        SELECT b.period, b.tenedor, any_value(b.ramo) ramo, COUNT(*) pos,
+               SUM(CASE b.mon WHEN 'UF' THEN b.nominal * fx.uf
+                              WHEN '$$' THEN b.nominal
+                              WHEN 'PROM' THEN b.nominal * fx.usd END) / 1e6 AS mm,
+               COUNT(*) FILTER (WHERE b.mon NOT IN ('UF', '$$', 'PROM')) AS sin_fx
+        FROM b JOIN fx USING (period)
+        GROUP BY 1, 2 ORDER BY 1, 2
+    """, [rut]).fetchdf()
+
+    # --- Fondos mutuos: por fondo y mes ----------------------------------------------------
+    ffm = db.conn.execute(f"""
+        WITH {_fx_cte(meses)},
+        cur AS (SELECT fund_run, arg_max(currency, date) currency, arg_max(agf_name, date) agf
+                FROM cmf_mutual_fund_quota_values GROUP BY 1),
+        h AS (
+            SELECT p.period_year * 100 + p.period_month AS period, p.fund_run, p.fund_name,
+                   {_FFM_VAL} / 1e3 AS valor_mm_fondo
+            FROM cmf_mutual_fund_portfolio p
+            WHERE p.portfolio_type = 'NACI' AND {_FFM_RUT} = ?
+              AND p.period_year * 100 + p.period_month IN ({lista}))
+        SELECT h.period, h.fund_run AS tenedor, any_value(h.fund_name) fondo, any_value(cur.agf) agf,
+               COUNT(*) pos,
+               SUM(h.valor_mm_fondo * CASE WHEN cur.currency = 'DOLAR' THEN fx.usd ELSE 1 END) mm
+        FROM h JOIN fx USING (period) LEFT JOIN cur USING (fund_run)
+        GROUP BY 1, 2 ORDER BY 1, 2
+    """, [rut]).fetchdf()
+
+    from api.insurer_glossary import clean_company_name
+    nombres_cias = dict(db.conn.execute("""
+        SELECT rut, arg_max(company_name, period) FROM cmf_insurer_portfolio_control
+        WHERE company_name <> '' GROUP BY 1""").fetchall())
+
+    def bloque(df, etiqueta):
+        if df.empty:
+            return None
+        tot = df.groupby("period").agg(mm=("mm", "sum"), pos=("pos", "sum"),
+                                       tenedores=("tenedor", "nunique"))
+        serie = [{"period": int(p), "mm": float(tot.mm.get(p, 0.0)) if p in tot.index else None,
+                  "pos": int(tot.pos.get(p, 0)) if p in tot.index else 0,
+                  "tenedores": int(tot.tenedores.get(p, 0)) if p in tot.index else 0}
+                 for p in periodos]
+        ult = int(df.period.max())
+        prev = max((p for p in periodos if p < ult), default=None)
+        hace12 = ult - 100 if (ult - 100) in periodos else None
+        w = df.pivot_table(index="tenedor", columns="period", values="mm", aggfunc="sum")
+        filas = []
+        for t, r in w.iterrows():
+            v1 = r.get(ult)
+            v0 = r.get(prev) if prev else None
+            v12 = r.get(hace12) if hace12 else None
+            v1 = None if v1 != v1 else v1
+            v0 = None if v0 != v0 else v0
+            v12 = None if v12 != v12 else v12
+            if v1 is None and v0 is None:
+                continue
+            meta = df[df.tenedor == t].iloc[-1]
+            if etiqueta == "seguros":
+                nom = clean_company_name(nombres_cias.get(t, ""), str(t)) or f"RUT {t}"
+                sub = "vida" if meta.ramo == "vida" else "generales"
+            else:
+                nom = str(meta.fondo).strip().title()
+                agf = " ".join(str(meta.agf).upper().split()) if meta.agf == meta.agf and meta.agf else ""
+                sub = (agf.replace("ADMINISTRADORA GENERAL DE FONDOS", "AGF").title()
+                       .replace("Agf", "AGF").replace("S.A.", "S.A."))
+            filas.append({"tenedor": str(t), "nombre": nom, "sub": sub, "ult": v1, "prev": v0,
+                          "hace12": v12,
+                          "d_prev": (v1 or 0) - (v0 or 0) if prev else None,
+                          "d_12": (v1 or 0) - (v12 or 0) if hace12 else None})
+        filas.sort(key=lambda f: -(f["ult"] or 0))
+        total_ult = sum(f["ult"] or 0 for f in filas)
+        for f in filas:
+            f["peso"] = (f["ult"] or 0) / total_ult * 100 if total_ult else None
+        return {"serie": serie, "tenedores": filas, "ult": ult, "prev": prev, "hace12": hace12,
+                "sin_fx": int(df["sin_fx"].sum()) if "sin_fx" in df else 0}
+
+    return {"rut": rut, "nombre": nombre, "razon": razon, "tipo": tipo,
+            "tipo_label": TIPO_LABEL.get(tipo or "", tipo),
+            "periodos": periodos, "seguros": bloque(seg, "seguros"), "ffmm": bloque(ffm, "ffmm")}
+
 
 def common_issuers(db, limit: int = 40) -> dict:
     per_seg = db.conn.execute("SELECT MAX(period) FROM cmf_insurer_portfolio_fixed_income").fetchone()[0]

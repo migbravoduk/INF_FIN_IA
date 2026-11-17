@@ -26,11 +26,14 @@ from db.database import AGF_SQL_PREDICATE
 
 logger = logging.getLogger(__name__)
 
-CONFIG = Path(__file__).resolve().parents[1] / "config" / "entidades.yaml"
+from config.settings import config_path
+
+CONFIG = config_path("entidades.yaml")
 
 # Prioridad cuando un RUT aparece en varias fuentes (menor = manda).
-_PRIORIDAD = {"banco": 0, "afp": 1, "agf": 2, "aseguradora_vida": 3, "aseguradora_generales": 3,
-              "corredora": 4, "agente_valores": 4, "emisor": 5, "otro": 6}
+_PRIORIDAD = {"estado": 0, "banco": 0, "afp": 1, "agf": 2, "aseguradora_vida": 3,
+              "aseguradora_generales": 3, "corredora": 4, "agente_valores": 4, "emisor": 5,
+              "otro": 6}
 
 
 def load_config() -> dict:
@@ -120,6 +123,8 @@ def rebuild_entities(db) -> dict:
         for n in db.conn.execute("SELECT DISTINCT bank_name FROM cmf_bank_statements WHERE bank_code = ?",
                                  [code]).fetchall():
             alias.append((str(b["rut"]).lstrip("0"), n[0], "cmf_bank_statements", None, None))
+    for rut, em in (cfg.get("emisores") or {}).items():
+        curado(rut, em["nombre"], em.get("tipo", "emisor"), corto=em.get("corto"))
     for afp, a in (cfg.get("afp") or {}).items():
         curado(a["rut"], a["nombre"], "afp", corto=afp)
         alias.append((str(a["rut"]).lstrip("0"), afp, "sp_quota_values", None, None))

@@ -1,46 +1,42 @@
 {#
-  partials/afp_comparativa.html — Tabla comparativa integral de AFP.
-  results = [{afp, fund, rentabilidad, cuota, patrimonio, share}]
-  fund = 'A' o 'TODOS'
+  partials/afp_comparativa.html — Tabla comparativa de AFP a una fecha común.
+  results = [{afp, fund, rentabilidad, cuota, patrimonio (MMM$), share}]; fund = 'A'…'E' o 'TODOS'
+  corte = fecha a la que se miden todas las AFP.
 #}
-
 {% if results %}
-<div class="table-responsive" style="margin-top: 1.5rem">
+<div class="table-scroll" style="margin-top: 1.5rem">
     <table class="eeff-table">
         <thead>
             <tr>
                 <th style="text-align:left">AFP</th>
-                {% if fund == 'TODOS' %}
-                <th>Fondo</th>
-                {% endif %}
-                <th title="Rentabilidad estimada últimos 12 meses">Rent. 12m (%)</th>
-                <th title="Valor Cuota actual (CLP)">Valor Cuota</th>
-                <th title="Patrimonio actual (MM$)">Patrimonio</th>
-                <th title="Participación de mercado (%)">Share (%)</th>
+                {% if fund == 'TODOS' %}<th>Fondo</th>{% endif %}
+                <th style="text-align:right" title="Cuota al corte / cuota de un año antes">Rent. 12m</th>
+                <th style="text-align:right">Valor cuota ($)</th>
+                <th style="text-align:right">Patrimonio (MMM$)</th>
+                <th style="text-align:right" title="% del patrimonio del fondo entre todas las AFP">Participación</th>
             </tr>
         </thead>
         <tbody>
             {% for r in results %}
             <tr>
-                <td style="text-align:left; font-weight:bold; color:var(--text)">{{ r.afp }}</td>
-                {% if fund == 'TODOS' %}
-                <td>{{ r.fund }}</td>
-                {% endif %}
-                
-                <td style="color: {% if r.rentabilidad and r.rentabilidad > 0 %}var(--success){% elif r.rentabilidad and r.rentabilidad < 0 %}var(--danger){% else %}inherit{% endif %}">
-                    {% if r.rentabilidad != None %}{{ "%.2f"|format(r.rentabilidad) }}%{% else %}—{% endif %}
+                <td style="text-align:left; font-weight:600">{{ r.afp }}</td>
+                {% if fund == 'TODOS' %}<td>{{ r.fund }}</td>{% endif %}
+                <td style="text-align:right" class="{{ 'pos' if (r.rentabilidad or 0) > 0 else 'neg' if (r.rentabilidad or 0) < 0 }}">
+                    {% if r.rentabilidad is not none %}{{ "%.2f"|format(r.rentabilidad)|replace('.', ',') }}%{% else %}—{% endif %}
                 </td>
-                
-                <td>{% if r.cuota != None %}${{ "{:,.2f}".format(r.cuota).replace(',', 'X').replace('.', ',').replace('X', '.') }}{% else %}—{% endif %}</td>
-                
-                <td>{% if r.patrimonio != None %}${{ "{:,.0f}".format(r.patrimonio).replace(',', '.') }}{% else %}—{% endif %}</td>
-                
-                <td style="color:var(--highlight)">{% if r.share != None %}{{ "%.1f"|format(r.share) }}%{% else %}—{% endif %}</td>
+                <td style="text-align:right">{{ "{:,.2f}".format(r.cuota).replace(',', 'X').replace('.', ',').replace('X', '.') }}</td>
+                <td style="text-align:right">{{ "{:,.0f}".format(r.patrimonio).replace(',', '.') }}</td>
+                <td style="text-align:right">{% if r.share is not none %}{{ "%.1f"|format(r.share)|replace('.', ',') }}%{% else %}—{% endif %}</td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
 </div>
+<p class="lead">
+    Todas las AFP medidas al <strong>{{ corte }}</strong>, último día en que informaron todas
+    (alguna puede traer días posteriores). Rentabilidad nominal del valor cuota, sin descontar
+    comisiones. Participación = % del patrimonio del fondo entre las AFP.
+</p>
 {% else %}
 <p class="loading">No hay datos suficientes para generar la comparativa.</p>
 {% endif %}

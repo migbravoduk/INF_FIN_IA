@@ -239,3 +239,22 @@ En pares h1–4: ingresos 56,4% (Δ −0,110; vistas −0,142, nuevas −0,077);
 (640 pares por celda): las bandas del 95% de ingresos se angostan ~45% (h2: 5,48 → 3,01).
 Configuración en `models/hybrid.PRODUCCION`; bancos y seguros en `simple_forecast.ROBUSTO_SIMPLE`
 (tope sí, limpieza no). Las vistas marcan los atípicos detectados (✕) como información.
+
+## Sectores curados en el shrinkage (17-nov-2026)
+
+La clasificación por nombre dejaba 199 de 579 emisores vigentes en "Otros / No Clasificado"
+(Falabella, Copec, CMPC, Bicecorp…). Se curó el sector por RUT (`config/company_sectors.yaml`)
+y se midió su efecto en el grupo de shrinkage de las betas de activos del estructural:
+`backtest --solo-estructural --sin-robusto --companies 80 --factores act_yoy,ipc_yoy,tasa_real5,tc_yoy
+--sectores curada|nombre` (misma corrida, mismo dato; `scratch/bt_sec_*.csv`).
+
+| Partida (spec de producción) | Pares distintos | Gana curada | Δ medio | Vistas / nuevas | Medianas h2/h3/h4 (nombre → curada) |
+|---|---|---|---|---|---|
+| Ingresos (`estr_last`) | 1.824 | 45,6% (z −3,8) | +0,011 | +0,007 / +0,014 | 0,790→0,804 · 0,755→0,774 · 0,737→0,739 |
+| Ganancia (`estr_last_mmed4_nop`) | 1.824 | 44,2% (z −4,9) | +0,007 | +0,006 / +0,008 | 0,810→0,817 · 0,792→0,794 · 0,787→0,786 |
+
+**NO ADOPTAR** para el modelo: `SECTOR_FUENTE = "nombre"`. Lectura: con sectores más finos los
+grupos quedan chicos y el beta sectorial es ruido; "Otros", grande y heterogéneo, se comportaba
+casi como el beta global, que es lo que mejor proyecta. La web sí usa la clasificación curada
+(es la correcta para leer y filtrar). Si se quiere volver a intentar: probar un `LAMBDA_SECTOR`
+mayor junto con la curada, no la curada sola.

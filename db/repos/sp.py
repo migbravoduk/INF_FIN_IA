@@ -28,6 +28,22 @@ class SpRepo:
         """).fetchall()
         return [str(r[0]) for r in rows]
 
+    def sp_common_date(self, fund: Optional[str] = None) -> Optional[str]:
+        """
+        Último día en que TODAS las AFP tienen valor cuota (el mínimo de los máximos).
+
+        Las AFP no siempre llegan al mismo día: en nov-2026 Capital traía datos al 15 y
+        las demás al 12. Comparar cada una con su propio último dato mezclaba ventanas
+        distintas (la rentabilidad 12m de Capital incluía un día de caída que las otras no)
+        y la participación de mercado se calculaba sobre el patrimonio de una sola AFP
+        (sumaba 412%). Toda comparación entre AFP se hace a esta fecha.
+        """
+        sql = """SELECT MIN(md) FROM (SELECT afp_name, MAX(date) md FROM sp_quota_values
+                 WHERE afp_name <> 'TOTAL' {f} GROUP BY afp_name)"""
+        row = self.conn.execute(sql.format(f="AND fund_type = ?" if fund else ""),
+                                [fund] if fund else []).fetchone()
+        return str(row[0]) if row and row[0] is not None else None
+
     # ----------------------------------------------------------
     # Superintendencia de Pensiones (SP)
     # ----------------------------------------------------------
@@ -109,14 +125,16 @@ class SpRepo:
         import pandas as _pd
         out = {}
         for f in ("A", "B", "C", "D", "E"):
+            corte = self.sp_common_date(f)
             rows = self.conn.execute("""
                 SELECT q.afp_name, q.date, q.quota_value, q.equity_value
                 FROM sp_quota_values q
                 JOIN (SELECT afp_name, MAX(date) md FROM sp_quota_values
-                      WHERE fund_type = ? AND afp_name <> 'TOTAL' GROUP BY afp_name) l
+                      WHERE fund_type = ? AND afp_name <> 'TOTAL' AND date <= ?
+                      GROUP BY afp_name) l
                   ON q.afp_name = l.afp_name AND q.date = l.md
                 WHERE q.fund_type = ?
-            """, [f, f]).fetchdf()
+            """, [f, corte, f]).fetchdf()
 
             num = den = 0.0
             per_afp = []  # (afp_name, ret_pct)
@@ -148,6 +166,11 @@ class SpRepo:
         Composición de cartera de un fondo por CATEGORÍA legible (filas "TOTAL ..." que
         agrupan los instrumentos y suman ~100%), excluyendo el gran total "TOTAL ACTIVOS".
         Evita los códigos crípticos de instrumento (CMEV, ETFA, ...).
+
+        Solo las secciones de primer nivel, que la SP escribe en MAYÚSCULAS ("TOTAL
+        INSTITUCIONES ESTATALES"). Los subtotales van en minúscula ("Total Tesorería
+        General", "Total Banco Central de Chile") y ya están dentro de su sección: con el
+        filtro insensible a mayúsculas se contaban dos veces y la cartera sumaba 100,9%.
         Devuelve DataFrame [instrument_glosa, porcentaje, monto_pesos].
         """
         return self.conn.execute("""
@@ -155,8 +178,9 @@ class SpRepo:
             FROM sp_portfolio_holdings
             WHERE period = ? AND fund_type = ? AND UPPER(afp_name) = ?
               AND porcentaje IS NOT NULL AND porcentaje < 100
-              AND UPPER(instrument_glosa) LIKE 'TOTAL %'
-              AND UPPER(instrument_glosa) NOT LIKE 'TOTAL ACTIVOS%'
+              AND instrument_glosa LIKE 'TOTAL %'
+              AND instrument_glosa NOT LIKE 'TOTAL ACTIVOS%'
+              AND instrument_glosa NOT LIKE '%MM$%' AND instrument_glosa NOT LIKE '%MMU$%'
             ORDER BY porcentaje DESC
             LIMIT ?
         """, [period, fund, afp.upper(), limit]).fetchdf()
@@ -350,7 +374,8 @@ class SpRepo:
         import pandas as pd
 
         df["date"] = pd.to_datetime(df["date"])
-        as_of = df["date"].max()
+        as_of = pd.Timestamp(self.sp_common_date(fund) or df["date"].max())
+        df = df[df["date"] <= as_of]
         labels = [f"{lab} (anual)" if ann else lab for lab, _, ann in self.FUND_HORIZONS]
         out = []
         for afp, sub in df.groupby("afp_name"):
@@ -445,9 +470,9 @@ class SpRepo:
 
         last = self.conn.execute("""
             SELECT afp_name, ARG_MAX(quota_value, date) AS quota, MAX(date) AS date
-            FROM sp_quota_values WHERE fund_type = ? AND afp_name <> 'TOTAL'
+            FROM sp_quota_values WHERE fund_type = ? AND afp_name <> 'TOTAL' AND date <= ?
             GROUP BY afp_name
-        """, [fund]).fetchdf().set_index("afp_name")
+        """, [fund, self.sp_common_date(fund)]).fetchdf().set_index("afp_name")
 
         aporte = salary * 0.10
         # Meses completos: excluir el mes de la última cuota (aún en curso)
@@ -498,7 +523,7 @@ class SpRepo:
         return self.conn.execute("""
             WITH latest AS (
                 SELECT afp_name, fund_type, MAX(date) md
-                FROM sp_quota_values WHERE afp_name <> 'TOTAL'
+                FROM sp_quota_values WHERE afp_name <> 'TOTAL' AND date <= ?
                 GROUP BY afp_name, fund_type
             )
             SELECT q.afp_name, SUM(q.equity_value) AS equity
@@ -506,7 +531,7 @@ class SpRepo:
             JOIN latest l ON q.afp_name = l.afp_name AND q.fund_type = l.fund_type AND q.date = l.md
             GROUP BY q.afp_name
             ORDER BY equity DESC
-        """).fetchdf().to_dict(orient="records")
+        """, [self.sp_common_date()]).fetchdf().to_dict(orient="records")
 
     def get_latest_sp_quota_date(self) -> Optional[str]:
         """Última fecha (YYYY-MM-DD) de valores cuota SP."""

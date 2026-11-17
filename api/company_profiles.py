@@ -13,13 +13,18 @@ from pathlib import Path
 
 import yaml
 
-_PROFILES_PATH = Path(__file__).resolve().parent.parent / "config" / "company_profiles.yaml"
+from config.settings import config_path
+
+_PROFILES_PATH = config_path("company_profiles.yaml")
+_SECTORS_PATH = config_path("company_sectors.yaml")
 _curated = None  # cache
+_sectors = None  # cache rut → macro-sector curado
 
 # Patrones nombre → reseña por tipo (orden importa: lo más específico primero).
 _INFER = [
     (r"ADMINISTRADORA GENERAL DE FONDOS|\bAGF\b", "Administradora general de fondos (gestión de fondos mutuos y de inversión).", "Servicios Financieros"),
     (r"SECURITIZADORA", "Securitizadora: emisión de bonos respaldados por activos.", "Servicios Financieros"),
+    (r"SERVICIOS FINANCIEROS|\bFINANCIER[OA]\b", "Servicios financieros.", "Servicios Financieros"),
     (r"\bAGUAS\b|SANITARI|ESVAL|ESSBIO|NUEVOSUR|AGUAS NUEVAS", "Empresa sanitaria: agua potable y tratamiento de aguas servidas.", "Energía y Servicios Básicos"),
     (r"CONCESIONARIA|AUTOPISTA|\bRUTA\b|VESPUCIO|COSTANERA|TUNEL", "Sociedad concesionaria de infraestructura pública (autopistas, hospitales, etc.).", "Infraestructura y Construcción"),
     (r"AEROPUERTO|TERMINAL INTERNACIONAL", "Concesionaria/operadora de infraestructura aeroportuaria.", "Infraestructura y Construcción"),
@@ -72,29 +77,64 @@ def _load() -> dict:
     return _curated
 
 
-def infer_profile(name: str) -> tuple[str, str]:
+def _load_sectors() -> dict:
+    """rut → macro-sector desde config/company_sectors.yaml ({sector: [rut, ...]})."""
+    global _sectors
+    if _sectors is None:
+        try:
+            data = yaml.safe_load(_SECTORS_PATH.read_text(encoding="utf-8")) or {}
+        except Exception:
+            data = {}
+        _sectors = {str(r).lstrip("0"): sec for sec, ruts in data.items() for r in (ruts or [])}
+    return _sectors
+
+
+# Patrones agregados en nov-2026; la clasificación "nombre" (anterior) no los usa.
+_INFER_NUEVOS = {r"SERVICIOS FINANCIEROS|\bFINANCIER[OA]\b"}
+
+
+def infer_profile(name: str, anterior: bool = False) -> tuple[str, str]:
     """Reseña por tipo, inferida del nombre. Retorna (descripción, macro_sector)."""
     n = (name or "").upper()
+    if not anterior:
+        n = " ".join(n.split())   # "ADMINISTRADORA  GENERAL" (doble espacio) no calzaba
     for pat, desc, macro in _INFER:
+        if anterior and pat in _INFER_NUEVOS:
+            continue
         if re.search(pat, n):
             return desc, macro
     return _GENERIC, "Otros / No Clasificado"
+
+
+def sector_of(rut: str, name: str, fuente: str = "curada") -> str:
+    """
+    Macro-sector de una empresa. fuente='curada' (default): la tabla por RUT manda y la
+    inferencia por nombre cubre el resto. fuente='nombre': solo la inferencia por nombre
+    (la clasificación anterior a nov-2026; queda para el A/B del modelo estructural).
+    """
+    if fuente == "curada":
+        sec = _load_sectors().get(str(rut).strip().replace(".", "").replace("-", "").lstrip("0"))
+        if sec:
+            return sec
+        return infer_profile(name)[1]
+    return infer_profile(name, anterior=True)[1]
 
 
 def get_profile(rut: str, name: str) -> dict:
     """Reseña de una empresa: {text, source, macro_sector}. source = 'curada' | 'inferida' | 'generica'."""
     rut = str(rut).strip().replace(".", "").replace("-", "")
     curated = _load().get(rut)
-    inferred_desc, inferred_macro = infer_profile(name)
-    
+    inferred_desc, _ = infer_profile(name)
+    macro = sector_of(rut, name)
+
     if curated:
-        return {"text": curated, "source": "curada", "macro_sector": inferred_macro}
-        
+        return {"text": curated, "source": "curada", "macro_sector": macro}
+
     if inferred_desc == _GENERIC:
         # Sin reseña: se deja el nombre de la empresa como marca/placeholder.
-        return {"text": name, "source": "generica", "macro_sector": inferred_macro}
-        
-    return {"text": inferred_desc, "source": "inferida", "macro_sector": inferred_macro}
+        return {"text": name, "source": "generica", "macro_sector": macro}
+
+    return {"text": inferred_desc, "source": "inferida", "macro_sector": macro}
 
 def get_all_sectors() -> list[str]:
     """Devuelve la lista de todos los macro-sectores únicos."""

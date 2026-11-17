@@ -45,6 +45,13 @@ DLOG_WINSOR = 0.35          # |Δlog A| > 0.35 trimestral se recorta (M&A, reval
 MIN_OBS_COMPANY = 12        # mínimo de Δlog para OLS propio; si no, hereda beta sectorial
 LAMBDA_COMPANY = 80.0       # shrinkage empresa → sector (n=40 → peso propio ~1/3)
 LAMBDA_SECTOR = 200.0       # shrinkage sector → global
+# Clasificación sectorial del shrinkage: "nombre" (inferencia por nombre, con ~1/3 de las
+# empresas en "Otros") o "curada" (config/company_sectors.yaml, la que muestra la web).
+# A/B 17-nov-2026 (80 empresas, h2–4, `backtest --sectores`): la curada PIERDE — ingresos
+# 45,6% de pares (z −3,8, Δ +0,011), ganancia 44,2% (z −4,9, Δ +0,007), en ambas mitades.
+# Sectores más finos dejan grupos chicos y el shrinkage hacia el sector pasa a ser ruido; el
+# grupo "Otros", grande, se comporta casi como el global. Se queda "nombre".
+SECTOR_FUENTE = "nombre"
 RATIO_SHORT_Q = 4           # ventana del nivel reciente del ratio
 RATIO_LONG_Q = 20           # ventana de la media de reversión (5 años)
 RATIO_PHI = 0.85            # velocidad de reversión del ratio por trimestre
@@ -139,7 +146,8 @@ def load_panel(db) -> PanelData:
     inc_w = pivot_stock(flows[flows["account_name"] == "Ganancia (pérdida)"])
 
     names = dict(stocks.groupby("rut")["nombre"].first())
-    sectors = {rut: get_profile(str(rut), str(nm))["macro_sector"]
+    from api.company_profiles import sector_of
+    sectors = {rut: sector_of(str(rut), str(nm), SECTOR_FUENTE)
                for rut, nm in names.items()}
 
     from models.nonop import load_nonop

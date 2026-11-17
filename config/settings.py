@@ -50,3 +50,18 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+
+def config_path(nombre: str) -> Path:
+    """
+    Ruta de un archivo bajo `config/`. En el .exe (PyInstaller onefile) `__file__` apunta a
+    la carpeta temporal de extracción, donde los YAML no están: ahí se busca junto al
+    ejecutable. Sin esto, cada catch-up desde Actualizar_Datos.exe reconstruía dim_entidad
+    sin los bancos ni los emisores curados de config/entidades.yaml.
+    """
+    import sys
+    if getattr(sys, "frozen", False):
+        base = Path(sys.executable).resolve().parent
+    else:
+        base = Path(__file__).resolve().parents[1]
+    return base / "config" / nombre

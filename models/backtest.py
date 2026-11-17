@@ -273,7 +273,13 @@ def main():
     ap.add_argument("--factores", default="",
                     help="Factores de la ecuación de activos separados por coma "
                          "(default: models.structural.FACTORS; ver models/curve_factors.py)")
+    ap.add_argument("--sectores", default="nombre", choices=["curada", "nombre"],
+                    help="Clasificación sectorial del shrinkage estructural "
+                         "(models.structural.SECTOR_FUENTE)")
     args = ap.parse_args()
+
+    import models.structural as _st
+    _st.SECTOR_FUENTE = args.sectores
 
     from db.database import Database
     logging.basicConfig(level=logging.WARNING)

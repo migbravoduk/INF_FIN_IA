@@ -48,7 +48,7 @@ def afp_chart(
     since = (dt.date.today() - dt.timedelta(days=730)).isoformat()
     val_key = "equity_value" if metric == "patrimonio" else "quota_value"
     normalize = metric != "patrimonio"
-    metric_label = "patrimonio" if metric == "patrimonio" else "valor cuota"
+    metric_label = "patrimonio (MMM$)" if metric == "patrimonio" else "valor cuota"
     funds = ["A", "B", "C", "D", "E"]
 
     def serie(afp_, fund_):
@@ -57,18 +57,27 @@ def afp_chart(
 
     def norm(pts, name):
         base = pts[0][val_key] or None
+        # Patrimonio en MMM$ (miles de millones): en pesos el eje llegaba a 13 dígitos.
         return {"name": name,
-                "points": [{"date": p["date"],
-                            "value": (p[val_key] / base * 100.0) if (normalize and base) else p[val_key]}
+                "points": [{"date": p["date"][:10],
+                            "value": (p[val_key] / base * 100.0) if (normalize and base)
+                            else p[val_key] / 1e9}
                            for p in pts]}
 
     multi, title, latest, note = [], "", None, None
 
     # Participación de mercado (% del patrimonio del fondo, por AFP en el tiempo).
     if metric == "share":
-        if afp == "TODAS" and fund not in ("TODOS", None, ""):
+        # La participación es siempre entre todas las AFP: no depende de la AFP elegida
+        # (antes con una AFP elegida mostraba solo un aviso).
+        if fund not in ("TODOS", None, ""):
             import pandas as _pd
             edf = db.get_fund_equity_rows(fund, since)
+            corte = db.sp_common_date(fund)
+            if corte is not None and not edf.empty:
+                # Días en que no han informado todas las AFP: la participación de la que
+                # sí informó saltaba al 100% al final del gráfico.
+                edf = edf[edf["date"].astype(str) <= corte]
             if not edf.empty:
                 edf["date"] = edf["date"].astype(str)
                 piv = edf.pivot_table(index="date", columns="afp_name",
@@ -82,7 +91,7 @@ def afp_chart(
             else:
                 note = "Sin datos de patrimonio para ese fondo."
         else:
-            note = "La participación de mercado aplica al modo 'Todas (comparar AFP)' + un fondo."
+            note = "La participación de mercado se calcula por fondo: elige un fondo (A–E)."
         return templates.TemplateResponse(request, "partials/afp_chart.html", {
             "multi": multi or None, "title": title, "normalized": False,
             "metric_label": "participación", "latest": None, "note": note,
@@ -202,58 +211,45 @@ def afp_neta(
 
 @router.get("/afp/comparativa")
 def afp_comparativa(request: Request, fund: str = Query("A"), db: Database = Depends(get_db)):
-    """Fragmento HTMX: tabla comparativa detallada por AFP para un fondo."""
-    import datetime as dt
-    since = (dt.date.today() - dt.timedelta(days=365)).isoformat()
-    
-    # Obtener listado para el fondo seleccionado (si es TODOS, la query mezclará, así que iteramos)
+    """
+    Fragmento HTMX: tabla comparativa por AFP para un fondo (o los cinco).
+
+    Todas las AFP se miden a la MISMA fecha (`sp_common_date`): cuota y patrimonio a esa
+    fecha y rentabilidad contra la cuota de un año antes. La participación es sobre la
+    suma de las AFP a esa fecha, así que suma 100% por fondo.
+    """
+    import pandas as pd
+
     target_funds = ["A", "B", "C", "D", "E"] if fund == "TODOS" else [fund]
-    afps = db.get_afp_list()
-    
-    results = []
-    
+    results, corte = [], None
     for f in target_funds:
-        df = db.query_sp_quota_values(fund=f, from_date=since, limit=20000)
+        corte_f = db.sp_common_date(f)
+        if not corte_f:
+            continue
+        corte = corte or corte_f
+        t = pd.Timestamp(corte_f)
+        desde = (t - pd.Timedelta(days=380)).date().isoformat()
+        df = db.query_sp_quota_values(fund=f, from_date=desde, to_date=corte_f, limit=50000)
         if df.empty:
             continue
-            
-        df = df.sort_values("date")
-        
-        # Filtrar solo último día para patrimonio
-        last_date = df["date"].max()
-        df_last = df[df["date"] == last_date]
-        total_equity = df_last["equity_value"].sum()
-        
-        for a in afps:
-            df_afp = df[df["afp_name"] == a]
-            if df_afp.empty:
+        df["date"] = pd.to_datetime(df["date"])
+        filas = []
+        for a, sub in df.sort_values("date").groupby("afp_name"):
+            if a == "TOTAL":
                 continue
-                
-            latest = df_afp.iloc[-1]
-            earliest = df_afp.iloc[0]
-            
-            c_latest = latest["quota_value"]
-            c_earliest = earliest["quota_value"]
-            eq = latest["equity_value"]
-            
-            ret_12m = ((c_latest / c_earliest) - 1) * 100 if c_latest and c_earliest else None
-            share = (eq / total_equity) * 100 if eq and total_equity else None
-            
-            # Formatear
-            results.append({
-                "afp": a,
-                "fund": f,
-                "rentabilidad": ret_12m,
-                "cuota": c_latest,
-                "patrimonio": eq,
-                "share": share
-            })
-            
-    # Si se seleccionó "TODOS", agrupar por AFP sumando patrimonio y promediando rentabilidad?
-    # Mejor mostrarlo tal cual o dejarlo claro que es una vista combinada.
-    # Por simplicidad, lo ordenaremos por Rentabilidad descendente
-    results.sort(key=lambda x: x["rentabilidad"] or -999, reverse=True)
-    
+            last = sub.iloc[-1]
+            base = sub[sub["date"] <= t - pd.Timedelta(days=365)]
+            c0 = float(base["quota_value"].iloc[-1]) if len(base) else None
+            c1 = float(last["quota_value"])
+            filas.append({"afp": a, "fund": f, "cuota": c1,
+                          "rentabilidad": (c1 / c0 - 1) * 100 if c0 else None,
+                          "patrimonio": float(last["equity_value"] or 0) / 1e9})
+        total = sum(r["patrimonio"] for r in filas)
+        for r in filas:
+            r["share"] = r["patrimonio"] / total * 100 if total else None
+        results += filas
+
+    results.sort(key=lambda x: (x["fund"], -(x["rentabilidad"] if x["rentabilidad"] is not None else -1e9)))
     return templates.TemplateResponse(request, "partials/afp_comparativa.html", {
-        "results": results, "fund": fund
+        "results": results, "fund": fund, "corte": corte,
     })
