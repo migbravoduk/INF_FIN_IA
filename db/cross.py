@@ -206,31 +206,58 @@ def issuer_holdings(db, rut: str, n_periods: int = 13) -> dict:
 
 
 def common_issuers(db, limit: int = 40) -> dict:
+    """
+    Emisores con instrumentos a la vez en seguros (B.1) y fondos mutuos (NACI), con el monto
+    expuesto en esos instrumentos, en MM$ al cierre de cada fuente:
+    seguros = nominal vigente a pesos con la UF y el dólar del cierre (valor par, no de mercado);
+    fondos = valorización de mercado, los fondos en dólares a pesos con el dólar del mes.
+    Instrumentos de seguros en otras monedas sin tipo de cambio (euro) no se suman.
+    """
     per_seg = db.conn.execute("SELECT MAX(period) FROM cmf_insurer_portfolio_fixed_income").fetchone()[0]
     per_ffm = db.conn.execute("SELECT MAX(period) FROM v_mutual_fund_holdings").fetchone()[0]
     if not per_seg or not per_ffm:
         return {"rows": [], "per_seg": per_seg, "per_ffm": per_ffm}
-    rows = db.conn.execute("""
-        WITH seg AS (
-            SELECT upper(trim(nemotecnico)) nemo, ltrim(rut_emisor, '0') rut,
-                   COUNT(*) pos_seg, COUNT(DISTINCT rut) cias
-            FROM cmf_insurer_portfolio_fixed_income
-            WHERE period = ? AND nemotecnico IS NOT NULL AND trim(nemotecnico) <> ''
+    # DISTINCT: seguros y fondos suelen cerrar el mismo mes; con el período repetido, `fx` tendría
+    # dos filas iguales y el cruce duplicaría montos y posiciones.
+    rows = db.conn.execute(f"""
+        WITH {_fx_cte("SELECT DISTINCT unnest([?, ?]) AS period")},
+        seg AS (
+            SELECT upper(trim(fi.nemotecnico)) nemo, ltrim(fi.rut_emisor, '0') rut,
+                   COUNT(*) pos_seg, COUNT(DISTINCT fi.rut) cias,
+                   SUM(CASE fi.unidad_monetaria WHEN 'UF' THEN nom * fx.uf WHEN '$$' THEN nom
+                                                WHEN 'PROM' THEN nom * fx.usd END) / 1e6 AS mm_seg
+            FROM (SELECT *, CASE WHEN coalesce(valor_nominal_vig, 0) > 0 THEN valor_nominal_vig
+                                 ELSE valor_nominal END AS nom
+                  FROM cmf_insurer_portfolio_fixed_income) fi
+            JOIN fx ON fx.period = fi.period
+            WHERE fi.period = ? AND fi.nemotecnico IS NOT NULL AND trim(fi.nemotecnico) <> ''
             GROUP BY 1, 2),
+        cur AS (SELECT fund_run, arg_max(currency, date) currency
+                FROM cmf_mutual_fund_quota_values GROUP BY 1),
         ffm AS (
-            SELECT upper(trim(nemotecnico)) nemo, COUNT(*) pos_ffm, COUNT(DISTINCT fund_run) fondos,
-                   SUM(monto) FILTER (WHERE moneda IN ('$$', 'PROM', 'CLP')) monto_clp
-            FROM v_mutual_fund_holdings
-            WHERE period = ? AND nemotecnico IS NOT NULL
+            SELECT upper(trim({_FFM_NEMO})) nemo, COUNT(*) pos_ffm, COUNT(DISTINCT p.fund_run) fondos,
+                   SUM({_FFM_VAL} / 1e3 * CASE WHEN cur.currency = 'DOLAR' THEN fx.usd ELSE 1 END) AS mm_ffm
+            FROM cmf_mutual_fund_portfolio p
+            JOIN fx ON fx.period = p.period_year * 100 + p.period_month
+            LEFT JOIN cur ON cur.fund_run = p.fund_run
+            WHERE p.period_year * 100 + p.period_month = ? AND p.portfolio_type = 'NACI'
+              AND {_FFM_NEMO} IS NOT NULL
             GROUP BY 1)
         SELECT seg.rut, coalesce(e.nombre_corto, e.nombre_canonico) AS emisor, e.tipo,
                COUNT(DISTINCT seg.nemo) instrumentos, SUM(seg.cias) cias_seg, SUM(ffm.fondos) fondos_ffm,
-               SUM(seg.pos_seg) pos_seg, SUM(ffm.pos_ffm) pos_ffm
+               SUM(seg.pos_seg) pos_seg, SUM(ffm.pos_ffm) pos_ffm,
+               SUM(seg.mm_seg) mm_seg, SUM(ffm.mm_ffm) mm_ffm
         FROM seg JOIN ffm USING (nemo)
         LEFT JOIN dim_entidad e ON e.rut = seg.rut
         GROUP BY 1, 2, 3
-        ORDER BY fondos_ffm + cias_seg DESC
+        ORDER BY coalesce(SUM(seg.mm_seg), 0) + coalesce(SUM(ffm.mm_ffm), 0) DESC
         LIMIT ?
-    """, [per_seg, per_ffm, limit]).fetchall()
-    cols = ["rut", "emisor", "tipo", "instrumentos", "cias_seg", "fondos_ffm", "pos_seg", "pos_ffm"]
-    return {"rows": [dict(zip(cols, r)) for r in rows], "per_seg": per_seg, "per_ffm": per_ffm}
+    """, [per_seg, per_ffm, per_seg, per_ffm, limit]).fetchall()
+    cols = ["rut", "emisor", "tipo", "instrumentos", "cias_seg", "fondos_ffm", "pos_seg", "pos_ffm",
+            "mm_seg", "mm_ffm"]
+    out = []
+    for r in rows:
+        d = dict(zip(cols, r))
+        d["mm_total"] = (d["mm_seg"] or 0) + (d["mm_ffm"] or 0)
+        out.append(d)
+    return {"rows": out, "per_seg": per_seg, "per_ffm": per_ffm}

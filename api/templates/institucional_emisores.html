@@ -9,9 +9,11 @@
     Instrumentos que están a la vez en la renta fija de las compañías de seguros
     (período {{ per_seg or '—' }}) y en la cartera de los fondos mutuos (período {{ per_ffm or '—' }}),
     cruzados por nemotécnico y agrupados por emisor.
-    <br><span class="lead">Se cuentan compañías, fondos e instrumentos, no montos: la renta fija de
-    seguros viene en valor nominal y en distintas monedas. Las AFP no entran en el cruce porque la
-    Superintendencia publica su cartera agregada por categoría, sin instrumento.</span>
+    <br><span class="lead">Los montos son MM$ expuestos al emisor en esos instrumentos en común.
+    Seguros: valor nominal vigente (valor par, no de mercado) pasado a pesos con la UF y el dólar
+    del cierre; fondos mutuos: valorización de mercado (los fondos en dólares, al dólar del mes).
+    Las dos fuentes miden distinto, por eso se muestran separadas y su suma es referencial. Las AFP
+    no entran: la Superintendencia publica su cartera agregada por categoría, sin instrumento.</span>
 </p>
 
 {% if not rows %}
@@ -22,6 +24,8 @@
     <thead><tr>
         <th>Emisor</th><th style="text-align:right">Instrumentos en común</th>
         <th style="text-align:right">Compañías de seguros</th><th style="text-align:right">Fondos mutuos</th>
+        <th style="text-align:right">Seguros (MM$)</th><th style="text-align:right">Fondos mutuos (MM$)</th>
+        <th style="text-align:right">Total (MM$)</th>
     </tr></thead>
     <tbody>
     {% for r in rows %}
@@ -30,6 +34,9 @@
         <td style="text-align:right">{{ r.instrumentos|num }}</td>
         <td style="text-align:right">{{ r.cias_seg|num }}</td>
         <td style="text-align:right">{{ r.fondos_ffm|num }}</td>
+        <td style="text-align:right">{{ r.mm_seg|num }}</td>
+        <td style="text-align:right">{{ r.mm_ffm|num }}</td>
+        <td style="text-align:right"><strong>{{ r.mm_total|num }}</strong></td>
     </tr>
     {% endfor %}
     </tbody>

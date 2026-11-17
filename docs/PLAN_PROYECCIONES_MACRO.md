@@ -99,3 +99,44 @@ la propia curva. A/B en ingresos h = 2–4.
 
 `/proyecciones/bancos` y `/seguros` son SARIMAX sin macro. Margen bancario ← inflación (descalce
 UF) y pendiente; aseguradoras de vida ← tasa de reinversión UF larga. Requiere su propio backtest.
+
+### D · Modelos de bancos y seguros con driver de crecimiento (análisis 17-nov-2026, sin código en producción)
+
+**Idea:** colocaciones por cartera y moneda (bancos) y reservas técnicas (seguros), en variación
+real 12m, impulsadas por el IMACEC (historia) empalmado con la expectativa de PIB de la EEE
+(futuro, `act_yoy` de `models/macro_path.py`). Colocaciones / reservas arrastran el resto del
+balance y el resultado.
+
+**Datos hallados**
+- BCCh, colocaciones reales (IPC ref. 2023) desde 1986: `F022.CEM.STO.TP.Z.P96R23.M` (comercial),
+  `F022.CON.STO.TP.Z.P96R23.M` (consumo), `F022.VIV.STO.TP.Z.P96R23.M` (vivienda),
+  `F022.CTO.STO.TP.Z.P96R23.M` (total). No están en el catálogo
+  ni en la base: bajadas a `scratch/coloc_reales_bcch.pkl` con `scratch/baja_coloc.py`.
+- CMF bancos: colocaciones por cartera (cuentas `1302000/1304000/1305000` hasta 202112 en millones;
+  `145000000/146000000/148000000` desde 202201 en pesos) y por moneda (`val_clp_no_reaj`,
+  `val_clp_reaj_ipc`, `val_clp_reaj_tc` + `val_extranjera`). Empalman sin salto (`scratch/explora_colocaciones.py`).
+- Seguros: reservas técnicas `5.21.31.00` trimestral 2015-03→2026-06, 72 compañías. No probado.
+
+**Pruebas (sistema, fuera de muestra, orígenes 2012-01→2025-09, `scratch/oos_sistema*.py`)**
+1. IMACEC rezagado 6 meses explica 40–60% del crecimiento real de colocaciones comerciales,
+   consumo y total en 2010–2019 (elasticidad ≈ 1). Con 2020–21 (retiros de AFP, FOGAPE) casi no
+   hay relación (R² 0,01–0,12). Vivienda crece ≈ 8% real sin ciclo.
+2. Modelo de nivel (g = a + b·IMACEC, con o sin AR del residuo) PIERDE contra persistencia del
+   crecimiento: MAE total 4,0 vs 0,75 pp a 1 mes; 4,3 vs 2,7 a 12 meses. El IMACEC mensual es ruidoso.
+3. Corrección sobre persistencia (g_{t+h} = g_t + b·Δ IMACEC suavizado 6m, rezago 6m, b estimado
+   sin 2020–21): MAE vs persistencia, total −7% (h3), −14% (h6), 0% (h12); comercial −5/−10/0;
+   consumo −6/−5/−15; vivienda 0. Ganancia modesta.
+   **Sesgo a favor (revisión 17-nov):** la prueba usa el IMACEC EFECTIVO de t+h−6, no la senda EEE
+   que habría existido en el origen. Para h ≤ 6 eso es casi justo (solo ~1 mes de rezago de
+   publicación del IMACEC); para h = 12 es mirar el futuro, así que la mejora a 12 meses
+   (consumo −15%) está sobrestimada. Repetir con la senda vintage (`build_macro_path(as_of=...)`)
+   antes de decidir.
+
+**Diseño propuesto (pendiente de decisión del usuario)**
+- Banco × cartera × moneda: crec. real = el actual + b·ΔIMACEC suavizado (b por cartera; vivienda
+  solo tendencia) + desviación propia del banco vs sistema que se desvanece; FX en USD + tc de la senda.
+- Total activos = colocaciones ÷ razón colocaciones/activos. Resultado = mismo mes del año anterior
+  × crecimiento del balance (+ exposición UF ya adoptada).
+- Seguros: igual con reservas técnicas reales.
+- Decide el backtest con `models/compare_bt.py` (16 bancos × 18 orígenes; base `sarimax`/`uf`).
+- Ganancia esperada: 5–15% de error a 3–6 meses; nula a 12 en colocaciones totales.

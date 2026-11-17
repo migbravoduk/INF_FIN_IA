@@ -259,3 +259,23 @@ Orden: 1 → 2 → 3, y la 4 en paralelo como búsqueda.
   (registro B.14, garantías de derivados).
 - SP, [Operaciones con instrumentos derivados](https://www.spensiones.cl/portal/institucional/594/w3-article-6474.html)
   (régimen de inversión).
+
+## Fuente nueva: cartera desagregada de la SP (hallada 17-nov-2026, sin cargar)
+
+`https://www.spensiones.cl/apps/loadCarteras/loadCarInv.php?menu=sci&menuN1=estfinfp&menuN2=NOID&orden=10&periodo=AAAAMM&ext=.php`
+→ enlace `GetFile_v2.0.php?param=…` a un ZIP (~3,7 MB) con un XML (~284 MB, se lee por streaming
+desde el ZIP, sin descomprimir). Formato: https://www.spensiones.cl/xml/doc/apps/finmes/ultima_version_cartera_desagregada/
+
+- 29 cuadros por tipo de fondo (A–E) y por AFP. Cuadros 26–29: **valorización de swaps** (MMUSD,
+  con signo) por AFP × fondo × contraparte × tipo (tasas / moneda; garantías bilaterales / cámara).
+  Cuadros 22–25: forwards en unidades del activo objeto por contraparte y AFP (glosas con código,
+  p. ej. "WNMV": falta el diccionario). Cuadros 11 y 21: cartera por emisor e instrumento
+  (21 = extranjero con ISIN). Trae el RUT de las 7 AFP.
+- Jun-2026 (cuadrado contra las filas TOTAL): swaps −2.411 MMUSD extranjeros (−2.419 de tasas con
+  garantías bilaterales) y −438 nacionales. Por AFP: Capital −701, Cuprum −580, Provida −543,
+  Habitat −536, Modelo −315, PlanVital −130, Uno −45.
+- Disponibilidad: mensual desde al menos 2010-12 hasta 2026-06. Jul–oct 2026 devuelven un archivo
+  vacío al 17-nov (jun se publicó el 9-jul): no es un rezago fijo de ~40 días; causa sin confirmar.
+- Peso estimado (medido con jun-2026: 261 mil celdas, ~15 bytes por celda en DuckDB): todo ≈ 4 MB/mes;
+  sin cuadros redundantes (transpuestos por AFP y filas "Total") ≈ 1,5–2 MB/mes; solo derivados
+  (22–29) ≈ 0,2 MB/mes.
