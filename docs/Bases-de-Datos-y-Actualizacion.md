@@ -19,7 +19,8 @@ DuckDB**: `data/finanzas_chile.duckdb` (~239 MB, ~3,06M filas). El esquema está
 | `cmf_bank_statements` | CMF / SBIFv3 (API JSON) | banco × período × cuenta × moneda | **mensual** | ~35 días | `(year, month, bank_code, report_type)` |
 | `sp_quota_values` | SP (scraping) | AFP × fondo × día | **diaria** | 1 día hábil | por año en curso (re-ingesta idempotente) |
 | `sp_instrument_prices` | SP (cinta de precios) | instrumento × día | **diaria** | 1 día hábil | por fecha |
-| `sp_portfolio_holdings` | SP (XML cartera) | AFP × fondo × instrumento × mes | **mensual** | ~40 días | por `period` (YYYY-MM) |
+| `sp_portfolio_holdings` | SP (XML cartera) | AFP × fondo × instrumento × mes | **mensual** | ~4 meses | por `period` (YYYY-MM) |
+| `sp_cartera_detalle` | SP (mismo XML) | formato largo: tabla × fondo × AFP × fila (emisor, contraparte…) × métrica | **mensual** | ~4 meses | por `period` (INTEGER AAAAMM) y `tabla`. Derivados desde 2010-01; resto desde 2022-01 |
 | `fetch_log` | — | bitácora | cada ingesta | — | append |
 
 ### Series diarias del BCCh (las que te importan para "frecuencia diaria")

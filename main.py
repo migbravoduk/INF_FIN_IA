@@ -1296,21 +1296,68 @@ def fetch_sp_cartera(period):
     ))
 
     try:
-        records = collector.fetch_portfolio(period)
-        if not records:
+        with Database() as db:
+            inserted, n_det = db.ingest_sp_cartera(period, collector)
+        if not inserted:
             console.print(f"[yellow]⚠️ No se obtuvieron registros de cartera para el período {period} (puede no estar disponible).[/]")
             return
 
-        with Database() as db:
-            db_period = f"{str(period)[:4]}-{str(period)[4:]}"
-            inserted = db.insert_sp_portfolio_holdings(db_period, records)
-
         console.print(f"\n[bold green]✅ Ingesta de Cartera finalizada con éxito![/]")
-        console.print(f"  • Total registros de activos ingresados: [bold]{inserted:,}[/]")
+        console.print(f"  • Composición: [bold]{inserted:,}[/] · detalle (emisores, swaps, forwards…): [bold]{n_det:,}[/]")
 
     except Exception as e:
         console.print(f"\n[bold red]❌ Error durante la ingesta de la cartera SP:[/] {e}")
         sys.exit(1)
+
+
+@cli.command(name="backfill-sp-detalle")
+@click.option("--since", type=int, default=201001, show_default=True, help="Primer período AAAAMM")
+@click.option("--until", type=int, default=None, help="Último período AAAAMM (default: el último de la composición)")
+@click.option("--todo-desde", type=int, default=202201, show_default=True,
+              help="Desde este período se cargan TODAS las tablas; antes, solo derivados")
+@click.option("--saltar-cargados", is_flag=True, help="No volver a bajar períodos que ya tienen detalle")
+def backfill_sp_detalle(since, until, todo_desde, saltar_cargados):
+    """Histórico del detalle de la cartera desagregada de la SP (swaps, forwards, emisores…).
+
+    Peso medido (nov-2026): ~2 MB/mes con todas las tablas y mucho menos solo con derivados;
+    por eso, antes de --todo-desde solo se guardan los derivados. Cada ZIP va a una carpeta
+    temporal y se borra; la composición (cuadro 1) también se refresca.
+    """
+    from collectors.sp_cartera_detalle import TABLAS_DERIVADOS
+    collector = SPPensionCollector()
+    # La BD se abre solo para escribir cada mes (segundos): la descarga y la lectura del XML
+    # van fuera, así el servidor web (lectura) no queda bloqueado durante todo el histórico.
+    with Database() as db:
+        hasta = until or int(str(db.get_latest_sp_portfolio_period() or "0").replace("-", ""))
+        cargados = set(db.get_sp_detalle_periods()) if saltar_cargados else set()
+    p = since
+    while hasta and p <= hasta:
+        if p not in cargados:
+            tablas = None if p >= todo_desde else set(TABLAS_DERIVADOS)
+            try:
+                recs, det = collector.fetch_portfolio_full(p, tablas=tablas)
+            except Exception as e:   # un mes roto no detiene el histórico
+                console.print(f"  [red]✗ {p}: {e}[/]")
+                recs, det = [], []
+            if recs:
+                # En Windows no se puede abrir para escribir mientras otro proceso (el servidor
+                # web, una consulta) tenga la base abierta, aunque sea solo lectura: se reintenta.
+                import time
+                for intento in range(30):
+                    try:
+                        with Database() as db:
+                            db.insert_sp_portfolio_holdings(f"{p // 100}-{p % 100:02d}", recs)
+                            n = db.insert_sp_cartera_detalle(p, det, tablas=tablas)
+                        break
+                    except Exception as e:
+                        if "already open" not in str(e) or intento == 29:
+                            raise
+                        time.sleep(2)
+                console.print(f"  {p}: {len(recs):,} composición · {n:,} detalle "
+                              f"({'todo' if tablas is None else 'derivados'})", highlight=False)
+            else:
+                console.print(f"  [yellow]⚠ {p}: no publicado[/]")
+        p = p + 1 if p % 100 < 12 else (p // 100 + 1) * 100 + 1
 
 
 # ----------------------------------------------------------

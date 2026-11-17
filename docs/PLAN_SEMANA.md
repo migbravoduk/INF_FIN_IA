@@ -289,7 +289,7 @@ Decisiones y curaduría pendientes desde antes:
 - Revisión legal antes de publicar (asesoría de inversión, conflicto de interés, datos
   personales, términos de uso de las fuentes). Ahora incluye `/portafolios` si se construyó.
 - `config/proveedores.yaml`: URL verificada de cada AGF y AFP.
-- RUT de las 7 AFP, China Construction Bank y Bank of China en `config/entidades.yaml`.
+- RUT de China Construction Bank y Bank of China en `config/entidades.yaml` (las 7 AFP: hecho 17-nov).
 - Factor de reparto de dividendos de fondos mutuos: sin fuente identificada.
 - Fondos de inversión públicos, APV y Cuenta 2, reclamos: explorar fuentes nuevas.
 - Cuotas diarias de fondos mutuos: decidir si vale el volumen.

@@ -543,6 +543,16 @@ Fuentes (BCCh BDE API · CMF XBRL plano · CMF/SBIF API · SP scraping)
   viene en M$ y el de la corta en pesos (escalas distintas). Objetivo `1512` en swaps: código
   no documentado en el anexo. Historia con `main.py backfill-derivados-seguros` (baja, lee
   solo B.7 y borra cada ZIP); el catch-up lo carga junto con B.1 y B.8.
+- **Cartera desagregada SP (`sp_cartera_detalle`, migración 013)**: el MISMO ZIP del cuadro 1
+  (`sp_portfolio_holdings`) trae ~28 cuadros más; `fetch_portfolio_full` saca ambos en una lectura
+  por streaming (no descomprime los ~300 MB del XML). Cuadros por TÍTULO (la numeración cambia
+  entre años). Swaps = VALORIZACIÓN (MMUSD, con signo), no nocional; forwards = unidades del
+  activo objeto, y la fila con código de 4 letras es el total de las siguientes (no sumar ambas).
+  Última letra del código C/V = compra/venta (validado contra el BCCh); W/Y y M/N sin
+  diccionario oficial. Emisores nacionales (tabla `emisor_nac`) vienen por NOMBRE: cruce en
+  `db/cross.mapa_emisores_sp` + `config/sp_emisores.yaml`. Rezago de publicación ~4 meses.
+  En Windows un escritor no abre la base si otro proceso la tiene abierta (aunque sea lectura):
+  `backfill-sp-detalle` abre la BD solo para insertar cada mes y reintenta.
 - **Emisores sin EEFF curados en `config/entidades.yaml` › `emisores`** (Fisco/Tesorería
   60805000, Banco Central 97029000, Coopeuch, RUT antiguo de Itaú), con el nemotécnico como
   evidencia. 77844703 (BTBD/FNTBD) queda pendiente.

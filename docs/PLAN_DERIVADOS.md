@@ -16,7 +16,7 @@ Vista: `/inversion-institucional/derivados` (tarjeta "Derivados" del hub institu
 | 3 · Seguros (B.7) | Parser `parse_zip_derivatives` (layout reconciliado), tabla `cmf_insurer_derivatives` (migración 012), carga en el catch-up y `main.py backfill-derivados-seguros`: 213 mil contratos, ene-2022 → sep-2026, ambos ramos. `db/derivados_seguros.py`. | Valor razonable = B.8 M10 exacto (±0,1%) en 994 de 1.064 compañía-mes (93%), ±5% en 98%. Posiciones solo desde dic-2024 (layout nuevo; antes el registro tiene otro orden). Contratos con precio implícito incoherente (±20% de UF/dólar del cierre) se excluyen de las posiciones: 15 de 6.110 en sep-2026. Neto B.7 −16.050 MMUSD vs. BCCh sector seguros −18.779: mismo signo y tendencia. |
 | 4 · Por AFP (exploración) | No hay fuente estructurada por AFP ni por fondo. El detalle está en los estados financieros de cada fondo (formato no uniforme) y en declaraciones de la SP. Queda como pendiente. | — |
 
-Pendientes de este plan: detalle por AFP/fondo (fase 4); verificar el cierre del 5-nov con el
+Pendientes de este plan: ~~detalle por AFP/fondo (fase 4)~~ resuelto con la SP (ver al final); verificar el cierre del 5-nov con el
 dato de nov-2026 del BCCh (llega ~enero 2027; la vista lo dirá sola); futuros de seguros sin
 valor reconciliado; posiciones de seguros antes de dic-2024 (layout antiguo sin reconciliar);
 código de objetivo `1512` sin documentar.
@@ -260,7 +260,7 @@ Orden: 1 → 2 → 3, y la 4 en paralelo como búsqueda.
 - SP, [Operaciones con instrumentos derivados](https://www.spensiones.cl/portal/institucional/594/w3-article-6474.html)
   (régimen de inversión).
 
-## Fuente nueva: cartera desagregada de la SP (hallada 17-nov-2026, sin cargar)
+## Fase 4 resuelta: cartera desagregada de la SP (hallada y cargada 17-nov-2026)
 
 `https://www.spensiones.cl/apps/loadCarteras/loadCarInv.php?menu=sci&menuN1=estfinfp&menuN2=NOID&orden=10&periodo=AAAAMM&ext=.php`
 → enlace `GetFile_v2.0.php?param=…` a un ZIP (~3,7 MB) con un XML (~284 MB, se lee por streaming
@@ -274,8 +274,31 @@ desde el ZIP, sin descomprimir). Formato: https://www.spensiones.cl/xml/doc/apps
 - Jun-2026 (cuadrado contra las filas TOTAL): swaps −2.411 MMUSD extranjeros (−2.419 de tasas con
   garantías bilaterales) y −438 nacionales. Por AFP: Capital −701, Cuprum −580, Provida −543,
   Habitat −536, Modelo −315, PlanVital −130, Uno −45.
-- Disponibilidad: mensual desde al menos 2010-12 hasta 2026-06. Jul–oct 2026 devuelven un archivo
-  vacío al 17-nov (jun se publicó el 9-jul): no es un rezago fijo de ~40 días; causa sin confirmar.
+- Disponibilidad: mensual 2010-01 → 2026-06 (198 meses, sin huecos). Jul–oct 2026 aún no están al
+  17-nov: el rezago es de ~4 meses (`LAG_SP_CARTERA = 130` en scheduler/sources.py ya lo recogía).
 - Peso estimado (medido con jun-2026: 261 mil celdas, ~15 bytes por celda en DuckDB): todo ≈ 4 MB/mes;
   sin cuadros redundantes (transpuestos por AFP y filas "Total") ≈ 1,5–2 MB/mes; solo derivados
   (22–29) ≈ 0,2 MB/mes.
+
+### Carga (17-nov-2026)
+
+- El ZIP es el mismo que ya bajaba `SPPensionCollector.fetch_portfolio` (solo usaba el cuadro 1).
+  Ahora `fetch_portfolio_full` lee el XML por streaming desde un ZIP temporal (antes lo descomprimía
+  en `data/sp_raw` y lo cargaba entero en memoria) y en la misma pasada saca el detalle
+  (`collectors/sp_cartera_detalle.py` → tabla `sp_cartera_detalle`, migración 013). La ingesta
+  mensual (scheduler, `fetch-sp-cartera`, `actualizar.py`) carga composición y detalle juntos.
+- Cuadros por TÍTULO, no por número (2010 tiene 23 cuadros; 2026, 29). Se omiten los transpuestos
+  por AFP y los bloques "total AFP" / "total fondos".
+- Histórico: `main.py backfill-sp-detalle` (derivados desde 2010-01; todo desde 2022-01): 5,5 M
+  filas. Swaps: nacionales desde 2012-04, extranjeros desde 2013-12; forwards separados de swaps
+  desde 2017-08 (antes, cuadro único "derivados"). La base no creció en disco (usó bloques libres).
+- Cuadres (jun-2026): swaps = filas TOTAL del XML; cartera extranjera por emisor = "TOTAL
+  EXTRANJERO" + valorización de swaps extranjeros (el total publicado va neto de derivados);
+  forwards USD-CLP (C/V = compra/venta) vs. Banco Central: neto −41.800 vs. −37.839 MMUSD.
+- Cuadros 11 y 21 SÍ vienen por AFP × fondo × emisor (con monto). Emisores nacionales sin RUT:
+  cruce por nombre (`db/cross.mapa_emisores_sp` + `config/sp_emisores.yaml`), 171 de 182 = 99% del monto.
+- Vistas: sección 4 de `/inversion-institucional/derivados` (swaps por AFP × fondo × contraparte,
+  serie desde 2012; forwards USD por AFP) y bloque AFP en `/inversion-institucional/emisor`.
+
+Pendiente: diccionario oficial de las letras W/Y y M/N de los códigos de forwards (la SP no lo
+publica en la documentación del XML); cuadros 22–25 antes de 2017-08 ("derivados" sin separar).

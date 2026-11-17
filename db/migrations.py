@@ -345,6 +345,21 @@ CREATE TABLE IF NOT EXISTS cmf_insurer_derivatives (
 """
 
 
+# ------------------------------------------------------------------
+# 013 · detalle de la cartera desagregada de la SP (fondos de pensiones), formato largo
+# Ver collectors/sp_cartera_detalle.py: tablas canónicas por título, montos en MILLONES de
+# pesos/dólares, swaps = valorización del contrato, forwards = unidades del activo objeto (MMUSD).
+# ------------------------------------------------------------------
+M013 = """
+CREATE TABLE IF NOT EXISTS sp_cartera_detalle (
+    period INTEGER NOT NULL, tabla VARCHAR NOT NULL, fondo VARCHAR, afp VARCHAR,
+    grupo VARCHAR, codigo VARCHAR, fila INTEGER, glosa VARCHAR, nemotecnico VARCHAR,
+    moneda VARCHAR, unidad VARCHAR, extra VARCHAR, columna VARCHAR, metrica VARCHAR,
+    valor DOUBLE
+);
+"""
+
+
 MIGRATIONS: list[tuple[str, str, str]] = [
     ("001", "dq_results: controles de calidad", M001),
     ("002", "dim_dataset: metadatos de unidades, frecuencia y fuente", M002),
@@ -358,6 +373,7 @@ MIGRATIONS: list[tuple[str, str, str]] = [
     ("010", "fact_producto_metricas.duracion_efectiva", M010),
     ("011", "v_mutual_fund_derivatives: derivados FFMM tipados", M011),
     ("012", "cmf_insurer_derivatives: derivados de seguros (B.7)", M012),
+    ("013", "sp_cartera_detalle: cartera desagregada SP (emisores, swaps, forwards)", M013),
 ]
 
 # Migraciones que se reaplican siempre (contenido de referencia o vistas): son idempotentes.

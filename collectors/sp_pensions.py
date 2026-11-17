@@ -208,112 +208,82 @@ class SPPensionCollector:
     # ============================================================
 
     def fetch_portfolio(self, period: int) -> list[dict]:
+        """Composición (cuadro 1) del período YYYYMM. Ver `fetch_portfolio_full`."""
+        return self.fetch_portfolio_full(period, tablas=set())[0]
+
+    def _download_portfolio_zip(self, period_str: str, dest: Path) -> Optional[Path]:
+        """Baja el ZIP de la cartera desagregada a `dest`. None si el período no está publicado."""
+        html_url = f"{self.BASE_URL}/apps/loadCarteras/loadCarInv.php"
+        html_params = {"menu": "sci", "menuN1": "estfinfp", "menuN2": "NOID", "orden": "10",
+                       "periodo": period_str, "ext": ".php"}
+        logger.info(f"Consultando página de carteras para período {period_str}...")
+        r_html = httpx.get(html_url, params=html_params, headers=self.headers, timeout=30)
+        r_html.raise_for_status()
+        soup = BeautifulSoup(r_html.content, "html.parser")
+        zip_link_el = soup.find(lambda tag: tag.name == "a" and "GetFile_v2.0.php" in str(tag.get("href", "")))
+        if not zip_link_el:
+            if "no se encuentra disponible" in r_html.text:
+                logger.warning(f"La cartera de inversión para el período {period_str} aún no está disponible en la SP.")
+                return None
+            raise ValueError(f"No se encontró el enlace de descarga ZIP en la página para el período {period_str}.")
+        zip_href = zip_link_el.get("href")
+        zip_url = f"{self.BASE_URL}{zip_href}" if zip_href.startswith("/") else zip_href
+        req_headers = {**self.headers, "Referer": str(r_html.url)}
+        r_zip = httpx.get(zip_url, headers=req_headers, timeout=120)
+        r_zip.raise_for_status()
+        # Un período no publicado responde un volcado de error de ~200 bytes en vez del ZIP.
+        if not r_zip.content.startswith(b"PK\x03\x04"):
+            logger.warning(f"La cartera de inversión para el período {period_str} no tiene formato ZIP "
+                           f"(puede no estar publicada aún por la SP).")
+            return None
+        if len(r_zip.content) < 5000:
+            raise ValueError("El archivo ZIP de la cartera descargado es demasiado pequeño, puede estar corrupto.")
+        zp = dest / f"cartera_{period_str}.zip"
+        zp.write_bytes(r_zip.content)
+        return zp
+
+    def fetch_portfolio_full(self, period: int, tablas: Optional[set] = None) -> tuple[list[dict], list[tuple]]:
         """
-        Descarga la cartera de inversión mensual desagregada para el periodo YYYYMM.
-        Obtiene el archivo ZIP, extrae el XML y parsea la distribución de activos.
+        Cartera desagregada mensual de la SP para YYYYMM: (composición del cuadro 1, detalle).
+
+        El detalle son filas largas de `collectors.sp_cartera_detalle` (emisores, swaps,
+        forwards, riesgo, plazos…) para las `tablas` pedidas (None = todas; set() = ninguna).
+        El ZIP (~4 MB) va a una carpeta temporal y el XML (~300 MB) se lee por streaming desde
+        el ZIP, sin descomprimirlo a disco ni cargarlo entero en memoria. Todo se borra al salir.
         """
+        import shutil
+        import tempfile
+
+        from collectors.sp_cartera_detalle import iter_listados, parse_listado
+
         period_str = str(period).strip()
         if not period_str.isdigit() or len(period_str) != 6:
             raise ValueError(f"Período inválido: {period}. Debe ser YYYYMM (ej. 202601).")
-
-        cache_zip = self.raw_dir / f"cartera_{period_str}.zip"
-        xml_name = f"cartera_desagregada{period_str}.xml"
-        extracted_xml = self.raw_dir / xml_name
-
-        # 1. Descarga del ZIP si no está en caché
-        if not cache_zip.exists() and not extracted_xml.exists():
-            # Obtener primero la página HTML del periodo que tiene el enlace de descarga cifrado
-            html_url = f"{self.BASE_URL}/apps/loadCarteras/loadCarInv.php"
-            html_params = {
-                "menu": "sci",
-                "menuN1": "estfinfp",
-                "menuN2": "NOID",
-                "orden": "10",
-                "periodo": period_str,
-                "ext": ".php"
-            }
-            
-            logger.info(f"Consultando página de carteras para período {period_str}...")
-            r_html = httpx.get(html_url, params=html_params, headers=self.headers, timeout=30)
-            r_html.raise_for_status()
-
-            soup = BeautifulSoup(r_html.content, "html.parser")
-            
-            # Buscar el enlace que contiene "GetFile_v2.0.php"
-            zip_link_el = soup.find(lambda tag: tag.name == "a" and "GetFile_v2.0.php" in str(tag.get("href", "")))
-            if not zip_link_el:
-                # Comprobación adicional de si no está disponible aún
-                if "no se encuentra disponible" in r_html.text:
-                    logger.warning(f"La cartera de inversión para el período {period_str} aún no está disponible en la SP.")
-                    return []
-                raise ValueError(f"No se encontró el enlace de descarga ZIP en la página para el período {period_str}.")
-
-            zip_href = zip_link_el.get("href")
-            zip_url = f"{self.BASE_URL}{zip_href}" if zip_href.startswith("/") else zip_href
-
-            # Descargar el ZIP
-            logger.info(f"Descargando archivo ZIP de la cartera desde {zip_url}...")
-            req_headers = {
-                **self.headers,
-                "Referer": f"{html_url}?menu=sci&menuN1=estfinfp&menuN2=NOID&orden=10&periodo={period_str}&ext=.php"
-            }
-            
-            r_zip = httpx.get(zip_url, headers=req_headers, timeout=90)
-            r_zip.raise_for_status()
-
-            # Validación de integridad del ZIP
-            if not r_zip.content.startswith(b"PK\x03\x04"):
-                logger.warning(f"La cartera de inversión para el período {period_str} no tiene formato ZIP (puede no estar publicada aún por la SP).")
-                return []
-
-            if len(r_zip.content) < 5000:
-                raise ValueError("El archivo ZIP de la cartera descargado es demasiado pequeño, puede estar corrupto.")
-
-            with open(cache_zip, "wb") as f:
-                f.write(r_zip.content)
-            logger.info(f"Archivo ZIP de cartera guardado en: {cache_zip}")
-
-        # 2. Descomprimir el XML
-        if not extracted_xml.exists() and cache_zip.exists():
-            logger.info(f"Descomprimiendo {xml_name} desde el archivo ZIP...")
-            try:
-                with zipfile.ZipFile(cache_zip, "r") as z:
-                    # Encontrar el nombre real del archivo XML en el zip
-                    real_xml_name = next((name for name in z.namelist() if name.endswith(".xml")), None)
-                    if not real_xml_name:
-                        raise ValueError("No se encontró ningún archivo XML dentro del ZIP descargado.")
-                    
-                    z.extract(real_xml_name, path=self.raw_dir)
-                    # Renombrar si es necesario para mantener consistencia
-                    if real_xml_name != xml_name:
-                        os.rename(self.raw_dir / real_xml_name, extracted_xml)
-                
-                # Eliminar el archivo ZIP para ahorrar espacio (el XML es suficiente y evita superar 1GB de descargas)
-                os.remove(cache_zip)
-            except Exception as e:
-                logger.error(f"Error al extraer archivo XML del ZIP: {e}")
-                if cache_zip.exists():
-                    os.remove(cache_zip)
-                raise e
-
-        # 3. Parsear el XML
-        if extracted_xml.exists():
-            logger.info(f"Parseando archivo XML de la cartera: {extracted_xml}")
-            try:
-                with open(extracted_xml, "r", encoding="utf-8", errors="ignore") as f:
-                    xml_content = f.read()
-                
-                # Comprobación de integridad del XML
-                if "<constitucion_cartera_desagregada" not in xml_content:
-                    raise ValueError("El XML no tiene la estructura correcta de constitucion_cartera_desagregada.")
-
-                return self._parse_portfolio_xml(xml_content, period_str)
-            except Exception as e:
-                logger.error(f"Error al parsear el XML de la cartera {extracted_xml}: {e}")
-                raise e
-        else:
-            logger.warning(f"No se encontró el XML extraído de la cartera para {period_str}")
-            return []
+        tmp = Path(tempfile.mkdtemp(prefix="sp_cartera_"))
+        try:
+            zp = self._download_portfolio_zip(period_str, tmp)
+            if zp is None:
+                return [], []
+            with zipfile.ZipFile(zp) as z:
+                xml_name = next((n for n in z.namelist() if n.endswith(".xml")), None)
+                if not xml_name:
+                    raise ValueError("No se encontró ningún archivo XML dentro del ZIP descargado.")
+                period_val = f"{period_str[:4]}-{period_str[4:]}"
+                records, detalle = [], []
+                with z.open(xml_name) as f:
+                    for numero, el in iter_listados(f):
+                        if numero == "periodo":
+                            period_val = el or period_val
+                            continue
+                        if numero == "1":
+                            records = self._parse_listado1(el, period_val)
+                        if tablas is None or tablas:
+                            detalle += parse_listado(el, int(period_val.replace("-", "")), tablas)
+            logger.info(f"Cartera SP {period_val}: {len(records)} filas de composición, "
+                        f"{len(detalle)} de detalle")
+            return records, detalle
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
 
     def _parse_portfolio_xml(self, xml_content: str, period_fallback: str) -> list[dict]:
         """Parsea la distribución de activos desde el XML desagregado mensual (Listado 1)."""
@@ -345,10 +315,27 @@ class SPPensionCollector:
         # Obtener el listado número 1 (Diversificación de Activos)
         listados = find_all_tags(root, "listado")
         listado_1 = next((l for l in listados if l.get("numero") == "1"), None)
-        
+
         if listado_1 is None:
             logger.warning("No se encontró el 'listado numero=1' en el XML de la cartera. Retornando vacío.")
             return []
+        return self._parse_listado1(listado_1, period_val)
+
+    def _parse_listado1(self, listado_1, period_val: str) -> list[dict]:
+        """Composición por instrumento (cuadro 1) desde un elemento <listado numero="1">."""
+        ns = {}
+        if '}' in listado_1.tag:
+            ns['sp'] = listado_1.tag.split('}')[0].strip('{')
+
+        def find_tag(element, tag_name):
+            if 'sp' in ns:
+                return element.find(f".//sp:{tag_name}", namespaces=ns)
+            return element.find(f".//{tag_name}")
+
+        def find_all_tags(element, tag_name):
+            if 'sp' in ns:
+                return element.findall(f".//sp:{tag_name}", namespaces=ns)
+            return element.findall(f".//{tag_name}")
 
         records = []
         tipofondos = find_all_tags(listado_1, "tipofondo")

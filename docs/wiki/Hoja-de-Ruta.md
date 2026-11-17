@@ -45,7 +45,8 @@ Pendiente que requiere decisión o curaduría humana:
   descarga de la Circular 1.835 que salta el CAPTCHA).
 - [ ] **`config/proveedores.yaml`**: URL verificada de cada AGF y AFP (sin eso no hay botón
   "ir al proveedor").
-- [ ] **RUT de las 7 AFP, China Construction Bank y Bank of China** en `config/entidades.yaml`.
+- [x] **RUT de las 7 AFP** en `config/entidades.yaml` (17-nov, desde el XML de la cartera desagregada de la SP).
+- [ ] **RUT de China Construction Bank y Bank of China** en `config/entidades.yaml`.
 - [ ] **Factor de reparto de dividendos** de fondos mutuos: no hay fuente identificada; los
   fondos afectados se marcan en su ficha y muestran la cifra oficial.
 - [ ] **Fondos de inversión públicos (D7), APV y Cuenta 2 (D8), reclamos (D11)**: requieren

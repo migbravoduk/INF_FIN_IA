@@ -594,10 +594,10 @@ def fetch_sp_cartera(db, st):
     from collectors.sp_pensions import SPPensionCollector
     started, c, total = datetime.now(), SPPensionCollector(), 0
     for p in st.params["periods"]:
-        recs = c.fetch_portfolio(p)
-        if not recs:
+        n_comp, n_det = db.ingest_sp_cartera(p, c)   # composición + detalle (emisores, swaps…)
+        if not n_comp:
             break
-        total += db.insert_sp_portfolio_holdings(f"{p // 100}-{p % 100:02d}", recs)
+        total += n_comp + n_det
     return _log(db, f"sp_cartera:{st.params['periods'][-1]}", "sp", total, started)
 
 

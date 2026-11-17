@@ -276,6 +276,52 @@ class SpRepo:
             logger.error(f"Error al insertar cartera SP para el período {period} en DuckDB", exc_info=True)
             raise e
 
+    def insert_sp_cartera_detalle(self, period: int, rows: list[tuple], tablas=None) -> int:
+        """
+        Detalle de la cartera desagregada (collectors/sp_cartera_detalle.py) con delete-then-insert
+        por período y tabla. `tablas`: las que se reemplazan (None = las presentes en `rows`).
+        """
+        import pandas as _pd
+        from collectors.sp_cartera_detalle import COLUMNAS
+        df = _pd.DataFrame(rows, columns=COLUMNAS)
+        tablas = sorted(set(tablas) if tablas is not None else set(df["tabla"]))
+        if not tablas:
+            return 0
+        self.conn.execute("BEGIN TRANSACTION")
+        try:
+            self.conn.execute(f"DELETE FROM sp_cartera_detalle WHERE period = ? "
+                              f"AND tabla IN ({','.join('?' * len(tablas))})", [int(period), *tablas])
+            if len(df):
+                self.conn.register("_sp_det", df)
+                self.conn.execute(f"INSERT INTO sp_cartera_detalle ({', '.join(COLUMNAS)}) "
+                                  f"SELECT {', '.join(COLUMNAS)} FROM _sp_det")
+                self.conn.unregister("_sp_det")
+            self.conn.execute("COMMIT")
+        except Exception:
+            self.conn.execute("ROLLBACK")
+            raise
+        return len(df)
+
+    def ingest_sp_cartera(self, period: int, collector=None, tablas=None) -> tuple[int, int]:
+        """
+        Baja e ingesta la cartera desagregada de la SP de un período YYYYMM: composición
+        (cuadro 1 → sp_portfolio_holdings) y detalle (→ sp_cartera_detalle) en una sola lectura.
+        `tablas`: None = todas las del detalle; set() = solo composición. Devuelve (n_comp, n_det).
+        """
+        if collector is None:
+            from collectors.sp_pensions import SPPensionCollector
+            collector = SPPensionCollector()
+        recs, det = collector.fetch_portfolio_full(int(period), tablas=tablas)
+        if not recs:
+            return 0, 0
+        n_comp = self.insert_sp_portfolio_holdings(f"{str(period)[:4]}-{str(period)[4:]}", recs)
+        n_det = self.insert_sp_cartera_detalle(int(period), det) if det else 0
+        return n_comp, n_det
+
+    def get_sp_detalle_periods(self, tabla: Optional[str] = None) -> list[int]:
+        sql = "SELECT DISTINCT period FROM sp_cartera_detalle" + (" WHERE tabla = ?" if tabla else "")
+        return sorted(r[0] for r in self.conn.execute(sql, [tabla] if tabla else []).fetchall())
+
     def query_sp_instrument_prices(
         self,
         instrument_id: Optional[str] = None,

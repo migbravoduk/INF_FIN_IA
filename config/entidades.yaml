@@ -46,8 +46,14 @@ emisores:
   # PENDIENTE: 77844703 (bonos BTBD… y depósitos FNTBD…). Parece un banco nuevo, pero no está
   # en cmf_bank_statements; confirmar en el registro de la CMF antes de nombrarlo.
 
-# AFP: la SP las identifica por nombre (`afp_name`), sin RUT.
-# PENDIENTE: ninguna fuente cargada trae el RUT de las AFP. Agregarlo desde la ficha de
-# cada AFP en spensiones.cl, con este formato:
-#   HABITAT: {rut: "<sin DV>", nombre: "AFP Habitat S.A."}
-afp: {}
+# AFP: los valores cuota de la SP las identifican por nombre (`afp_name`), sin RUT.
+# Evidencia (2026-11-17): la cartera desagregada de la SP (XML mensual, collectors/sp_cartera_detalle)
+# trae <afp><rut><numero>…</numero><dv>…</dv></rut><nombre>…</nombre> en cada cuadro por AFP.
+afp:
+  CAPITAL: {rut: "98000000", nombre: "AFP Capital S.A."}     # DV 1
+  CUPRUM: {rut: "76240079", nombre: "AFP Cuprum S.A."}       # DV 0
+  HABITAT: {rut: "98000100", nombre: "AFP Habitat S.A."}     # DV 8
+  MODELO: {rut: "76762250", nombre: "AFP Modelo S.A."}       # DV 3
+  PLANVITAL: {rut: "98001200", nombre: "AFP PlanVital S.A."} # DV K
+  PROVIDA: {rut: "76265736", nombre: "AFP ProVida S.A."}     # DV 8
+  UNO: {rut: "76960424", nombre: "AFP Uno S.A."}             # DV 3

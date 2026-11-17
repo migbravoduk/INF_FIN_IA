@@ -1,7 +1,7 @@
 {#
   partials/institucional_emisor_panel.html — Tenencias institucionales en un emisor.
   h = db.cross.issuer_holdings(): {rut, nombre, razon, tipo_label, periodos,
-        seguros|ffmm: {serie:[{period, mm, pos, tenedores}], tenedores:[...], ult, prev, hace12, sin_fx}}
+        seguros|ffmm|afp: {serie:[{period, mm, pos, tenedores}], tenedores:[...], ult, prev, hace12, sin_fx}}
   Montos en MM$ en los datos; se muestran en MMM$ (miles de millones).
 #}
 {% macro per(p) %}{{ (p|string)[4:] }}/{{ (p|string)[:4] }}{% endmacro %}
@@ -60,9 +60,9 @@
 
 {% if not h %}
 <p class="loading">No reconozco {{ '«' ~ q ~ '»' if q else 'ese emisor' }}. Escribe un RUT o elige un nombre de la lista.</p>
-{% elif not h.seguros and not h.ffmm %}
-<p class="loading">RUT {{ h.rut }}{% if h.nombre %} ({{ h.nombre }}){% endif %}: sin posiciones de seguros ni de fondos
-mutuos en los últimos {{ h.periodos|length }} meses.</p>
+{% elif not h.seguros and not h.ffmm and not h.afp %}
+<p class="loading">RUT {{ h.rut }}{% if h.nombre %} ({{ h.nombre }}){% endif %}: sin posiciones de seguros, fondos
+mutuos ni AFP en los últimos {{ h.periodos|length }} meses.</p>
 {% else %}
 
 <div class="eeff-meta" style="margin:1rem 0">
@@ -74,6 +74,7 @@ mutuos en los últimos {{ h.periodos|length }} meses.</p>
 <div class="chart-grid">
     {% if h.seguros %}{{ bloque(h.seguros, "Compañías de seguros · renta fija", "MMM$ valor par", "em-seg-chart", "compañías") }}{% endif %}
     {% if h.ffmm %}{{ bloque(h.ffmm, "Fondos mutuos · cartera nacional", "MMM$ valor de mercado", "em-ffm-chart", "fondos") }}{% endif %}
+    {% if h.afp %}{{ bloque(h.afp, "Fondos de pensiones · AFP", "MMM$ valor de mercado", "em-afp-chart", "AFP") }}{% endif %}
 </div>
 
 {% if h.seguros %}
@@ -84,6 +85,10 @@ mutuos en los últimos {{ h.periodos|length }} meses.</p>
 <h2 style="font-size:1rem;color:var(--muted);margin-top:2rem">Fondos mutuos con posiciones</h2>
 {{ tabla(h.ffmm, "Fondo") }}
 {% endif %}
+{% if h.afp %}
+<h2 style="font-size:1rem;color:var(--muted);margin-top:2rem">AFP con posiciones (fondos A–E sumados)</h2>
+{{ tabla(h.afp, "AFP") }}
+{% endif %}
 
 <p class="lead" style="margin-top:1rem">
     <strong>Cómo leer los montos.</strong> Seguros: nominal vigente de la renta fija (archivo B.1 de la
@@ -93,7 +98,10 @@ mutuos en los últimos {{ h.periodos|length }} meses.</p>
     cuentan como posiciones pero no se suman.{% endif %}
     Fondos mutuos: valorización de mercado al cierre informada por cada fondo (cartera nacional; la
     extranjera no trae RUT); fondos en dólares pasados a pesos con el dólar observado.
-    Los dos montos no son sumables entre sí: miden cosas distintas y un mismo bono puede estar en
+    AFP: cartera desagregada de la Superintendencia de Pensiones (valorización de mercado, MM$),
+    que publica con ~4 meses de rezago y nombra al emisor sin RUT: se cruza por nombre
+    {%- if h.afp_glosas %} («{{ h.afp_glosas|join('», «') }}»){% endif %}.
+    Los montos no son sumables entre sí: miden cosas distintas y un mismo bono puede estar en
     ambas carteras.
 </p>
 
@@ -102,6 +110,7 @@ mutuos en los últimos {{ h.periodos|length }} meses.</p>
     var bloques = [
         {% if h.seguros %}{id: "em-seg-chart", serie: {{ h.seguros.serie | tojson }}, label: "valor par"},{% endif %}
         {% if h.ffmm %}{id: "em-ffm-chart", serie: {{ h.ffmm.serie | tojson }}, label: "valor de mercado"},{% endif %}
+        {% if h.afp %}{id: "em-afp-chart", serie: {{ h.afp.serie | tojson }}, label: "valor de mercado"},{% endif %}
     ];
     function etiqueta(p) { p = String(p); return p.slice(4) + "/" + p.slice(0, 4); }
     function fmt(v) { return v.toLocaleString("es-CL", {maximumFractionDigits: 1, minimumFractionDigits: 1}); }

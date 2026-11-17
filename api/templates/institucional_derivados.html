@@ -129,8 +129,61 @@ dólares a plazo; positivo = los compra. Los bancos son la contraparte de casi t
 </table>
 {% endif %}
 
-{# ============================ 4 · SEGUROS ============================ #}
-<h2 style="margin-top:2.5rem">4 · Compañías de seguros, contrato a contrato</h2>
+
+{# ============================ 4 · AFP POR ADMINISTRADORA (SP) ============================ #}
+<h2 style="margin-top:2.5rem">4 · Swaps y forwards por AFP, fondo y contraparte</h2>
+{% if sw %}
+<p class="lead">Superintendencia de Pensiones, cartera desagregada ({{ sw.ultimo }}; la SP publica con
+~4 meses de rezago, por eso llega antes el Banco Central). Swaps = <b>valorización</b> del contrato
+(MMUSD, con signo: negativo es pérdida no realizada del fondo), no el nocional. Al {{ sw.ultimo }}:
+{{ sw.total|es(0) }} MMUSD ({{ sw.ext|es(0) }} con contrapartes extranjeras, {{ sw.nac|es(0) }} nacionales).
+{% if sw.var12 %}Respecto de {{ sw.hace12 }} la valorización cambió {{ sw.var12.values()|sum|es(0) }} MMUSD.{% endif %}</p>
+<div class="chart-grid">
+    <div class="chart-block"><h4>Valorización de los swaps por AFP (MMUSD, desde {{ sw.desde }})</h4><div id="d-swafp" class="chart"></div></div>
+</div>
+<div class="table-scroll"><table class="eeff-table">
+    <thead><tr><th style="text-align:left">AFP ({{ sw.ultimo }}, MMUSD)</th>
+        {% for f in sw.fondos %}<th style="text-align:right">Fondo {{ f }}</th>{% endfor %}<th style="text-align:right">Total</th>
+        {% if sw.var12 %}<th style="text-align:right">Cambio 12 meses</th>{% endif %}</tr></thead>
+    <tbody>{% for r in sw.por_afp %}<tr><td style="text-align:left">{{ r.afp|title }}</td>
+        {% for f in sw.fondos %}<td style="text-align:right" class="{{ 'neg' if r.fondos[f] < 0 else 'pos' }}">{{ r.fondos[f]|es(0) }}</td>{% endfor %}
+        <td style="text-align:right"><b>{{ r.total|es(0) }}</b></td>
+        {% if sw.var12 %}<td style="text-align:right">{{ sw.var12.get(r.afp, 0)|es(0) }}</td>{% endif %}</tr>{% endfor %}
+    <tr><td style="text-align:left"><b>Sistema</b></td>{% for f in sw.fondos %}<td style="text-align:right"><b>{{ sw.tot_fondo[f]|es(0) }}</b></td>{% endfor %}
+        <td style="text-align:right"><b>{{ sw.total|es(0) }}</b></td>{% if sw.var12 %}<td></td>{% endif %}</tr></tbody>
+</table></div>
+<div class="chart-grid" style="margin-top:1rem">
+<div class="table-scroll"><table class="eeff-table">
+    <thead><tr><th style="text-align:left">Contraparte (mayores por valor absoluto)</th><th style="text-align:left">Origen</th>
+        <th style="text-align:right">Valorización (MMUSD)</th><th style="text-align:right">AFP con contratos</th></tr></thead>
+    <tbody>{% for c in sw.contrapartes %}<tr><td style="text-align:left">{{ c.contraparte|title }}</td><td style="text-align:left">{{ c.origen }}</td>
+        <td style="text-align:right" class="{{ 'neg' if c.valor < 0 else 'pos' }}">{{ c.valor|es(0) }}</td><td style="text-align:right">{{ c.afps }}</td></tr>{% endfor %}</tbody>
+</table></div>
+<div class="table-scroll"><table class="eeff-table">
+    <thead><tr><th style="text-align:left">Tipo de swap</th><th style="text-align:right">Valorización (MMUSD)</th></tr></thead>
+    <tbody>{% for t in sw.tipos %}<tr><td style="text-align:left">{{ t.origen }} · {{ t.tipo }}</td>
+        <td style="text-align:right" class="{{ 'neg' if t.valor < 0 else 'pos' }}">{{ t.valor|es(0) }}</td></tr>{% endfor %}</tbody>
+</table></div>
+</div>
+{% if fw %}
+<p class="lead" style="margin-top:1rem">Forwards dólar contra pesos ({{ fw.ultimo }}), unidades del contrato en MMUSD.
+Compra/venta según la última letra del código de la SP (C/V), validado contra el Banco Central: el neto
+del sistema ({{ fw.total.neto|es(0) }}) está en línea con el de la sección 3 para ese mes.</p>
+<div class="table-scroll"><table class="eeff-table">
+    <thead><tr><th style="text-align:left">AFP</th><th style="text-align:right">Compra USD</th><th style="text-align:right">Venta USD</th>
+        <th style="text-align:right">Neto</th><th style="text-align:right">con contraparte local</th><th style="text-align:right">con contraparte exterior</th></tr></thead>
+    <tbody>{% for r in fw.filas %}<tr><td style="text-align:left">{{ r.afp|title }}</td>
+        <td style="text-align:right">{{ r.compra|es(0) }}</td><td style="text-align:right">{{ r.venta|es(0) }}</td>
+        <td style="text-align:right"><b>{{ r.neto|es(0) }}</b></td><td style="text-align:right">{{ r.neto_local|es(0) }}</td>
+        <td style="text-align:right">{{ r.neto_exterior|es(0) }}</td></tr>{% endfor %}
+    <tr><td style="text-align:left"><b>Sistema</b></td><td style="text-align:right">{{ fw.total.compra|es(0) }}</td><td style="text-align:right">{{ fw.total.venta|es(0) }}</td>
+        <td style="text-align:right"><b>{{ fw.total.neto|es(0) }}</b></td><td style="text-align:right">{{ fw.total.neto_local|es(0) }}</td><td style="text-align:right">{{ fw.total.neto_exterior|es(0) }}</td></tr></tbody>
+</table></div>
+{% endif %}
+{% else %}<p class="loading">Sin cartera desagregada de la SP cargada (<code>main.py backfill-sp-detalle</code>).</p>{% endif %}
+
+{# ============================ 5 · SEGUROS ============================ #}
+<h2 style="margin-top:2.5rem">5 · Compañías de seguros, contrato a contrato</h2>
 {% if seg %}
 <p class="lead">CMF, Circular 1.835, archivo B.7 ({{ seg.ultimo }}). Posición en moneda extranjera:
 + pata larga, − pata corta, en USD equivalentes. El valor razonable cuadra con el total de derivados
@@ -160,7 +213,7 @@ precio implícito no calza con la UF o el dólar del cierre y queda fuera de las
 {% else %}<p class="loading">Aún sin datos del archivo B.7 (<code>main.py backfill-derivados-seguros</code>).</p>{% endif %}
 
 {# ============================ 5 · FONDOS MUTUOS ============================ #}
-<h2 style="margin-top:2.5rem">5 · Fondos mutuos, fondo por fondo</h2>
+<h2 style="margin-top:2.5rem">6 · Fondos mutuos, fondo por fondo</h2>
 {% if ffmm %}
 <p class="lead">CMF, cartera de fondos mutuos, archivos FUTU (forwards, swaps, futuros) y OPCI (opciones), {{ ffmm.ultimo }}:
 {{ ffmm.n_fondos }} fondos con derivados. Neto USD = compras − ventas de dólares a plazo (forwards y futuros).
@@ -192,7 +245,7 @@ posición y su contraria (forwards a ambos lados que se compensan).</p>
 <script>
 (function () {
     var M = {{ m | tojson }}, RET = {{ ret | tojson }}, SEC = {{ sec | tojson }}, DET = {{ det | tojson }},
-        SEG = {{ seg | tojson }}, FF = {{ ffmm | tojson }};
+        SEG = {{ seg | tojson }}, FF = {{ ffmm | tojson }}, SW = {{ sw | tojson }};
     var C = ["#38bdf8", "#fbbf24", "#a78bfa", "#4ade80", "#f87171", "#fb923c"];
     var X0 = M.meses[0], X1 = M.meses[M.meses.length - 1];
     function base(extra) {
@@ -261,6 +314,12 @@ posición y su contraria (forwards a ambos lados que se compensan).</p>
                 base({ showlegend: false, xaxis: { gridcolor: "rgba(0,0,0,0)", type: "category" } }), { displayModeBar: false, responsive: true });
             line("d-cob", DET.cobertura.meses, [{ y: DET.cobertura.pct, name: "cobertura", ht: "%{y:.1f}%" }],
                  base({ showlegend: false, yaxis: { gridcolor: "#334155", ticksuffix: "%", rangemode: "tozero" } }));
+        }
+        if (SW && SW.serie) {
+            var afps = Object.keys(SW.serie.afp), PAL = ["#38bdf8", "#fbbf24", "#a78bfa", "#4ade80", "#f87171", "#fb923c", "#94a3b8"];
+            line("d-swafp", SW.serie.meses, afps.map(function (a, i) {
+                return { y: SW.serie.afp[a], name: a.charAt(0) + a.slice(1).toLowerCase(), color: PAL[i % PAL.length], ht: "%{y:,.0f}" }; }),
+                 base({ xaxis: { gridcolor: "rgba(0,0,0,0)" }, yaxis: { gridcolor: "#334155", zerolinecolor: "#e2e8f0" } }));
         }
         if (SEG && SEG.serie) {
             line("d-seg", SEG.serie.meses, [{ y: SEG.serie.neto_me_usd, name: "B.7 (suma de compañías)" },

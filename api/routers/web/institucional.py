@@ -67,7 +67,9 @@ def inversion_institucional_derivados(request: Request, db: Database = Depends(g
     import db.derivados as D
     from db.derivados_ffmm import resumen_ffmm
     from db.derivados_seguros import resumen_seguros
+    from db.derivados_afp import forwards_usd_afp, swaps_afp
     return templates.TemplateResponse(request, "institucional_derivados.html", {
+        "sw": swaps_afp(db), "fw": forwards_usd_afp(db),
         "mon": D.monitor_afp(db), "ident": D.identidades(db),
         "ret": D.retornos_afp(db, desde="2025-01-01"),
         "sec": D.sectores_usd(db), "det": D.detalle_afp(db),

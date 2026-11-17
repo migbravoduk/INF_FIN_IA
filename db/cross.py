@@ -152,6 +152,20 @@ def issuer_holdings(db, rut: str, n_periods: int = 13) -> dict:
         GROUP BY 1, 2 ORDER BY 1, 2
     """, [rut]).fetchdf()
 
+    # --- AFP: por AFP y mes (cartera desagregada SP, por nombre de emisor) -------------------
+    glosas = [g for g, r in mapa_emisores_sp(db).items() if r == rut]
+    afp = None
+    if glosas:
+        import pandas as _pd
+        afp = db.conn.execute(f"""
+            SELECT period, afp AS tenedor, string_agg(DISTINCT fondo, ', ' ORDER BY fondo) AS fondos,
+                   COUNT(*) AS pos, SUM(valor) AS mm
+            FROM sp_cartera_detalle
+            WHERE tabla = 'emisor_nac' AND columna = 'total' AND metrica = 'monto_pesos'
+              AND afp <> 'TOTAL' AND period IN ({lista})
+              AND glosa IN ({','.join('?' * len(glosas))})
+            GROUP BY 1, 2 ORDER BY 1, 2""", glosas).fetchdf()
+
     from api.insurer_glossary import clean_company_name
     nombres_cias = dict(db.conn.execute("""
         SELECT rut, arg_max(company_name, period) FROM cmf_insurer_portfolio_control
@@ -184,6 +198,8 @@ def issuer_holdings(db, rut: str, n_periods: int = 13) -> dict:
             if etiqueta == "seguros":
                 nom = clean_company_name(nombres_cias.get(t, ""), str(t)) or f"RUT {t}"
                 sub = "vida" if meta.ramo == "vida" else "generales"
+            elif etiqueta == "afp":
+                nom, sub = f"AFP {str(t).title()}", f"fondos {meta.fondos}"
             else:
                 nom = str(meta.fondo).strip().title()
                 agf = " ".join(str(meta.agf).upper().split()) if meta.agf == meta.agf and meta.agf else ""
@@ -202,7 +218,8 @@ def issuer_holdings(db, rut: str, n_periods: int = 13) -> dict:
 
     return {"rut": rut, "nombre": nombre, "razon": razon, "tipo": tipo,
             "tipo_label": TIPO_LABEL.get(tipo or "", tipo),
-            "periodos": periodos, "seguros": bloque(seg, "seguros"), "ffmm": bloque(ffm, "ffmm")}
+            "periodos": periodos, "seguros": bloque(seg, "seguros"), "ffmm": bloque(ffm, "ffmm"),
+            "afp": bloque(afp, "afp") if afp is not None else None, "afp_glosas": glosas}
 
 
 def common_issuers(db, limit: int = 40) -> dict:
@@ -261,3 +278,57 @@ def common_issuers(db, limit: int = 40) -> dict:
         d["mm_total"] = (d["mm_seg"] or 0) + (d["mm_ffm"] or 0)
         out.append(d)
     return {"rows": out, "per_seg": per_seg, "per_ffm": per_ffm}
+
+
+# ---------------------------------------------------------------------------------------
+# AFP: la cartera desagregada de la SP (sp_cartera_detalle, tabla 'emisor_nac') identifica al
+# emisor solo por NOMBRE. Se cruza con dim_entidad / dim_entidad_alias por nombre normalizado,
+# y config/sp_emisores.yaml fija a mano los que no calzan (Fisco, Banco Central, …).
+# ---------------------------------------------------------------------------------------
+_ABREV = {"CIA": "COMPANIA", "SOC": "SOCIEDAD", "ADM": "ADMINISTRADORA", "GRAL": "GENERAL",
+          "ASIG": "ASIGNACION", "FAM": "FAMILIAR", "CONC": "CONCESIONARIA"}
+_SUFIJOS = {"SA", "S", "A", "SPA", "LTDA", "LIMITADA", "Y", "CIA"}
+_MAPA_SP: dict = {}
+
+
+def _norm_emisor(nombre: str) -> str:
+    import re
+    import unicodedata
+    s = unicodedata.normalize("NFKD", str(nombre or ""))
+    s = "".join(c for c in s if not unicodedata.combining(c)).upper()
+    s = re.sub(r"[^A-Z0-9 ]", " ", s.replace("Ñ", "N"))
+    tok = [_ABREV.get(t, t) for t in s.split()]
+    while tok and tok[-1] in _SUFIJOS:
+        tok.pop()
+    return " ".join(tok)
+
+
+def mapa_emisores_sp(db) -> dict[str, str]:
+    """{glosa de emisor en la SP: rut} (cache por período más reciente)."""
+    clave = db.conn.execute("SELECT MAX(period) FROM sp_cartera_detalle WHERE tabla = 'emisor_nac'").fetchone()[0]
+    if _MAPA_SP.get("clave") == clave:
+        return _MAPA_SP["mapa"]
+    import yaml
+    from pathlib import Path
+    nombres = db.conn.execute("""
+        SELECT rut, nombre_canonico FROM dim_entidad WHERE nombre_canonico IS NOT NULL
+        UNION SELECT rut, nombre_corto FROM dim_entidad WHERE nombre_corto IS NOT NULL
+        UNION SELECT rut, nombre FROM dim_entidad_alias""").fetchall()
+    por_nombre: dict[str, set] = {}
+    for rut, nom in nombres:
+        por_nombre.setdefault(_norm_emisor(nom), set()).add(str(rut))
+    manual = {}
+    f = Path("config/sp_emisores.yaml")
+    if f.exists():
+        manual = {_norm_emisor(k): str(v) for k, v in (yaml.safe_load(f.read_text(encoding="utf-8")) or {}).items()}
+    glosas = [r[0] for r in db.conn.execute(
+        "SELECT DISTINCT glosa FROM sp_cartera_detalle WHERE tabla = 'emisor_nac'").fetchall()]
+    mapa = {}
+    for g in glosas:
+        n = _norm_emisor(g)
+        if n in manual:
+            mapa[g] = manual[n]
+        elif len(por_nombre.get(n, ())) == 1:      # nombre ambiguo (dos RUT): no se asigna
+            mapa[g] = next(iter(por_nombre[n]))
+    _MAPA_SP.update(clave=clave, mapa=mapa)
+    return mapa

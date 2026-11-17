@@ -382,12 +382,12 @@ def manual_sp_cartera():
     
     try:
         console.print(f"[bold yellow]Descargando cartera para período {period}...[/]")
-        recs = collector.fetch_portfolio(period)
-        if recs:
-            with Database() as db:
-                db_period = f"{str(period)[:4]}-{str(period)[4:]}"
-                inserted = db.insert_sp_portfolio_holdings(db_period, recs)
-            console.print(f"[bold green]✓ Ingesta de cartera finalizada. {inserted:,} activos insertados para {db_period}.[/]")
+        with Database() as db:
+            inserted, n_det = db.ingest_sp_cartera(period, collector)
+        db_period = f"{str(period)[:4]}-{str(period)[4:]}"
+        if inserted:
+            console.print(f"[bold green]✓ Ingesta de cartera finalizada. {inserted:,} activos y "
+                          f"{n_det:,} filas de detalle para {db_period}.[/]")
         else:
             console.print("[yellow]No se obtuvieron registros de cartera para ese período.[/]")
     except Exception as e:
