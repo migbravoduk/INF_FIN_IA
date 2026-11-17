@@ -306,6 +306,89 @@ def parse_zip_fixed_income(zip_path: str | Path) -> list[dict]:
     return out
 
 
+# ------------------------------------------------------------------
+# B.7 · Inversiones en instrumentos derivados y pactos (prefijo 'p')
+# ------------------------------------------------------------------
+# Un tipo de registro por instrumento: 2 opciones, 3 forwards, 4 futuros, 5 swaps, 6 pactos,
+# 7 cuadratura. Registro de 587 chars. El anexo técnico publicado NO calza campo a campo con
+# los archivos (como en B.1): las posiciones de abajo se RECONCILIARON con los datos de
+# 202609 vida (5.462 contratos):
+#   - Precio implícito de cada pata = valor en M$ × 1.000 / unidades: da exacto la UF
+#     (41.057,2), el dólar (972,6), el euro (1.102,72) y la libra (1.290,26) del cierre.
+#   - Valor razonable de forwards + swaps + opciones = total "productos derivados" del B.8
+#     (código M10) EXACTO en 13 de 15 compañías; las otras 2 difieren 1–4% (tienen futuros,
+#     cuyo valor no se toma). Los pactos (tipo 6) van al código M20 y no se cargan aquí.
+# Encabezado común (tipos 3 y 5, OBJETIVO X(05)): 164 chars. Opciones y futuros usan
+# OBJETIVO X(03): su encabezado mide 162.
+_B7_HEADER = [("objetivo", 1, 5), ("tipo_operacion", 6, 10), ("tipo_contrato", 16, 2),
+              ("fecha_operacion", 31, 8), ("fecha_vencimiento", 39, 8),
+              ("rut_contraparte", 47, 9), ("contraparte", 77, 60), ("nacionalidad", 137, 2),
+              ("tipo_contraparte", 141, 2)]
+_B7_TIPO = {"2": "opción", "3": "forward", "4": "futuro", "5": "swap"}
+_SIGNED = re.compile(r"[+-]\d{13}")
+
+
+def _b7_record(line: str) -> dict | None:
+    k = line[:1]
+    if k not in _B7_TIPO:
+        return None
+    off = 0 if k in "35" else -2           # opciones y futuros: OBJETIVO de 3, no de 5
+    rec = {"tipo": _B7_TIPO[k]}
+    for name, start, width in _B7_HEADER:
+        s = start if name in ("objetivo",) else start + off
+        w = width + (off if name == "objetivo" else 0)
+        rec[name] = line[s:s + w].strip() or None
+    rec["rut_contraparte"] = (rec["rut_contraparte"] or "").lstrip("0") or None
+    t = line[164 + off:]
+    nums = [int(x) for x in _SIGNED.findall(t)]
+    num = lambda a, b, d: (int(t[a:b]) / d) if t[a:b].strip().isdigit() else None
+    if k == "3":
+        rec.update(moneda_larga=t[65:95].strip() or None, moneda_corta=t[95:125].strip() or None,
+                   unidades_larga=num(125, 141, 1e3), unidades_corta=num(141, 157, 1e3),
+                   nocional_larga_m=num(157, 170, 1), nocional_corta_m=num(170, 183, 1),
+                   precio=num(189, 204, 1e5), valor_razonable_m=nums[1] if len(nums) > 1 else None)
+    elif k == "5":
+        rec.update(moneda_larga=t[58:64].strip() or None, moneda_corta=t[64:70].strip() or None,
+                   nocional_larga_m=num(0, 16, 1e3), nocional_corta_m=num(16, 32, 1e6),
+                   unidades_larga=num(32, 45, 1e6), unidades_corta=num(45, 58, 1e3),
+                   tasa_larga=t[70:100].strip() or None, tasa_corta=t[100:130].strip() or None,
+                   valor_razonable_m=nums[0] if nums else None)
+    elif k == "2":
+        rec.update(moneda_larga=t[0:30].strip() or None, moneda_corta=t[30:60].strip() or None,
+                   valor_razonable_m=nums[0] if nums else None)
+    else:  # futuros: subyacente sí, valor no reconciliado
+        rec.update(moneda_larga=t[65:95].strip() or None, moneda_corta=t[95:125].strip() or None)
+    return rec
+
+
+def parse_zip_derivatives(zip_path: str | Path) -> list[dict]:
+    """Archivo B.7 de todas las compañías de un ZIP mensual: una fila por contrato derivado."""
+    path = Path(zip_path)
+    m = _ZIP_RE.match(path.name)
+    if not m:
+        raise ValueError(f"Nombre de ZIP inesperado: {path.name}")
+    period, insurance_type = int(m.group(1)), _TIPO_ENTIDAD[m.group(2).lower()]
+    out: list[dict] = []
+    with zipfile.ZipFile(path) as z:
+        for fname in sorted(_type_files(z.namelist(), "p", m.group(2).lower())):
+            rut = Path(fname).name.split(".", 1)[-1].strip().lstrip("0")
+            try:
+                lines = z.read(fname).decode("latin-1").splitlines()
+            except Exception as e:
+                logger.error(f"{path.name}/{fname}: no se pudo leer ({e}).")
+                continue
+            for line in lines:
+                try:
+                    rec = _b7_record(line)
+                except Exception as e:  # registro con formato inesperado: se omite y se avisa
+                    logger.warning(f"{fname}: registro B.7 omitido ({e}).")
+                    continue
+                if rec:
+                    out.append({"insurance_type": insurance_type, "period": period, "rut": rut, **rec})
+    logger.info(f"{path.name}: {len(out)} contratos derivados ({insurance_type} {period}).")
+    return out
+
+
 def _tipoentidad(insurance_type: str) -> str:
     code = _TIPOENTIDAD.get(insurance_type)
     if not code:

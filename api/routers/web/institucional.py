@@ -61,6 +61,21 @@ def inversion_institucional_emisor_panel(request: Request, rut: str = Query(""),
                                       {"h": h, "q": rut})
 
 
+@router.get("/inversion-institucional/derivados")
+def inversion_institucional_derivados(request: Request, db: Database = Depends(get_db)):
+    """Monitor de posiciones institucionales en derivados (docs/PLAN_DERIVADOS.md)."""
+    import db.derivados as D
+    from db.derivados_ffmm import resumen_ffmm
+    from db.derivados_seguros import resumen_seguros
+    return templates.TemplateResponse(request, "institucional_derivados.html", {
+        "mon": D.monitor_afp(db), "ident": D.identidades(db),
+        "ret": D.retornos_afp(db, desde="2025-01-01"),
+        "sec": D.sectores_usd(db), "det": D.detalle_afp(db),
+        "ffmm": resumen_ffmm(db), "seg": resumen_seguros(db),
+        "umbral": {"k": D.ALERTA_K, "hist": D.ALERTA_MIN_HIST, "signo": D.ALERTA_SIGNO_MIN},
+    })
+
+
 @router.get("/inversion-institucional")
 def inversion_institucional(request: Request):
     """Hub de inversionistas institucionales: AFP y compañías de seguros."""

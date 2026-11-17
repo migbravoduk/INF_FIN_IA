@@ -525,6 +525,24 @@ Fuentes (BCCh BDE API · CMF XBRL plano · CMF/SBIF API · SP scraping)
   RUT, luego nombre): "Otros" bajó de 199 a 18 empresas. El modelo estructural sigue con la de
   nombre (`models.structural.SECTOR_FUENTE = "nombre"`) porque la curada perdió el A/B
   (`backtest --sectores`, 17-nov: 45% de pares, z −3,8/−4,9). No unificar sin re-medir.
+- **Derivados por sector (BCCh `F099.DER`)**: 73 series en el catálogo, categoría
+  `derivados_sector` (monitor en `/inversion-institucional/derivados`, `db/derivados.py`). Los
+  nocionales de AFP son reales aunque superen varias veces los activos (US$ 873 mil millones
+  de total con US$ 232 mil millones de activos): las identidades cuadran exactas y se testean.
+  "Compra de tasa variable" = recibe variable; neto negativo = recibe fija (pierde si suben
+  las tasas). Las fechas mensuales del BCCh vienen como el 1° del mes = saldo a fin de ese mes.
+  El catálogo de la BDE se lista con `SearchSeries` por frecuencia (la respuesta viene en
+  latin-1, no UTF-8). En YAML, los títulos BDE traen `\`: no ponerlos entre comillas dobles.
+- **Cartera FFMM, derivados (FUTU/OPCI)**: `v_mutual_fund_derivatives` (migración 011).
+  `FFM_6040500` = monto comprometido y `FFM_6030800` = valor de la opción, en miles de la
+  moneda del fondo. Subyacente rotulado sin norma (`PROM`/`DOLAR`/`USD`/`US$` = dólar).
+- **Seguros B.7 (derivados, archivo `p` del ZIP 1.835)**: tipos de registro 2 opción, 3
+  forward, 4 futuro, 5 swap, 6 pacto. El anexo no calza con los archivos: posiciones
+  reconciliadas en `collectors/seguros_cartera._b7_record` (precio implícito de cada pata =
+  UF/dólar/euro del cierre; valor razonable = B.8 M10). En swaps el nocional de la pata larga
+  viene en M$ y el de la corta en pesos (escalas distintas). Objetivo `1512` en swaps: código
+  no documentado en el anexo. Historia con `main.py backfill-derivados-seguros` (baja, lee
+  solo B.7 y borra cada ZIP); el catch-up lo carga junto con B.1 y B.8.
 - **Emisores sin EEFF curados en `config/entidades.yaml` › `emisores`** (Fisco/Tesorería
   60805000, Banco Central 97029000, Coopeuch, RUT antiguo de Itaú), con el nemotécnico como
   evidencia. 77844703 (BTBD/FNTBD) queda pendiente.

@@ -718,7 +718,52 @@ def _ingest_cartera_zip(db, zp):
         emis = len({r["rut_emisor"] for r in fi if r["rut_emisor"]})
         console.print(f"    [green]✓ Renta fija: {n_fi:,} instrumentos · "
                       f"{emis} emisores distintos.[/]")
+    from collectors.seguros_cartera import parse_zip_derivatives
+    der = parse_zip_derivatives(zp)
+    if der:
+        n_der = db.insert_insurer_derivatives(der[0]["period"], der[0]["insurance_type"], der)
+        console.print(f"    [green]✓ Derivados (B.7): {n_der:,} contratos.[/]")
     return n_ctrl, n_fi
+
+
+@cli.command(name="backfill-derivados-seguros")
+@click.option("--since", type=int, default=202201, show_default=True, help="Primer período AAAAMM")
+@click.option("--until", type=int, default=None, help="Último período AAAAMM (default: el último cargado)")
+def backfill_derivados_seguros(since, until):
+    """Carga el archivo B.7 (derivados) de los ZIP históricos de cartera de seguros.
+
+    Baja cada ZIP a una carpeta temporal, lee SOLO el B.7 y lo borra (regla de disco). Al
+    final compara el valor razonable con el total de derivados del B.8 (código M10).
+    """
+    import shutil, tempfile
+    from collectors.seguros_cartera import download_cartera, parse_zip_derivatives
+    tmp = Path(tempfile.mkdtemp(prefix="b7_"))
+    try:
+        with Database() as db:
+            for itype in ("vida", "generales"):
+                periods = [p for p in db.get_insurer_portfolio_periods(insurance_type=itype)
+                           if p >= since and (until is None or p <= until)]
+                for p in sorted(periods):
+                    zp = download_cartera(p, itype, raw_dir=str(tmp))
+                    if not zp:
+                        console.print(f"  [yellow]⚠ {itype} {p}: sin ZIP[/]")
+                        continue
+                    der = parse_zip_derivatives(zp)
+                    n = db.insert_insurer_derivatives(p, itype, der) if der else 0
+                    zp.unlink(missing_ok=True)
+                    console.print(f"  {itype} {p}: {n:,} contratos")
+            rec = db.conn.execute("""
+                WITH d AS (SELECT insurance_type, period, rut, SUM(valor_razonable_m) vr
+                           FROM cmf_insurer_derivatives WHERE tipo IN ('forward', 'swap', 'opción')
+                           GROUP BY ALL),
+                     c AS (SELECT insurance_type, period, rut, SUM(valor_final) m10
+                           FROM cmf_insurer_portfolio_control WHERE investment_code = 'M10' GROUP BY ALL)
+                SELECT COUNT(*), COUNT(*) FILTER (WHERE abs(vr - m10) <= greatest(1, abs(m10) * 0.001))
+                FROM d JOIN c USING (insurance_type, period, rut)""").fetchone()
+            console.print(f"[green]✓ Reconciliación B.7 vs B.8 (M10):[/] {rec[1]} de {rec[0]} "
+                          f"compañía-mes cuadran al 0,1%.")
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
 
 
 @cli.command(name="fetch-cartera-seguros")

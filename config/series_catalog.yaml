@@ -776,3 +776,607 @@ bcentral:
     unit: porcentaje_anual
     description: Tasa mercado secundario de depósitos bancarios en bolsa, UF 1 año
     publish_lag_days: 3   # se publica al día hábil siguiente
+
+  # --- Derivados por sector (BCCh, F099.DER): montos vigentes y transados, mensual ---
+  # Monitor de posiciones institucionales (docs/PLAN_DERIVADOS.md). Generado desde el catálogo
+  # BDE (SearchSeries, 17-nov-2026). Neto = comprador − vendedor. Desde ene-2022; rezago ~2 meses.
+  # Unidades: millones de USD salvo swap cámara (miles de millones de $) y UF-CLP (miles de UF).
+  - id: F099.DER.STO.Z.42.Z.Z.TOT.Z.MMUSD.Z.Z.Z.0.M
+    name: "Derivados AFP · todos · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente total, total · Resumen derivados montos vigentes de fondos de pensiones · BCCh · Mensual · Millones de dólares usa · Stock"
+
+  - id: F099.DER.STO.Z.42.Z.Z.TOT.Z.MMUSD.IRT.Z.Z.0.M
+    name: "Derivados AFP · tasa (total) · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Tasa de interés · Monto vigente total, total, resumen derivados montos vigentes de fondos de pensiones · BCCh · Mensual · Millones de dólares usa · Stock"
+
+  - id: F099.DER.STO.Z.42.Z.Z.TOT.Z.MMUSD.FXT.Z.Z.0.M
+    name: "Derivados AFP · monedas (total) · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente total, total · Derivados de monedas montos transados de fondos de pensiones por pares de monedas · BCCh · Mensual · Millones de dólares usa · Stock"
+
+  - id: F099.DER.STO.Z.42.Z.Z.TOT.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados AFP · moneda extranjera vs. peso · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "ME-ML · Fx, monto vigente total, total, resumen derivados montos vigentes de fondos de pensiones · BCCh · Mensual · Millones de dólares usa · Stock"
+
+  - id: F099.DER.STO.Z.42.Z.Z.TOT.Z.MMUSD.MEME.Z.Z.0.M
+    name: "Derivados AFP · pares de monedas extranjeras · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "ME-ME · Fx, monto vigente total, total, resumen derivados montos vigentes de fondos de pensiones · BCCh · Mensual · Millones de dólares usa · Stock"
+
+  - id: F099.DER.STO.Z.42.Z.Z.TOT.Z.MMUSD.OPM.Z.Z.0.M
+    name: "Derivados AFP · otros pares · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Otros pares de moneda · Monto vigente total, total, derivados de monedas montos transados de fondos de pensiones por pares de monedas · BCCh · Mensual · Millones de dólares usa · Stock"
+
+  - id: F099.DER.STO.Z.42.Z.Z.TOT.Z.MMUSD.USDEUR.Z.Z.0.M
+    name: "Derivados AFP · USD-EUR · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "USD-EUR · Monto vigente total, total, derivados de monedas montos transados de fondos de pensiones por pares de monedas · BCCh · Mensual · Millones de dólares usa · Stock"
+
+  - id: F099.DER.STO.Z.42.Z.Z.TOT.Z.MMUSD.USDJPY.Z.Z.0.M
+    name: "Derivados AFP · USD-JPY · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "USD-JPY · Monto vigente total, total, derivados de monedas montos transados de fondos de pensiones por pares de monedas · BCCh · Mensual · Millones de dólares usa · Stock"
+
+  - id: F099.DER.STO.Z.42.Z.Z.TOT.Z.MMUSD.USDGBP.Z.Z.0.M
+    name: "Derivados AFP · USD-GBP · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "USD-GBP · Monto vigente total, total, derivados de monedas montos transados de fondos de pensiones por pares de monedas · BCCh · Mensual · Millones de dólares usa · Stock"
+
+  - id: F099.DER.STO.Z.42.Z.Z.TOT.Z.MMUSD.USDBRL.Z.Z.0.M
+    name: "Derivados AFP · USD-BRL · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "USD-BRL · Monto vigente total, total, derivados de monedas montos transados de fondos de pensiones por pares de monedas · BCCh · Mensual · Millones de dólares usa · Stock"
+
+  - id: F099.DER.STO.Z.42.Z.Z.TOT.Z.MMUSD.USDMXN.Z.Z.0.M
+    name: "Derivados AFP · USD-MXN · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "USD-MXN · Monto vigente total, total, derivados de monedas montos transados de fondos de pensiones por pares de monedas · BCCh · Mensual · Millones de dólares usa · Stock"
+
+  - id: F099.DER.STO.Z.42.Z.Z.TOT.Z.MMUSD.USDCNY.Z.Z.0.M
+    name: "Derivados AFP · USD-CNY · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "USD-CNY · Monto vigente total, total, derivados de monedas montos transados de fondos de pensiones por pares de monedas · BCCh · Mensual · Millones de dólares usa · Stock"
+
+  - id: F099.DER.STO.Z.42.Z.Z.TOT.Z.MMUSD.MLML.R.Z.0.M
+    name: "Derivados AFP · UF-CLP · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Inflación CLF-CLP · Monto vigente total, total, resumen derivados montos vigentes de fondos de pensiones · BCCh · Mensual · Millones de dólares usa · Stock"
+
+  - id: F099.DER.STO.Z.42.Z.Z.TOT.SWP.MMUSD.SPC.R.Z.0.M
+    name: "Derivados AFP · swap cámara · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "SPC-CLP · Tasa de interés, monto vigente total, total, resumen derivados montos vigentes de fondos de pensiones · BCCh · Mensual · Millones de dólares usa · Stock"
+
+  - id: F099.DER.STO.Z.42.Z.Z.COM.SWP.MMUSD.EXT.Z.Z.0.M
+    name: "Derivados AFP · tasas extranjeras · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Compra tasa variable · Monto vigente total, derivados sobre tasas extranjeras montos vigentes interés de fondos de pensiones · BCCh · Mensual · Millones de dólares usa · Stock"
+
+  - id: F099.DER.STO.Z.42.Z.Z.VTA.SWP.MMUSD.EXT.Z.Z.0.M
+    name: "Derivados AFP · tasas extranjeras · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Venta tasa variable · Monto vigente total, derivados sobre tasas extranjeras montos vigentes interés de fondos de pensiones · BCCh · Mensual · Millones de dólares usa · Stock"
+
+  - id: F099.DER.STO.Z.42.Z.Z.NET.SWP.MMUSD.EXT.Z.Z.0.M
+    name: "Derivados AFP · tasas extranjeras · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Neto tasa variable · Monto vigente total, derivados sobre tasas extranjeras montos vigentes interés de fondos de pensiones · BCCh · Mensual · Millones de dólares usa · Stock"
+
+  - id: F099.DER.STO.Z.42.Z.Z.TOT.SWP.MMUSD.EXT.Z.Z.0.M
+    name: "Derivados AFP · tasas extranjeras · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente total · Derivados sobre tasas extranjeras montos vigentes interés de fondos de pensiones · BCCh · Mensual · Millones de dólares usa · Stock"
+
+  - id: F099.DER.FLU.Z.42.Z.Z.COM.SWP.MMUSD.EXT.Z.Z.0.M
+    name: "Derivados AFP · tasas extranjeras · comprador · transado"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Compra tasa variable · Monto transado total, derivados sobre tasas de interés extranjeras montos transados de fondos de pensiones · BCCh · Mensual · Millones de dólares usa · Flujo"
+
+  - id: F099.DER.FLU.Z.42.Z.Z.VTA.SWP.MMUSD.EXT.Z.Z.0.M
+    name: "Derivados AFP · tasas extranjeras · vendedor · transado"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Venta tasa variable · Monto transado total, derivados sobre tasas de interés extranjeras montos transados de fondos de pensiones · BCCh · Mensual · Millones de dólares usa · Flujo"
+
+  - id: F099.DER.FLU.Z.42.Z.Z.NET.SWP.MMUSD.EXT.Z.Z.0.M
+    name: "Derivados AFP · tasas extranjeras · neto · transado"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Neto tasa variable · Monto transado total, derivados sobre tasas de interés extranjeras montos transados de fondos de pensiones · BCCh · Mensual · Millones de dólares usa · Flujo"
+
+  - id: F099.DER.FLU.Z.42.Z.Z.TOT.SWP.MMUSD.EXT.Z.Z.0.M
+    name: "Derivados AFP · tasas extranjeras · total · transado"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto transado total · Derivados sobre tasas de interés extranjeras montos transados de fondos de pensiones · BCCh · Mensual · Millones de dólares usa · Flujo"
+
+  - id: F099.DER.STO.Z.42.Z.Z.COM.SWP.MMMCLP.SPC.R.HA02.0.M
+    name: "Derivados AFP · swap cámara · hasta 2 años · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Compras tasa variable · Hasta 2 años, monto vigente total, total, derivados de swap promedio cámara nominal montos vigentes de fondos de pensiones · BCCh · Mensual · Miles de millones de pesos  · Stoc"
+
+  - id: F099.DER.STO.Z.42.Z.Z.COM.SWP.MMMCLP.SPC.R.MA02.0.M
+    name: "Derivados AFP · swap cámara · más de 2 años · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Compras tasa variable · Mayor a 2 años, monto vigente total, total, derivados de swap promedio cámara nominal montos vigentes de fondos de pensiones · BCCh · Mensual · Miles de millones de pesos  · St"
+
+  - id: F099.DER.STO.Z.42.Z.Z.VTA.SWP.MMMCLP.SPC.R.HA02.0.M
+    name: "Derivados AFP · swap cámara · hasta 2 años · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Ventas tasa variable · Hasta 2 años, monto vigente total, total, derivados de swap promedio cámara nominal montos vigentes de fondos de pensiones · BCCh · Mensual · Miles de millones de pesos  · Stock"
+
+  - id: F099.DER.STO.Z.42.Z.Z.VTA.SWP.MMMCLP.SPC.R.MA02.0.M
+    name: "Derivados AFP · swap cámara · más de 2 años · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Ventas tasa variable · Mayor a 2 años, monto vigente total, total, derivados de swap promedio cámara nominal montos vigentes de fondos de pensiones · BCCh · Mensual · Miles de millones de pesos  · Sto"
+
+  - id: F099.DER.STO.Z.42.Z.Z.NET.SWP.MMMCLP.SPC.R.HA02.0.M
+    name: "Derivados AFP · swap cámara · hasta 2 años · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Neto tasa variable · Hasta 2 años, monto vigente total, total, derivados de swap promedio cámara nominal montos vigentes de fondos de pensiones · BCCh · Mensual · Miles de millones de pesos  · Stock"
+
+  - id: F099.DER.STO.Z.42.Z.Z.NET.SWP.MMMCLP.SPC.R.MA02.0.M
+    name: "Derivados AFP · swap cámara · más de 2 años · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Neto tasa variable · Mayor a 2 años, monto vigente total, total, derivados de swap promedio cámara nominal montos vigentes de fondos de pensiones · BCCh · Mensual · Miles de millones de pesos  · Stock"
+
+  - id: F099.DER.STO.Z.42.Z.Z.TOT.SWP.MMMCLP.SPC.R.HA02.0.M
+    name: "Derivados AFP · swap cámara · hasta 2 años · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Hasta 2 años · Monto vigente total, total, derivados de swap promedio cámara nominal montos vigentes de fondos de pensiones · BCCh · Mensual · Miles de millones de pesos  · Stock"
+
+  - id: F099.DER.STO.Z.42.Z.Z.TOT.SWP.MMMCLP.SPC.R.MA02.0.M
+    name: "Derivados AFP · swap cámara · más de 2 años · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Mayor a 2 años · Monto vigente total, total, derivados de swap promedio cámara nominal montos vigentes de fondos de pensiones · BCCh · Mensual · Miles de millones de pesos  · Stock"
+
+  - id: F099.DER.STO.Z.42.Z.Z.TOT.SWP.MMMCLP.SPC.R.Z.0.M
+    name: "Derivados AFP · swap cámara · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Monto vigente total, total · Derivados de swap promedio cámara nominal montos vigentes de fondos de pensiones · BCCh · Mensual · Miles de millones de pesos  · Stock"
+
+  - id: F099.DER.STO.Z.42.Z.Z.COM.Z.MMUSD.CLPUSD.Z.Z.0.M
+    name: "Derivados AFP · USD-CLP · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente comprador · Monto vigente total, total, USD-CLP, derivados de monedas montos vigentes por plazo residual y sector contraparte de fondos de pensiones (USD-CLP) · BCCh · Mensual · Millones"
+
+  - id: F099.DER.STO.Z.42.Z.Z.VTA.Z.MMUSD.CLPUSD.Z.Z.0.M
+    name: "Derivados AFP · USD-CLP · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente vendedor · Monto vigente total, total, USD-CLP, derivados de monedas montos vigentes por plazo residual y sector contraparte de fondos de pensiones (USD-CLP) · BCCh · Mensual · Millones"
+
+  - id: F099.DER.STO.Z.42.Z.Z.NET.Z.MMUSD.CLPUSD.Z.Z.0.M
+    name: "Derivados AFP · USD-CLP · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente neto, total, USD-CLP · Monto vigente total, total, USD-CLP, derivados de monedas montos vigentes por plazo residual y sector contraparte de fondos de pensiones (USD-CLP) · BCCh · Mensual"
+
+  - id: F099.DER.STO.Z.42.Z.Z.TOT.Z.MMUSD.CLPUSD.Z.Z.0.M
+    name: "Derivados AFP · USD-CLP · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente total, total, USD-CLP · Derivados de monedas montos vigentes por plazo residual y sector contraparte de fondos de pensiones (USD-CLP) · BCCh · Mensual · Millones de dólares usa · Stock"
+
+  - id: F099.DER.STO.Z.42.Z.Z.NET.Z.MMUSD.CLPUSD.R.P17.0.M
+    name: "Derivados AFP · USD-CLP · hasta 7 días · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Hasta 7 días  · Monto vigente neto, total, USD-CLP, monto vigente total, total, USD-CLP, derivados de monedas montos vigentes por plazo residual y sector contraparte de fondos de pensiones (USD-CLP) ·"
+
+  - id: F099.DER.STO.Z.42.Z.Z.NET.Z.MMUSD.CLPUSD.R.P835.0.M
+    name: "Derivados AFP · USD-CLP · 8–35 días · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "8 a 35 días  · Monto vigente neto, total, USD-CLP, monto vigente total, total, USD-CLP, derivados de monedas montos vigentes por plazo residual y sector contraparte de fondos de pensiones (USD-CLP) ·"
+
+  - id: F099.DER.STO.Z.42.Z.Z.NET.Z.MMUSD.CLPUSD.R.P3695.0.M
+    name: "Derivados AFP · USD-CLP · 36–95 días · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "36 a 95 días  · Monto vigente neto, total, USD-CLP, monto vigente total, total, USD-CLP, derivados de monedas montos vigentes por plazo residual y sector contraparte de fondos de pensiones (USD-CLP) ·"
+
+  - id: F099.DER.STO.Z.42.Z.Z.NET.Z.MMUSD.CLPUSD.R.P96185.0.M
+    name: "Derivados AFP · USD-CLP · 96–185 días · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "96 a 185 días  · Monto vigente neto, total, USD-CLP, monto vigente total, total, USD-CLP, derivados de monedas montos vigentes por plazo residual y sector contraparte de fondos de pensiones (USD-CLP)"
+
+  - id: F099.DER.STO.Z.42.Z.Z.NET.Z.MMUSD.CLPUSD.R.P186370.0.M
+    name: "Derivados AFP · USD-CLP · 186–370 días · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "186 a 370 días  · Monto vigente neto, total, USD-CLP, monto vigente total, total, USD-CLP, derivados de monedas montos vigentes por plazo residual y sector contraparte de fondos de pensiones (USD-CLP)"
+
+  - id: F099.DER.STO.Z.42.Z.Z.NET.Z.MMUSD.CLPUSD.R.MA01.0.M
+    name: "Derivados AFP · USD-CLP · más de 370 días · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "mayor a 370 días · Monto vigente neto, total, USD-CLP, monto vigente total, total, USD-CLP, derivados de monedas montos vigentes por plazo residual y sector contraparte de fondos de pensiones (USD-CLP"
+
+  - id: F099.DER.STO.Z.42.R.40.COM.Z.MMUSD.CLPUSD.Z.Z.0.M
+    name: "Derivados AFP · USD-CLP · vs. bancos · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente comprador · Bancos, sectores, derivados de monedas montos vigentes por plazo residual y sector contraparte de fondos de pensiones (USD-CLP) · BCCh · Mensual · Millones de dólares usa · S"
+
+  - id: F099.DER.STO.Z.42.R.40.VTA.Z.MMUSD.CLPUSD.Z.Z.0.M
+    name: "Derivados AFP · USD-CLP · vs. bancos · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente vendedor · Bancos, sectores, derivados de monedas montos vigentes por plazo residual y sector contraparte de fondos de pensiones (USD-CLP) · BCCh · Mensual · Millones de dólares usa · St"
+
+  - id: F099.DER.STO.Z.42.R.40.NET.Z.MMUSD.CLPUSD.Z.Z.0.M
+    name: "Derivados AFP · USD-CLP · vs. bancos · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente neto · Bancos, sectores, derivados de monedas montos vigentes por plazo residual y sector contraparte de fondos de pensiones (USD-CLP) · BCCh · Mensual · Millones de dólares usa · Stock"
+
+  - id: F099.DER.STO.Z.42.N.NR.COM.Z.MMUSD.CLPUSD.Z.Z.0.M
+    name: "Derivados AFP · USD-CLP · vs. no residentes · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente comprador · No residentes, sectores, derivados de monedas montos vigentes por plazo residual y sector contraparte de fondos de pensiones (USD-CLP) · BCCh · Mensual · Millones de dólares"
+
+  - id: F099.DER.STO.Z.42.N.NR.VTA.Z.MMUSD.CLPUSD.Z.Z.0.M
+    name: "Derivados AFP · USD-CLP · vs. no residentes · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente vendedor · No residentes, sectores, derivados de monedas montos vigentes por plazo residual y sector contraparte de fondos de pensiones (USD-CLP) · BCCh · Mensual · Millones de dólares u"
+
+  - id: F099.DER.STO.Z.42.N.NR.NET.Z.MMUSD.CLPUSD.Z.Z.0.M
+    name: "Derivados AFP · USD-CLP · vs. no residentes · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente neto · No residentes, sectores, derivados de monedas montos vigentes por plazo residual y sector contraparte de fondos de pensiones (USD-CLP) · BCCh · Mensual · Millones de dólares usa ·"
+
+  - id: F099.DER.STO.Z.42.Z.Z.NET.Z.MUF.MLML.Z.Z.0.M
+    name: "Derivados AFP · UF-CLP · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "Monto vigente neto, total · Derivados de unidad de fomento - peso chileno (UF-CLP) montos vigentes por contraparte y plazo residual de fondos de pensiones · BCCh · Mensual · Miles de uf · Stock"
+
+  - id: F099.DER.STO.Z.42.Z.Z.TOT.Z.MUF.MLML.Z.Z.0.M
+    name: "Derivados AFP · UF-CLP · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "Monto vigente total, total · Derivados de unidad de fomento - peso chileno (UF-CLP) montos vigentes por contraparte y plazo residual de fondos de pensiones · BCCh · Mensual · Miles de uf · Stock"
+
+  - id: F099.DER.STO.Z.44.Z.Z.COM.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Seguros · moneda extranjera vs. peso · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente comprador | Derivados de monedas montos vigentes de Compañías de seguros, datos mensuales (moneda nacional contra moneda extranjera) (millones de dólares)"
+
+  - id: F099.DER.STO.Z.44.Z.Z.VTA.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Seguros · moneda extranjera vs. peso · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente vendedor | Derivados de monedas montos vigentes de Compañías de seguros, datos mensuales (moneda nacional contra moneda extranjera) (millones de dólares)"
+
+  - id: F099.DER.STO.Z.44.Z.Z.NET.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Seguros · moneda extranjera vs. peso · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente neto | Derivados de monedas montos vigentes de Compañías de seguros, datos mensuales (moneda nacional contra moneda extranjera) (millones de dólares)"
+
+  - id: F099.DER.STO.Z.44.Z.Z.TOT.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Seguros · moneda extranjera vs. peso · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente total, ME-ML | Derivados de monedas montos vigentes de Compañías de seguros, datos mensuales (moneda nacional contra moneda extranjera) (millones de dólares)"
+
+  - id: F099.DER.STO.Z.38.Z.Z.COM.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados AGF · moneda extranjera vs. peso · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente comprador | Derivados de monedas montos vigentes de Administradoras generales de fondos, datos mensuales (moneda nacional contra moneda extranjera)"
+
+  - id: F099.DER.STO.Z.38.Z.Z.VTA.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados AGF · moneda extranjera vs. peso · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente vendedor | Derivados de monedas montos vigentes de Administradoras generales de fondos, datos mensuales (moneda nacional contra moneda extranjera)"
+
+  - id: F099.DER.STO.Z.38.Z.Z.NET.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados AGF · moneda extranjera vs. peso · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente neto | Derivados de monedas montos vigentes de Administradoras generales de fondos, datos mensuales (moneda nacional contra moneda extranjera)"
+
+  - id: F099.DER.STO.Z.38.Z.Z.TOT.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados AGF · moneda extranjera vs. peso · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente total, ME-ML | Derivados de monedas montos vigentes de Administradoras generales de fondos, datos mensuales (moneda nacional contra moneda extranjera)"
+
+  - id: F099.DER.STO.Z.39.Z.Z.COM.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Corredoras · moneda extranjera vs. peso · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente comprador | Derivados de monedas montos vigentes de Corredoras de bolsa y agencias de valores, datos mensuales (moneda nacional contra moneda extranjera) (millones de dólares)"
+
+  - id: F099.DER.STO.Z.39.Z.Z.VTA.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Corredoras · moneda extranjera vs. peso · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente vendedor | Derivados de monedas montos vigentes de Corredoras de bolsa y agencias de valores, datos mensuales (moneda nacional contra moneda extranjera) (millones de dólares)"
+
+  - id: F099.DER.STO.Z.39.Z.Z.NET.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Corredoras · moneda extranjera vs. peso · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente neto | Derivados de monedas montos vigentes de Corredoras de bolsa y agencias de valores, datos mensuales (moneda nacional contra moneda extranjera) (millones de dólares)"
+
+  - id: F099.DER.STO.Z.39.Z.Z.TOT.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Corredoras · moneda extranjera vs. peso · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente total, ME-ML | Derivados de monedas montos vigentes de Corredoras de bolsa y agencias de valores, datos mensuales (moneda nacional contra moneda extranjera) (millones de dólares)"
+
+  - id: F099.DER.STO.Z.50.Z.Z.COM.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Otros sectores · moneda extranjera vs. peso · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente comprador | Derivados de monedas montos vigentes de Otros sectores, datos mensuales (moneda nacional contra moneda extranjera)"
+
+  - id: F099.DER.STO.Z.50.Z.Z.VTA.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Otros sectores · moneda extranjera vs. peso · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente vendedor | Derivados de monedas montos vigentes de Otros sectores, datos mensuales (moneda nacional contra moneda extranjera)"
+
+  - id: F099.DER.STO.Z.50.Z.Z.NET.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Otros sectores · moneda extranjera vs. peso · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente neto | Derivados de monedas montos vigentes de Otros sectores, datos mensuales (moneda nacional contra moneda extranjera)"
+
+  - id: F099.DER.STO.Z.50.Z.Z.TOT.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Otros sectores · moneda extranjera vs. peso · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente total, ME-ML | Derivados de monedas montos vigentes de Otros sectores, datos mensuales (moneda nacional contra moneda extranjera)"
+
+  - id: F099.DER.STO.Z.55A.Z.Z.COM.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Empresas · moneda extranjera vs. peso · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente comprador | Derivados de monedas montos vigentes de Empresas sector real, datos mensuales (moneda nacional contra moneda extranjera) (millones de dólares)"
+
+  - id: F099.DER.STO.Z.55A.Z.Z.VTA.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Empresas · moneda extranjera vs. peso · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente vendedor | Derivados de monedas montos vigentes de Empresas sector real, datos mensuales (moneda nacional contra moneda extranjera) (millones de dólares)"
+
+  - id: F099.DER.STO.Z.55A.Z.Z.NET.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Empresas · moneda extranjera vs. peso · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente neto | Derivados de monedas montos vigentes de Empresas sector real, datos mensuales (moneda nacional contra moneda extranjera) (millones de dólares)"
+
+  - id: F099.DER.STO.Z.55A.Z.Z.TOT.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Empresas · moneda extranjera vs. peso · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente total, ME-ML | Derivados de monedas montos vigentes de Empresas sector real, datos mensuales (moneda nacional contra moneda extranjera) (millones de dólares)"
+
+  - id: F099.DER.STO.Z.55A.R.40.NET.Z.MMUSD.CLPUSD.Z.Z.0.M
+    name: "Derivados Empresas · USD-CLP · vs. bancos · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente neto | Derivados de monedas montos vigentes de Empresas sector real, datos mensuales (USD-CLP) (millones de dólares)"
+
+  - id: F099.DER.STO.Z.NR.R.40.NET.Z.MMUSD.CLPUSD.Z.Z.0.M
+    name: "Derivados No residentes · USD-CLP · vs. bancos · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente neto| Derivados de monedas montos vigentes de No residentes, datos mensuales (USD-CLP) (millones de dólares)"
+
+  - id: F099.DER.STO.Z.44.R.40.NET.Z.MMUSD.CLPUSD.Z.Z.0.M
+    name: "Derivados Seguros · USD-CLP · vs. bancos · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente neto | Derivados de monedas montos vigentes de Compañías de seguros, datos mensuales (USD-CLP) (millones de dólares)"
+
+  - id: F099.DER.STO.Z.38.R.40.NET.Z.MMUSD.CLPUSD.Z.Z.0.M
+    name: "Derivados AGF · USD-CLP · vs. bancos · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente neto | Derivados de monedas montos vigentes de Administradoras generales de fondos, datos mensuales (USD-CLP)"
+
+  # --- Contexto del monitor de derivados: tasas de EE.UU. ---
+  - id: F019.TBG.TAS.10.M
+    name: Bono de gobierno EE.UU. 10 años (mensual)
+    category: tasas_externas
+    frequency: monthly
+    unit: porcentaje_anual
+    publish_lag_days: 10
+    description: Rendimiento del bono del Tesoro de EE.UU. a 10 años, promedio mensual
+
+  - id: F019.TPM.TIN.10.D
+    name: Tasa de política monetaria EE.UU. (Fed)
+    category: tasas_externas
+    frequency: daily
+    unit: porcentaje_anual
+    description: Tasa de interés externa, política monetaria EE.UU.

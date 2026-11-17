@@ -288,6 +288,63 @@ ALTER TABLE fact_producto_metricas ADD COLUMN IF NOT EXISTS duracion_factor VARC
 """
 
 
+# ------------------------------------------------------------------
+# 011 · derivados de fondos mutuos (FUTU = forwards/swaps/futuros, OPCI = opciones), tipados
+# Campos verificados contra el patrimonio (sep-2026): FFM_6040500 = monto comprometido
+# (nocional valorizado) y FFM_6030800 = valor de mercado de la opción, ambos en MILES de la
+# moneda del FONDO; FFM_6040300 = nocional en unidades del subyacente (USD, UF, $).
+# El subyacente viene rotulado de forma inconsistente (PROM, DOLAR, USD, US$ = dólar).
+# ------------------------------------------------------------------
+M011 = """
+CREATE OR REPLACE VIEW v_mutual_fund_derivatives AS
+WITH b AS (
+    SELECT period_year * 100 + period_month AS period, portfolio_type, fund_run, fund_name,
+           upper(trim(json_extract_string(raw_data, '$.' || CASE portfolio_type WHEN 'FUTU' THEN 'FFM_6040111' ELSE 'FFM_6030111' END))) AS subyacente_raw,
+           upper(trim(json_extract_string(raw_data, '$.' || CASE portfolio_type WHEN 'FUTU' THEN 'FFM_6040112' ELSE 'FFM_6030112' END))) AS tipo_raw,
+           upper(trim(json_extract_string(raw_data, '$.' || CASE portfolio_type WHEN 'FUTU' THEN 'FFM_6040200' ELSE 'FFM_6030200' END))) AS direccion,
+           json_extract_string(raw_data, '$.' || CASE portfolio_type WHEN 'FUTU' THEN 'FFM_6040114' ELSE 'FFM_6030114' END) AS vencimiento,
+           TRY_CAST(json_extract_string(raw_data, '$.FFM_6040300') AS DOUBLE) AS nocional_unidades,
+           TRY_CAST(json_extract_string(raw_data, '$.FFM_6040400') AS DOUBLE) AS precio_pactado,
+           TRY_CAST(json_extract_string(raw_data, '$.' || CASE portfolio_type WHEN 'FUTU' THEN 'FFM_6040500' ELSE 'FFM_6030800' END) AS DOUBLE) AS monto_miles
+    FROM cmf_mutual_fund_portfolio WHERE portfolio_type IN ('FUTU', 'OPCI'))
+SELECT *,
+       CASE WHEN portfolio_type = 'OPCI' THEN 'opción'
+            WHEN tipo_raw LIKE 'FORWARD%' THEN 'forward'
+            WHEN tipo_raw = 'SWAP' THEN 'swap'
+            ELSE 'futuro' END AS tipo,
+       CASE WHEN subyacente_raw IN ('PROM', 'DOLAR', 'USD', 'US$', 'US') THEN 'USD'
+            WHEN subyacente_raw IN ('UF', '0UF') THEN 'UF'
+            WHEN subyacente_raw IN ('$$', 'CLP', 'ICP') THEN 'tasa en pesos'
+            WHEN subyacente_raw IN ('EUR', 'MXN', 'SUC', 'SCC', 'DA', 'YY') OR tipo_raw LIKE '%CURNCY' THEN 'otras monedas'
+            WHEN subyacente_raw LIKE '% INDEX' OR subyacente_raw IN ('NDX', 'SPX') OR tipo_raw LIKE '% INDEX'
+                 OR tipo_raw LIKE 'MNQ%' OR tipo_raw LIKE 'MES%' THEN 'índices bursátiles'
+            WHEN subyacente_raw LIKE '% COMDTY' OR subyacente_raw LIKE 'BTP%' OR subyacente_raw LIKE 'BTU%' THEN 'bonos y tasas'
+            WHEN portfolio_type = 'OPCI' THEN 'acciones y ETF'
+            ELSE 'otro' END AS subyacente
+FROM b;
+"""
+
+
+# ------------------------------------------------------------------
+# 012 · derivados de las compañías de seguros (Circular 1.835, archivo B.7), contrato a contrato
+# Montos `_m` en MILES de pesos (M$); unidades en la moneda de cada pata. Ver el parser en
+# collectors/seguros_cartera.py (layout reconciliado contra B.8, código M10).
+# ------------------------------------------------------------------
+M012 = """
+CREATE TABLE IF NOT EXISTS cmf_insurer_derivatives (
+    insurance_type VARCHAR NOT NULL, period INTEGER NOT NULL, rut VARCHAR NOT NULL,
+    tipo VARCHAR, objetivo VARCHAR, tipo_operacion VARCHAR, tipo_contrato VARCHAR,
+    fecha_operacion VARCHAR, fecha_vencimiento VARCHAR,
+    rut_contraparte VARCHAR, contraparte VARCHAR, nacionalidad VARCHAR, tipo_contraparte VARCHAR,
+    moneda_larga VARCHAR, moneda_corta VARCHAR,
+    unidades_larga DOUBLE, unidades_corta DOUBLE,
+    nocional_larga_m DOUBLE, nocional_corta_m DOUBLE,
+    precio DOUBLE, tasa_larga VARCHAR, tasa_corta VARCHAR, valor_razonable_m DOUBLE,
+    fetched_at TIMESTAMP DEFAULT now()
+);
+"""
+
+
 MIGRATIONS: list[tuple[str, str, str]] = [
     ("001", "dq_results: controles de calidad", M001),
     ("002", "dim_dataset: metadatos de unidades, frecuencia y fuente", M002),
@@ -299,10 +356,12 @@ MIGRATIONS: list[tuple[str, str, str]] = [
     ("008", "fact_producto_metricas.serie_anomala", M008),
     ("009", "curva_ajuste: curvas de tasas Nelson-Siegel-Svensson", M009),
     ("010", "fact_producto_metricas.duracion_efectiva", M010),
+    ("011", "v_mutual_fund_derivatives: derivados FFMM tipados", M011),
+    ("012", "cmf_insurer_derivatives: derivados de seguros (B.7)", M012),
 ]
 
 # Migraciones que se reaplican siempre (contenido de referencia o vistas): son idempotentes.
-ALWAYS = {"002", "005", "006"}
+ALWAYS = {"002", "005", "006", "011"}
 
 
 def run_migrations(conn) -> list[str]:

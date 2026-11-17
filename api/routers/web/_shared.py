@@ -385,6 +385,11 @@ INST_CLASSES = [
     {"url": "/fondos", "icon": "📊", "title": "Fondos de pensiones",
      "desc": "Retornos multi-horizonte y composición de cada fondo por AFP.",
      "meta": "Superintendencia de Pensiones · mensual"},
+    {"url": "/inversion-institucional/derivados", "icon": "⚖️", "title": "Derivados",
+     "desc": "Cómo están posicionados en derivados las AFP, las aseguradoras, los fondos y "
+             "otros sectores: dirección, instrumento y tamaño. Incluye el monitor de los "
+             "swaps de tasa de las AFP.",
+     "meta": "Banco Central (F099.DER) + CMF · mensual"},
     {"url": "/inversion-institucional/emisor", "icon": "🔎", "title": "Inversión por emisor",
      "desc": "Elige un emisor (empresa, banco, Fisco…) y ve cuánto tienen invertido en él las "
              "compañías de seguros y los fondos mutuos, y cómo cambió mes a mes.",

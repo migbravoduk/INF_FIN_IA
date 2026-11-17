@@ -322,6 +322,31 @@ class FecuRepo:
                          exc_info=True)
             raise e
 
+    _DER_COLS = ("insurance_type", "period", "rut", "tipo", "objetivo", "tipo_operacion",
+                 "tipo_contrato", "fecha_operacion", "fecha_vencimiento", "rut_contraparte",
+                 "contraparte", "nacionalidad", "tipo_contraparte", "moneda_larga", "moneda_corta",
+                 "unidades_larga", "unidades_corta", "nocional_larga_m", "nocional_corta_m",
+                 "precio", "tasa_larga", "tasa_corta", "valor_razonable_m")
+
+    def insert_insurer_derivatives(self, period: int, insurance_type: str, records: list[dict]) -> int:
+        """Derivados de seguros (B.7) con Delete-then-Insert por (tipo, período)."""
+        if not records:
+            return 0
+        ph = ", ".join(["?"] * len(self._DER_COLS))
+        self.conn.execute("BEGIN TRANSACTION")
+        try:
+            self.conn.execute("DELETE FROM cmf_insurer_derivatives WHERE insurance_type = ? AND period = ?",
+                              [str(insurance_type), int(period)])
+            fast_executemany(self.conn,
+                             f"INSERT INTO cmf_insurer_derivatives ({', '.join(self._DER_COLS)}) VALUES ({ph})",
+                             [tuple(r.get(c) for c in self._DER_COLS) for r in records])
+            self.conn.execute("COMMIT")
+            return len(records)
+        except Exception:
+            self.conn.execute("ROLLBACK")
+            logger.error(f"Error ingestando derivados {insurance_type} {period}. Revertido.", exc_info=True)
+            raise
+
     def get_insurer_portfolio_periods(self, insurance_type: Optional[str] = None) -> list[int]:
         """Períodos (YYYYMM) con cartera de inversiones cargada."""
         clause = "WHERE insurance_type = ?" if insurance_type else ""

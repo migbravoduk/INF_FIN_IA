@@ -366,8 +366,10 @@ def refresh_cmf_broker(db, n=2):
 # ============================================================
 
 def ingest_cartera_zip(db, zip_path) -> tuple[int, int]:
-    """Parsea e ingesta un ZIP de cartera: B.8 Control + B.1 Renta Fija. Devuelve (n_ctrl, n_fi)."""
-    from collectors.seguros_cartera import parse_zip_control, parse_zip_fixed_income
+    """Parsea e ingesta un ZIP de cartera: B.8 Control + B.1 Renta Fija + B.7 Derivados.
+    Devuelve (n_ctrl, n_fi)."""
+    from collectors.seguros_cartera import (parse_zip_control, parse_zip_fixed_income,
+                                            parse_zip_derivatives)
     n_ctrl = n_fi = 0
     recs = parse_zip_control(zip_path)
     if recs:
@@ -375,6 +377,9 @@ def ingest_cartera_zip(db, zip_path) -> tuple[int, int]:
     fi = parse_zip_fixed_income(zip_path)
     if fi:
         n_fi = db.insert_insurer_portfolio_fixed_income(fi[0]["period"], fi[0]["insurance_type"], fi)
+    der = parse_zip_derivatives(zip_path)
+    if der:
+        db.insert_insurer_derivatives(der[0]["period"], der[0]["insurance_type"], der)
     return n_ctrl, n_fi
 
 

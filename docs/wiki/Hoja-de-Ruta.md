@@ -33,6 +33,11 @@ bancos; anclas de mercado y factores de curva medidos y no adoptados. Queda S5 (
 eficiente, opcional) y las decisiones del §6 de ese plan. Detalle de modelos en
 [`docs/PLAN_PROYECCIONES_MACRO.md`](../PLAN_PROYECCIONES_MACRO.md).
 
+17-nov: inversión por emisor (`/inversion-institucional/emisor`), arreglos de AFP (fecha
+común) y productos, sectores curados; y el **monitor de derivados institucionales**
+(`/inversion-institucional/derivados`, [`docs/PLAN_DERIVADOS.md`](../PLAN_DERIVADOS.md)):
+BCCh por sector, fondos mutuos por fondo y seguros por compañía (B.7).
+
 Pendiente que requiere decisión o curaduría humana:
 
 - [ ] **Revisión legal** antes de publicar (PLAN §8: asesoría de inversión — Ley 21.521,
