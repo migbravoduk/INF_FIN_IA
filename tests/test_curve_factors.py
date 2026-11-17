@@ -3,12 +3,9 @@
 import pandas as pd
 import pytest
 
-from db.database import Database
-
-
 @pytest.fixture(scope="module")
-def db():
-    d = Database(read_only=True)
+def db(real_db_readonly):
+    d = real_db_readonly
     if not d.conn.execute("SELECT COUNT(*) FROM curva_ajuste").fetchone()[0]:
         pytest.skip("sin curvas ajustadas")
     return d

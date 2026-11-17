@@ -3,12 +3,9 @@
 import pandas as pd
 import pytest
 
-from db.database import Database
-
-
 @pytest.fixture(scope="module")
-def db():
-    d = Database(read_only=True)
+def db(real_db_readonly):
+    d = real_db_readonly
     n = d.conn.execute("SELECT COUNT(*) FROM curva_ajuste WHERE curva = 'swap_clp'").fetchone()[0]
     if not n:
         pytest.skip("sin curvas ajustadas")
