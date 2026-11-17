@@ -122,3 +122,54 @@ rondas 1–3: las cifras absolutas no son comparables con las de julio).
 En pares (1.280): `estr_last_nop` gana a `estr_last` en 53% (Δ media −0.068) y a la ablación
 en 56–58% en todos los horizontes. **Producción**: el híbrido usa `nonop=True` en h≥2 y
 `BAND_QUANTILES` de ganancia h=2–4 se actualizaron con esta corrida (`scratch/bt_nop.csv`).
+
+## Ronda 5: corrida completa con empresas ERNG (nov-2026)
+
+Plan: [`docs/PLAN_SEMANA.md`](../PLAN_SEMANA.md) S1–S4. Primero cambia la muestra: el modelo
+lee el estado de resultados por función (ERFG) o, si la empresa solo informa por naturaleza,
+ERNG. 11 de las 40 empresas son nuevas (Enel ×3, Entel, Telefónica ×2, Aguas Andinas…), así
+que las cifras no son comparables con las rondas anteriores. 40 empresas × 8 orígenes × h1–4
+(320 pares por celda), todos los specs, 136 s (`scratch/bt_full.csv`).
+
+| Partida | h | noexog | eee | estr_last | estr_m4 | estr_last_nop | estr_m4_nop | snaive |
+|---|---|---|---|---|---|---|---|---|
+| Ingresos | 1 | **0.573** | 0.599 | 0.729 | 1.736 | | | 0.909 |
+| Ingresos | 2 | 0.760 | 0.883 | 0.768 | **0.744** | | | 0.909 |
+| Ingresos | 3 | 0.827 | 0.935 | 0.746 | **0.698** | | | 0.831 |
+| Ingresos | 4 | 0.907 | 1.055 | 0.721 | **0.704** | | | 0.799 |
+| Ganancia | 1 | **0.727** | 0.873 | 0.919 | 1.538 | 0.867 | 1.528 | 0.844 |
+| Ganancia | 2 | **0.856** | 0.973 | 0.925 | 0.901 | 0.894 | 0.868 | 0.859 |
+| Ganancia | 3 | 0.830 | 0.898 | 0.872 | 0.878 | 0.828 | **0.821** | 0.850 |
+| Ganancia | 4 | 0.853 | 0.887 | 0.834 | 0.834 | 0.794 | **0.786** | 0.828 |
+
+MASE mediana. El híbrido (noexog h1; `estr_last` / `estr_last_nop` h≥2) se mantiene: noexog
+gana h1 por más de 0,02. Pendiente de decidir (no se cambió producción): en h2 `noexog` queda
+levemente mejor en mediana, y el ancla `m4` supera a `last` en esta muestra.
+`BAND_QUANTILES` regenerado entero con esta corrida.
+
+Comparaciones en pares contra la misma base (`compare_bt`, h2–4; regla en PLAN_SEMANA §2):
+
+| Cambio | Cuenta | Pares ganados | Δ MASE medio | Veredicto |
+|---|---|---|---|---|
+| Senda de mercado (TPM e inflación implícitas en swaps) | ingresos | 45,7% | 0,000 | no |
+| Senda mezcla 50/50 encuestas–mercado | ingresos | 47,0% | −0,005 | no |
+| V1 + tasa real swap UF 5a | ingresos | 49,5% | −0,010 | no |
+| V2 tasa real 5a en lugar de TPM | ingresos | **54,3%** | **−0,040** | pasa h2–4, falla h1–4 |
+| V3 + pendiente 10a−2a | ingresos | 52,1% | +0,036 | no |
+| V4 + spread depósito − swap 1a | ingresos | 46,9% | +0,133 | no |
+
+## Bancos y seguros (nov-2026)
+
+Arnés propio: `models/backtest_simple.py` (bancos 16 × 18 orígenes mensuales, h = 1, 3, 6, 12;
+seguros 73 × 8 trimestrales, h = 1–4). MASE mediana:
+
+| Clase · partida | h | sarimax | snaive | uf |
+|---|---|---|---|---|
+| Bancos · resultado | 1 / 3 / 6 / 12 | 0.557 / 0.632 / 0.682 / 0.951 | 0.748 / 0.713 / 0.730 / **0.748** | 0.563 / **0.613** / **0.629** / 0.901 |
+| Bancos · activos | 1 / 3 / 6 / 12 | 0.188 / 0.289 / 0.369 / **0.612** | 0.194 / 0.275 / 0.369 / 0.795 | |
+| Seguros · resultado | 1 / 2 / 3 / 4 | 0.861 / 0.815 / 0.873 / 0.930 | 0.854 / 0.851 / 0.906 / 0.931 | (solo vida) |
+| Seguros · activo | 1 / 2 / 3 / 4 | **0.293** / **0.401** / **0.509** / **0.706** | 0.380 / 0.599 / 0.816 / 1.056 | |
+
+`uf` = resultado − k·π_UF con el SARIMAX + k·π de la senda (k: MCO con intercepto, 36 meses).
+Bancos h3/6/12 en pares: 51,7%, Δ −0,021 → **adoptado**. Seguros de vida h2–4: 49,5%, Δ −0,026
+→ no adoptado. Bandas de ambas vistas: cuantiles de esta corrida (`BANDAS_SIMPLE`).

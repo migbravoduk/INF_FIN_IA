@@ -43,10 +43,11 @@ def _deacc(w: pd.DataFrame) -> pd.DataFrame:
 def load_nonop(db, periods: list[str]) -> dict[str, pd.DataFrame]:
     """Reajuste y diferencias de cambio trimestrales (desacumulados), period × rut."""
     names = REAJUSTE + DIF_CAMBIO
+    from models.forecast import VALOR_ER
     df = db.conn.execute(f"""
-        SELECT rut, account_name, period, MAX(value) AS value
+        SELECT rut, account_name, period, {VALOR_ER} AS value
         FROM cmf_financial_statements
-        WHERE statement_group = 'ERFG' AND account_name IN ({', '.join('?' * len(names))})
+        WHERE statement_group IN ('ERFG', 'ERNG') AND account_name IN ({', '.join('?' * len(names))})
         GROUP BY rut, account_name, period
     """, names).fetchdf()
     out = {}
@@ -69,6 +70,30 @@ def drivers(db, macro) -> pd.DataFrame:
     la senda; después, la senda macro (encuestas) — así el backtest no ve el futuro.
     """
     corte = macro.future.index.min()
+    lag = inflacion_uf_mensual(db, macro)
+
+    # UF del trimestre ≈ IPC de los 3 meses que terminan un mes antes del cierre.
+    uf = db.conn.execute("SELECT date, value FROM observations WHERE series_id = ? ORDER BY date",
+                         [UF]).fetchdf()
+    ufm = pd.Series(uf["value"].values, index=pd.to_datetime(uf["date"])).resample("ME").last()
+    ufm = ufm[ufm.index < corte]
+    pi_hist = (ufm / ufm.shift(3) - 1)[ufm.index.month.isin([3, 6, 9, 12])]
+    pi = {_quarter_key(d): float(v) for d, v in pi_hist.dropna().items()}
+    for d in pd.date_range(corte, periods=len(macro.future) + 3, freq="ME"):
+        if d.month in (3, 6, 9, 12) and _quarter_key(d) not in pi:
+            win = lag[(lag.index > d - pd.DateOffset(months=3)) & (lag.index <= d)]
+            if len(win) == 3 and win.notna().all():
+                pi[_quarter_key(d)] = float(np.prod(1 + win.values) - 1)
+    return _drivers_tc(macro, pi)
+
+
+def inflacion_uf_mensual(db, macro) -> pd.Series:
+    """
+    Variación mensual de la UF (decimal, índice inicio de mes) ≈ IPC del mes anterior.
+    Historia efectiva hasta el corte de la senda; después, tendencia de la senda de inflación
+    a 12 meses + estacionalidad promedio de 5 años.
+    """
+    corte = macro.future.index.min()
 
     # --- Inflación mensual: historia efectiva + futura por recursión desde y (12m) ---
     ipc = db.conn.execute("SELECT date, value FROM observations WHERE series_id = ? ORDER BY date",
@@ -89,22 +114,10 @@ def drivers(db, macro) -> pd.DataFrame:
         if yt is None or not np.isfinite(yt):
             yt = y[y.index <= t].dropna().iloc[-1] if y[y.index <= t].notna().any() else 0.03
         m.loc[t] = (1 + yt) ** (1 / 12) - 1 + float(estac.get(t.month, 0.0))
-    m = m.sort_index()
+    return m.sort_index().shift(1)  # rezago de la UF
 
-    # UF del trimestre ≈ IPC de los 3 meses que terminan un mes antes del cierre.
-    uf = db.conn.execute("SELECT date, value FROM observations WHERE series_id = ? ORDER BY date",
-                         [UF]).fetchdf()
-    ufm = pd.Series(uf["value"].values, index=pd.to_datetime(uf["date"])).resample("ME").last()
-    ufm = ufm[ufm.index < corte]
-    pi_hist = (ufm / ufm.shift(3) - 1)[ufm.index.month.isin([3, 6, 9, 12])]
-    pi = {_quarter_key(d): float(v) for d, v in pi_hist.dropna().items()}
-    lag = m.shift(1)  # rezago de la UF
-    for d in pd.date_range(corte, periods=len(macro.future) + 3, freq="ME"):
-        if d.month in (3, 6, 9, 12) and _quarter_key(d) not in pi:
-            win = lag[(lag.index > d - pd.DateOffset(months=3)) & (lag.index <= d)]
-            if len(win) == 3 and win.notna().all():
-                pi[_quarter_key(d)] = float(np.prod(1 + win.values) - 1)
 
+def _drivers_tc(macro, pi: dict) -> pd.DataFrame:
     # --- Tipo de cambio: promedio del último mes del trimestre ---
     tc = macro.full()["tc"]
     tcq = tc[tc.index.month.isin([3, 6, 9, 12])]

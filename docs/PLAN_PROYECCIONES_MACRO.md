@@ -20,9 +20,13 @@ error / error del naive estacional dentro de muestra; < 1 es mejor que repetir e
 | Paso | Qué | Estado |
 |---|---|---|
 | B | Ganancia = operacional + no operacional (reajuste UF, diferencias de cambio) | **Hecho, en producción** |
-| A | Anclas de mercado en la senda (TPM implícita, inflación implícita) | 60%: `models/market_path.py` listo; falta conectarlo y medir |
-| C | Tasa real y pendiente como factores de la ecuación de activos | Pendiente |
-| D | Bancos y aseguradoras con factores de curva | Pendiente |
+| A | Anclas de mercado en la senda (TPM implícita, inflación implícita) | Medido, **no adoptado** (`fuente=` en `build_macro_path`; mercado y mezcla < 50% de pares) |
+| C | Tasa real y pendiente como factores de la ecuación de activos | Medido, **no adoptado**; la tasa real en lugar de la TPM pasa en h2–4 (54% de pares, Δ −0,040) y falla en h1: decisión del dueño |
+| D | Bancos y aseguradoras | Bandas calibradas en ambos; **bancos: exposición a la UF adoptada** (52% de pares, Δ −0,021); seguros de vida no pasa |
+| B′ | Empresas que informan por naturaleza (ERNG) | **Hecho**: panel 402 → 483 empresas |
+
+Resultados: [`docs/wiki/Backtest-Modelos.md`](wiki/Backtest-Modelos.md) rondas 5 y "Bancos y
+seguros"; resumen en [`docs/INFORME_SEMANA.md`](INFORME_SEMANA.md).
 
 **Ejecución de lo pendiente:** [`docs/PLAN_SEMANA.md`](PLAN_SEMANA.md) (bloques S1–S6, con la
 regla de adopción programada en `models/compare_bt.py`).
@@ -71,10 +75,9 @@ angostas (2,20 vs 2,35 en h = 2).
 - [ ] **Costos financieros** (596 empresas): hoy quedan dentro del margen operacional. Medirlos
       como deuda × tasa (curva UF + spread propio) aporta poco mientras la deuda sea a tasa fija;
       probarlo junto con C.
-- [ ] **Empresas con estado de resultados por naturaleza (ERNG, ~150)**: el modelo estructural
-      solo lee ERFG, así que no tienen proyección (p. ej. Aguas Andinas). Extender `load_panel`.
-- [ ] Re-correr el SARIMAX (h = 1) en la misma muestra para comparar el híbrido completo; el
-      cuadro de arriba es solo estructural.
+- [x] **Empresas con estado de resultados por naturaleza (ERNG)**: hecho el 16-nov (ERFG o
+      ERNG, prefiere ERFG); +81 empresas en el panel, Aguas Andinas incluida.
+- [x] Re-correr el SARIMAX (h = 1) en la misma muestra: hecho (Ronda 5); el híbrido se mantiene.
 
 ---
 

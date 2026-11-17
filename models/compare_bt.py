@@ -7,7 +7,8 @@ Uso:
       --cuenta ganancia [--horizontes 2,3,4]
 
 `archivo.csv:spec` — los dos pueden venir del mismo archivo (specs distintos) o de corridas
-distintas (mismo spec, otra senda). `--cuenta`: ingresos | ganancia (prefijo del nombre).
+distintas (mismo spec, otra senda). `--cuenta`: ingresos | ganancia | cualquier prefijo del
+nombre de la partida (p. ej. "Resultado" para bancos, models/backtest_simple.py).
 
 Regla (las cuatro a la vez, sobre los horizontes pedidos; por defecto 2–4, que es donde manda
 el estructural en producción):
@@ -36,7 +37,7 @@ CUENTAS = {"ingresos": "Ingresos", "ganancia": "Ganancia"}
 def _load(arg: str, cuenta: str) -> pd.Series:
     path, spec = arg.rsplit(":", 1)
     df = pd.read_csv(path, dtype={"rut": str, "origin": str})
-    df = df[(df["spec"] == spec) & df["account"].str.startswith(CUENTAS[cuenta])]
+    df = df[(df["spec"] == spec) & df["account"].str.startswith(CUENTAS.get(cuenta, cuenta))]
     if df.empty:
         sys.exit(f"Sin filas para {arg} / {cuenta}")
     return df.set_index(["rut", "origin", "h"])["mase"]
@@ -61,7 +62,8 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
     ap.add_argument("--base", required=True)
     ap.add_argument("--nuevo", required=True)
-    ap.add_argument("--cuenta", choices=list(CUENTAS), required=True)
+    ap.add_argument("--cuenta", required=True,
+                    help="ingresos | ganancia | cualquier prefijo del nombre de la partida")
     ap.add_argument("--horizontes", default="2,3,4")
     a = ap.parse_args()
     hs = [int(x) for x in a.horizontes.split(",")]

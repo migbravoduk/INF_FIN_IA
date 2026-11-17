@@ -75,7 +75,8 @@ def proyecciones_simple_chart(
     db: Database = Depends(get_db),
 ):
     """Fragmento HTMX: fan charts SARIMAX de una entidad no corporativa."""
-    from models.simple_forecast import deaccumulate_ytd, forecast_series
+    from models.simple_forecast import (bandas_empiricas, cargar_serie, forecast_series,
+                                        forecast_series_uf, inflacion_uf_periodos)
 
     clase = request.url.path.split("/")[2]
     cfg = _PROY_SIMPLE.get(clase)
@@ -106,29 +107,36 @@ def proyecciones_simple_chart(
 
     results = []
     for acc in cfg["accounts"]:
-        if clase == "bancos":
-            serie = db.get_bank_total_series(entity, acc["key"], acc["report"])
-        elif clase == "seguros":
-            serie = db.get_insurer_account_series(entity, acc["key"],
-                                                  insurance_type=(kind or "vida"))
-        else:
-            serie = db.get_broker_account_series(entity, acc["key"])
-
-        if serie is None or serie.empty:
+        serie = cargar_serie(db, clase, entity, acc, kind)
+        if serie is None:
             continue
-        if acc["accumulated"]:
-            serie = deaccumulate_ytd(serie)
 
-        fc = forecast_series(serie, steps, monthly=monthly, is_stock=acc["stock"])
+        fc = None
+        if acc.get("uf"):
+            # Resultado de bancos: base + exposición a la UF (backtest nov-2026, S4)
+            try:
+                fc = forecast_series_uf(serie, steps, monthly,
+                                        inflacion_uf_periodos(db, monthly, steps + 6))
+            except Exception:
+                fc = None
+        if fc is None:
+            fc = forecast_series(serie, steps, monthly=monthly, is_stock=acc["stock"])
         if fc is None:
             continue
+        calibradas = bandas_empiricas(fc, clase, acc["label"], monthly)
+        uf_note = ""
+        if fc.get("k_uf") is not None:
+            uf_note = (f"exposición a la UF: +1 pp de inflación mensual ≈ "
+                       f"{fc['k_uf'] * 0.01 / 1e9:+,.1f} mil millones de {cfg['unit']} en el resultado del mes"
+                       ).replace(",", "X").replace(".", ",").replace("X", ".")
         note = ("nivel (stock)" if acc["stock"]
                 else ("flujo del período — desacumulado del acumulado anual"))
         results.append({
             "account": acc["label"], "unit_note": note,
             # El spec es POR SERIE: stocks y flujos usan specs distintos, así que no puede
             # ir en `meta` (se pisarían entre sí).
-            "spec": fc["spec"], "n_obs": fc["n_obs"],
+            "spec": fc["spec"], "n_obs": fc["n_obs"], "calibradas": calibradas,
+            "uf_note": uf_note,
             "history": [{"period": _proy_period_label(p, monthly), "value": float(v)}
                         for p, v in fc["history"].items()],
             "forecast": [{"period": _proy_period_label(p, monthly),

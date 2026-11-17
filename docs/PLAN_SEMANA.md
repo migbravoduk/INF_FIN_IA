@@ -44,12 +44,15 @@ bitácora (§7) con cifras, (c) un commit por bloque y `git push origin feature/
 
 | Bloque | Qué | Día | Sesiones | Estado |
 |---|---|---|---|---|
-| S1 | A · anclas de mercado en la senda macro | lun | 1 | 60% (ver S1) |
-| S2 | C · factores de curva en la ecuación de activos | mar | 1–2 | pendiente |
-| S3 | Cobertura ERNG + corrida completa del híbrido y bandas | mié | 1 | pendiente |
-| S4 | D · bancos y aseguradoras: backtest, bandas calibradas, inflación | jue–vie | 2 | pendiente |
-| S6 | Cierre: documentación, validación, informe | vie | 0,5 | pendiente |
-| S5 | Frontera eficiente v1 (**opcional**, solo si S1–S4 y S6 están cerrados) | — | 2 | pendiente |
+| S1 | A · anclas de mercado en la senda macro | lun | 1 | **hecho 16-nov** · no adoptado |
+| S2 | C · factores de curva en la ecuación de activos | mar | 1–2 | **hecho 16-nov** · no adoptado (V2 pasa h2–4, falla h1) |
+| S3 | Cobertura ERNG + corrida completa del híbrido y bandas | mié | 1 | **hecho 16-nov** · adoptado |
+| S4 | D · bancos y aseguradoras: backtest, bandas calibradas, inflación | jue–vie | 2 | **hecho 16-nov** · bandas + UF en bancos adoptados |
+| S6 | Cierre: documentación, validación, informe | vie | 0,5 | **hecho 16-nov** |
+| S5 | Frontera eficiente v1 (**opcional**, solo si S1–S4 y S6 están cerrados) | — | 2 | pendiente (no iniciado) |
+
+Ejecutado todo en una sola sesión el 16-nov (no en cinco): los bloques compartían archivos,
+así que va en un solo commit. Informe: [`docs/INFORME_SEMANA.md`](INFORME_SEMANA.md).
 
 Orden fijo: S3 cambia la muestra del backtest (entran empresas nuevas), por eso va **después**
 de S1 y S2. Si la semana se acorta, se sacrifica S5, luego la mitad "seguros" de S4. S6 no se salta.
@@ -302,6 +305,28 @@ Estacionado a propósito (no cabe en la semana o depende de lo anterior):
 
 El ejecutor agrega aquí lo que encuentre y no pueda resolver, con una línea cada cosa.
 
+Encontrado en la ejecución (16-nov):
+
+- **Decidir S2-V2** (tasa real 5a en lugar de TPM): en ingresos h2–4 gana 54,3% de pares
+  (z = 2,6), Δ medio −0,040, medianas −0,03; falla solo la condición extra de h1–4 porque la
+  mediana de h1 empeora +0,033. En producción h1 lo cubre el SARIMAX, no el estructural, así
+  que la condición extra puede ser más estricta de lo necesario. Ganancia: Δ +0,001 (dentro de
+  la tolerancia). Activarlo = `--factores act_yoy,ipc_yoy,tasa_real5,tc_yoy` como valor por defecto.
+- **h2 en la corrida completa:** `noexog` (0,760 ingresos; 0,856 ganancia) queda levemente bajo
+  el estructural (0,768; 0,894). En h3–4 manda el estructural. No se cambió producción.
+- **`estr_m4` vs `estr_last`** en la muestra nueva (con ERNG): `estr_m4` tiene mejor mediana en
+  ingresos h2–4 (0,744/0,698/0,704 vs 0,768/0,746/0,721) y `estr_m4_nop` en ganancia h3–4.
+  Merece una comparación en pares con `compare_bt` antes de cambiar el ancla.
+- **SARIMAX que explota** en seguros: CONTEMPORA origen 202403, MASE 6·10⁸ en h4
+  (`enforce_stationarity=False`). La vista de producción podría mostrar algo así; conviene un
+  tope (p. ej. volver a `snaive` si la proyección sale 10× fuera del rango histórico).
+- **Bancos, resultado h12:** `snaive` (0,748) le gana al SARIMAX (0,951) y al `uf` (0,901).
+  Para la vista de 24 meses, considerar `snaive` desde h ≥ 9.
+- **Diferencia leve entre corridas de la misma spec:** la base guardada al preparar el plan y la
+  regenerada al empezar S1 difieren < 1% en los pronósticos (mediana por origen 0,00–1,7%);
+  causa no investigada (probable: datos actualizados entre medio). Por eso S1/S2 se compararon
+  contra una base corrida en el mismo momento (`scratch/senda_encuestas.csv`).
+
 ---
 
 ## 7. Bitácora (la llena quien ejecuta: fecha, bloque, cifras, veredicto)
@@ -310,6 +335,30 @@ El ejecutor agrega aquí lo que encuentre y no pueda resolver, con una línea ca
   meses ≈ +0,42 pp, inflación ≈ +0,05 a +0,19 pp). `compare_bt` probado contra el paso B:
   ADOPTAR (51,8% de pares, Δ medio −0,058) y contra un control `estr_m4` vs `estr_last` en
   ingresos: NO ADOPTAR. Base guardada en `scratch/base_encuestas.csv`.
+- 2026-11-16 · S1 · `build_macro_path(fuente=encuestas|mercado|mezcla)`, `--senda`; el
+  backtest `--solo-estructural` ya no construye la senda del SARIMAX. Contra `senda_encuestas`:
+  mercado ingresos 45,7% pares, Δ 0,000 (medianas −0,01 a −0,02); ganancia 50,6%, Δ +0,004,
+  h2 +0,032. Mezcla ingresos 47,0%, Δ −0,005; ganancia 51,2%, Δ +0,001, h2 +0,041.
+  **NO ADOPTAR** ninguna: queda `fuente="encuestas"` por defecto.
+- 2026-11-16 · S2 · `db.curves.tasas_cero` (historia() la usa), `models/curve_factors.py`,
+  `_quarterly_factors(extra, factores)`, `--factores`. Ingresos h2–4 contra la base: V1 49,5%,
+  Δ −0,010; **V2 54,3%, Δ −0,040, medianas −0,03 → ADOPTAR en h2–4 pero NO en h1–4** (h1
+  +0,033); V3 52,1%, Δ +0,036; V4 46,9%, Δ +0,133. Ganancia: todas |Δ| ≤ 0,004. Por la regla
+  (§2, condición extra h1–4) **ninguna se adopta**; V2 queda para decisión del dueño (§6). Sin
+  quinta corrida (no pasaron dos).
+- 2026-11-16 · S3 · ERFG o ERNG (prefiere ERFG) en structural/nonop/forecast/backtest:
+  panel de ingresos 402 → 483 empresas; Aguas Andinas con proyección; 11 de las 40 del
+  backtest son nuevas (Enel ×3, Entel, Telefónica ×2, Aguas Andinas…). `catchup` OK.
+  Corrida completa (con SARIMAX): **136 s**, no 20–40 min. noexog sigue mejor en h1 (0,573 vs
+  0,599 eee y 0,729 estr_last; ganancia 0,727 vs 0,867). `BAND_QUANTILES` regenerado entero.
+  Ronda 5 en `docs/wiki/Backtest-Modelos.md`. Base regenerada.
+- 2026-11-16 · S4 · `models/backtest_simple.py` (bancos 16 × 18 orígenes, seguros 73 × 8);
+  `cargar_serie` compartida con la vista; `compare_bt --cuenta` acepta cualquier prefijo.
+  Bandas calibradas en `BANDAS_SIMPLE`; la vista ya no dice "no calibradas" para bancos y seguros.
+  `nonop.inflacion_uf_mensual`. Spec `uf` bancos h3/6/12: 51,7% pares, Δ −0,021, medianas
+  −0,02/−0,05/−0,05 → **ADOPTAR** (también en h1–12: 52,0%, Δ −0,023). Seguros de vida h2–4:
+  49,5%, Δ −0,026, medianas −0,05 a −0,09 → **NO ADOPTAR** (pares < 50%).
+- 2026-11-16 · S6 · pytest 50 pasan. Validación y documentación: ver INFORME_SEMANA.
 
 ---
 

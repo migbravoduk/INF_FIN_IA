@@ -322,7 +322,7 @@ _PROY_SIMPLE = {
             {"label": "Total activos", "key": "TOTAL ACTIVOS", "report": "balance",
              "stock": True, "accumulated": False},
             {"label": "Resultado de los propietarios", "key": "RESULTADO DE LOS PROPIETARIOS",
-             "report": "resultado", "stock": False, "accumulated": True},
+             "report": "resultado", "stock": False, "accumulated": True, "uf": True},
         ],
     },
     "seguros": {

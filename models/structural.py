@@ -28,6 +28,7 @@ from dataclasses import dataclass, field
 import numpy as np
 import pandas as pd
 
+from models.forecast import VALOR_ER
 from models.macro_path import MacroPath, build_macro_path
 
 logger = logging.getLogger(__name__)
@@ -55,13 +56,20 @@ def _next_quarter(period: str) -> str:
     return f"{y + (m > 12)}{m - 12 if m > 12 else m:02d}"
 
 
-def _quarterly_factors(macro: MacroPath) -> pd.DataFrame:
-    """Factores trimestrales (historia + senda) con tc_yoy derivado de los niveles."""
+def _quarterly_factors(macro: MacroPath, extra: pd.DataFrame | None = None,
+                       factores: list | None = None) -> pd.DataFrame:
+    """
+    Factores trimestrales (historia + senda) con tc_yoy derivado de los niveles.
+    `extra`: factores mensuales adicionales (p. ej. models/curve_factors.py), promediados por
+    trimestre. `factores`: columnas a usar (por defecto FACTORS).
+    """
     full = macro.full().copy()
     full["tc_yoy"] = full["tc"].pct_change(12) * 100.0
+    if extra is not None and not extra.empty:
+        full = full.join(extra, how="outer")
     q = full.resample("QE").mean()
     q.index = [f"{d.year}{d.month:02d}" for d in q.index]
-    return q[FACTORS].ffill()
+    return q[list(factores or FACTORS)].ffill()
 
 
 # ============================================================
@@ -91,11 +99,12 @@ def load_panel(db) -> PanelData:
         GROUP BY rut, account_name, period
     """, OP_ASSET_ACCOUNTS).fetchdf()
 
-    # --- Flujos ERFG (acumulados en el año → desacumular) ---
-    flows = db.conn.execute("""
-        SELECT rut, account_name, period, MAX(value) AS value
+    # --- Flujos del estado de resultados (acumulados en el año → desacumular) ---
+    # ERFG (por función) o ERNG (por naturaleza); si una empresa informa ambos, manda ERFG.
+    flows = db.conn.execute(f"""
+        SELECT rut, account_name, period, {VALOR_ER} AS value
         FROM cmf_financial_statements
-        WHERE statement_group = 'ERFG'
+        WHERE statement_group IN ('ERFG', 'ERNG')
           AND account_name IN ('Ingresos de actividades ordinarias', 'Ganancia (pérdida)')
         GROUP BY rut, account_name, period
     """).fetchdf()
@@ -235,7 +244,8 @@ def estimate_asset_model(panel: PanelData, factors_q: pd.DataFrame,
         sigmas[rut] = float(np.std(resid)) if n >= 8 else 0.10
 
     return AssetModel(betas=betas, alphas=alphas, sigmas=sigmas,
-                      sector_betas=sector_betas, global_beta=global_beta)
+                      sector_betas=sector_betas, global_beta=global_beta,
+                      factor_names=list(factors_q.columns))
 
 
 # ============================================================
@@ -264,7 +274,8 @@ def forecast_structural(db, rut: str, steps: int = 8,
                         as_of_period: str | None = None,
                         ratio_anchor: str = "mean4",
                         nonop: bool = False,
-                        drv: pd.DataFrame | None = None) -> dict | None:
+                        drv: pd.DataFrame | None = None,
+                        factors_q: pd.DataFrame | None = None) -> dict | None:
     """
     Proyección estructural. Devuelve dict con series trimestrales proyectadas
     para ingresos y ganancia + trayectoria de activos y ratios (narrativa).
@@ -278,7 +289,8 @@ def forecast_structural(db, rut: str, steps: int = 8,
         panel = load_panel(db)
     if macro is None:
         macro = build_macro_path(db, horizon_months=3 * steps + 9)
-    factors_q = _quarterly_factors(macro)
+    if factors_q is None:
+        factors_q = _quarterly_factors(macro)
     if model is None:
         model = estimate_asset_model(panel, factors_q, as_of_period)
 
@@ -319,7 +331,7 @@ def forecast_structural(db, rut: str, steps: int = 8,
     # Factores
     if any(p not in factors_q.index for p in fc_periods):
         return None
-    Xf = factors_q.loc[fc_periods].values
+    Xf = factors_q.loc[fc_periods, model.factor_names].values
 
     # Paso 1: trayectoria de activos
     beta, alpha, sigma = model.betas[rut], model.alphas[rut], model.sigmas[rut]
@@ -375,7 +387,7 @@ def forecast_structural(db, rut: str, steps: int = 8,
         "activos_hist": a, "rotacion_hist": rot, "margen_hist": mgn,
         "rotacion_path": pd.Series(rot_path, index=fc_periods),
         "margen_path": pd.Series(mgn_path, index=fc_periods),
-        "beta": dict(zip(FACTORS, np.round(beta, 4))),
+        "beta": dict(zip(model.factor_names, np.round(beta, 4))),
         "alpha": round(alpha, 4), "sigma_dlog": round(sigma, 4),
         "no_operacional": nonop_det,
     }

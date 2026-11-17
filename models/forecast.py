@@ -26,7 +26,12 @@ from models.macro_path import MacroPath, build_macro_path
 
 logger = logging.getLogger(__name__)
 
-# Partidas ERFG proyectables (desacumulables, un valor por período)
+# Valor de una partida del estado de resultados: por función (ERFG) o, si la empresa solo
+# informa por naturaleza, ERNG (Aguas Andinas y ~57 más). Con ambos, manda ERFG.
+VALOR_ER = ("coalesce(MAX(value) FILTER (WHERE statement_group = 'ERFG'), "
+            "MAX(value) FILTER (WHERE statement_group = 'ERNG'))")
+
+# Partidas proyectables (desacumulables, un valor por período)
 FORECASTABLE_ACCOUNTS = [
     "Ingresos de actividades ordinarias",
     "Ganancia (pérdida)",
@@ -62,10 +67,10 @@ def _next_quarter(period: str) -> str:
 def get_quarterly_deaccumulated(db, rut: str, account: str) -> pd.Series:
     """Serie trimestral desacumulada de una partida ERFG (valores del trimestre)."""
     clean = str(rut).strip().replace(".", "").replace("-", "")
-    df = db.conn.execute("""
-        SELECT period, MAX(value) AS value
+    df = db.conn.execute(f"""
+        SELECT period, {VALOR_ER} AS value
         FROM cmf_financial_statements
-        WHERE rut = ? AND account_name = ? AND statement_group = 'ERFG'
+        WHERE rut = ? AND account_name = ? AND statement_group IN ('ERFG', 'ERNG')
         GROUP BY period ORDER BY period
     """, [clean, account]).fetchdf()
     if df.empty:

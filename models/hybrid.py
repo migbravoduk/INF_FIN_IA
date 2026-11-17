@@ -28,20 +28,19 @@ from models.structural import (estimate_asset_model, forecast_structural,
 
 logger = logging.getLogger(__name__)
 
-# Cuantiles de |error|/escala por (partida, h) — backtest jul-2026 con anclaje
-# dual EEE+EOF (hibrido: noexog en h=1, estr_last en h>=2). Para h>4 se usa el
-# valor de h=4. Regenerar si cambian los specs o los anclajes de la senda.
+# Cuantiles 0,80 / 0,95 de |error|/escala por (partida, h) — corrida completa nov-2026
+# (scratch/bt_full.csv: 40 empresas con ERFG o ERNG × 8 orígenes × h1–4, 320 pares por
+# celda) del spec de producción: noexog en h=1, estr_last (ingresos) y estr_last_nop
+# (ganancia) en h>=2. Para h>4 se usa h=4. Regenerar si cambian specs, senda o muestra.
 BAND_QUANTILES = {
-    ("Ingresos de actividades ordinarias", 1): (1.258, 3.349),
-    ("Ingresos de actividades ordinarias", 2): (1.675, 3.816),
-    ("Ingresos de actividades ordinarias", 3): (1.781, 4.244),
-    ("Ingresos de actividades ordinarias", 4): (1.889, 5.395),
-    ("Ganancia (pérdida)", 1): (1.877, 3.743),
-    # h>=2 de ganancia: backtest nov-2026 del estructural con no operacional separado
-    # (`estr_last_nop`, 40 empresas × 8 orígenes 202409–202606; scratch/bt_nop.csv).
-    ("Ganancia (pérdida)", 2): (2.201, 4.222),
-    ("Ganancia (pérdida)", 3): (2.149, 4.083),
-    ("Ganancia (pérdida)", 4): (2.092, 3.848),
+    ("Ingresos de actividades ordinarias", 1): (1.382, 3.597),
+    ("Ingresos de actividades ordinarias", 2): (1.685, 5.477),
+    ("Ingresos de actividades ordinarias", 3): (1.574, 5.727),
+    ("Ingresos de actividades ordinarias", 4): (1.587, 6.122),
+    ("Ganancia (pérdida)", 1): (1.618, 3.516),
+    ("Ganancia (pérdida)", 2): (2.060, 3.745),
+    ("Ganancia (pérdida)", 3): (2.055, 3.754),
+    ("Ganancia (pérdida)", 4): (1.888, 3.658),
 }
 _STRUCT_KEY = {"Ingresos de actividades ordinarias": "ingresos",
                "Ganancia (pérdida)": "ganancia"}
@@ -120,7 +119,7 @@ def forecast_company_hybrid(db, rut: str, steps: int = 8) -> dict:
             survey_month=macro.survey_month,
             model_info={
                 "modelo": "híbrido (SARIMAX h1 + estructural h2+)",
-                "bandas": "empíricas (backtest jul-2026; ganancia h2+ nov-2026)",
+                "bandas": "empíricas (backtest completo nov-2026)",
                 "n_obs": int(history.dropna().shape[0]),
                 "order": "(1,0,0)", "seasonal_order": "(0,1,1,4)",
             },

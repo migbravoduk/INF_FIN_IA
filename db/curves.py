@@ -423,18 +423,37 @@ def historia(db, desde: str = "2010-01-01") -> dict:
     """, [desde]).fetchdf()
     out: dict[str, dict] = {}
     for curva, g in df.groupby("curva"):
-        g = g.reset_index(drop=True)
-        tau2 = g["tau2"].fillna(1.0).values
-        b3 = g["b3"].fillna(0.0).values
+        z = _ceros_vec(g.reset_index(drop=True), (1, 2, 5, 10))
         res = {"fecha": [str(d)[:10] for d in g["fecha"]]}
         for t in (1, 2, 5, 10):
-            X1, e1 = _l(t, g["tau1"].values), np.exp(-t / g["tau1"].values)
-            X2 = _l(t, tau2) - np.exp(-t / tau2)
-            c = g["b0"].values + g["b1"].values * X1 + g["b2"].values * (X1 - e1) + b3 * X2
-            dentro = (g["plazo_min"].values <= t + 1e-9) & (g["plazo_max"].values >= t - 1e-9)
-            res[f"{t}a"] = [round(float(v), 3) if ok else None for v, ok in zip(efectiva(c), dentro)]
+            res[f"{t}a"] = [None if np.isnan(v) else round(float(v), 3) for v in z[t]]
         out[curva] = res
     return out
+
+
+def _ceros_vec(g: pd.DataFrame, plazos) -> dict:
+    """Tasas cero (% efectivo) para cada fila de parámetros; NaN fuera del tramo observado."""
+    tau2 = g["tau2"].fillna(1.0).values
+    b3 = g["b3"].fillna(0.0).values
+    out = {}
+    for t in plazos:
+        X1, e1 = _l(t, g["tau1"].values), np.exp(-t / g["tau1"].values)
+        X2 = _l(t, tau2) - np.exp(-t / tau2)
+        c = g["b0"].values + g["b1"].values * X1 + g["b2"].values * (X1 - e1) + b3 * X2
+        dentro = (g["plazo_min"].values <= t + 1e-9) & (g["plazo_max"].values >= t - 1e-9)
+        out[t] = np.where(dentro, efectiva(c), np.nan)
+    return out
+
+
+def tasas_cero(db, curva: str, plazos, hasta=None, desde: str = "2005-01-01") -> pd.DataFrame:
+    """Serie diaria de tasas cero (% efectivo) de `curva`; índice fecha, una columna por plazo."""
+    hasta = hasta if hasta is not None else "2100-01-01"
+    g = db.conn.execute("SELECT * FROM curva_ajuste WHERE curva = ? AND fecha >= ? AND fecha <= ? "
+                        "ORDER BY fecha", [curva, desde, pd.Timestamp(hasta).date()]).fetchdf()
+    if g.empty:
+        return pd.DataFrame(columns=list(plazos), dtype=float)
+    z = _ceros_vec(g, plazos)
+    return pd.DataFrame(z, index=pd.to_datetime(g["fecha"]))
 
 
 def factor_tasas_mensual(db) -> pd.DataFrame:

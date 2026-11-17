@@ -25,9 +25,12 @@ Plan completo y diagnóstico en [`docs/PLAN_MEJORAS.md`](../PLAN_MEJORAS.md). Ej
   CI; export a Parquet.
 
 Después de la auditoría (nov-2026): curvas de tasas y `/curvas`, duración efectiva de fondos
-de renta fija, y proyecciones con el resultado no operacional separado. En curso:
-[`docs/PLAN_SEMANA.md`](../PLAN_SEMANA.md) (anclas de mercado, factores de curva, cobertura
-ERNG, bancos y seguros, frontera eficiente opcional), con el detalle de modelos en
+de renta fija, y proyecciones con el resultado no operacional separado. Ejecutado el 16-nov
+[`docs/PLAN_SEMANA.md`](../PLAN_SEMANA.md) S1–S4 y S6 (resumen en
+[`docs/INFORME_SEMANA.md`](../INFORME_SEMANA.md)): empresas ERNG con proyección, bandas
+regeneradas, bancos y seguros con bandas calibradas, exposición a la UF en el resultado de
+bancos; anclas de mercado y factores de curva medidos y no adoptados. Queda S5 (frontera
+eficiente, opcional) y las decisiones del §6 de ese plan. Detalle de modelos en
 [`docs/PLAN_PROYECCIONES_MACRO.md`](../PLAN_PROYECCIONES_MACRO.md).
 
 Pendiente que requiere decisión o curaduría humana:

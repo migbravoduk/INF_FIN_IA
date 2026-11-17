@@ -14,11 +14,19 @@
 </div>
 
 <p class="warn-box">
+    {% if results | selectattr("calibradas") | list | length == results | length %}
+    <strong>Bandas calibradas fuera de muestra.</strong> Los intervalos 80% y 95% son los
+    cuantiles del error real del mismo modelo en un backtest de esta clasificación (orígenes
+    móviles, nov-2026), escalados por la variabilidad propia de la serie. Un horizonte no
+    medido usa el cuantil del horizonte medido inmediatamente superior. El modelo es
+    univariante: no usa el ancla macro (EEE/EOF).
+    {% else %}
     ⚠ <strong>Bandas no calibradas.</strong> Los intervalos vienen del propio SARIMAX
     (gaussianos), no de un backtest de esta clasificación. A diferencia de la vista
     corporativa —cuyas bandas son cuantiles del error real fuera de muestra— aquí no se ha
     medido el desempeño histórico, así que trátalos como referencia y no como probabilidad
     calibrada. Tampoco se usa el ancla macro (EEE/EOF): el modelo es univariante.
+    {% endif %}
     <br>
     <strong>Quiebres estructurales no modelados.</strong> Fusiones y adquisiciones aparecen
     como saltos de nivel en la historia (ej. BICE absorbe a Security en nov-2025, con los
@@ -30,6 +38,7 @@
 <div class="chart-block" style="margin-top:1.5rem">
     <h4>{{ r.account }}
         <span class="lead">— {{ r.unit_note }} · {{ r.spec }} · {{ r.n_obs }} obs.</span></h4>
+    {% if r.uf_note %}<p class="lead" style="margin:0.25rem 0 0">{{ r.uf_note }}</p>{% endif %}
     <div id="proys-chart-{{ loop.index }}" class="chart"></div>
 </div>
 {% endfor %}

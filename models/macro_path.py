@@ -110,7 +110,8 @@ def build_history(db) -> pd.DataFrame:
 
 
 def build_future(db, horizon_months: int = 24,
-                 as_of: pd.Timestamp | str | None = None) -> tuple[pd.DataFrame, pd.Timestamp, dict]:
+                 as_of: pd.Timestamp | str | None = None,
+                 fuente: str = "encuestas") -> tuple[pd.DataFrame, pd.Timestamp, dict]:
     """
     Senda futura mensual interpolando los anclajes EEE de la última encuesta.
     `as_of` (vintage): usar solo observaciones disponibles hasta esa fecha — permite
@@ -189,11 +190,53 @@ def build_future(db, horizon_months: int = 24,
                 )
         used_anchors["tc_lp_var_anual_pct"] = [(LP_MONTH, tc_lp_var)]
 
+    if fuente != "encuestas":
+        _anclar_mercado(db, future, used_anchors, horizon_months, as_of, fuente)
+
     return future, survey_month, used_anchors
 
 
+FUENTES = ("encuestas", "mercado", "mezcla")
+
+
+def _anclar_mercado(db, future: pd.DataFrame, used_anchors: dict, horizon_months: int,
+                    as_of, fuente: str) -> None:
+    """
+    Reemplaza (`mercado`) o promedia 50/50 (`mezcla`) tpm e ipc_yoy con la senda implícita en
+    swaps (models/market_path.py). Alineación posicional: fila i de `future` ← h = i+1 desde la
+    fecha de la curva (el desfase de días dentro del mes se acepta). tc y act_yoy no cambian.
+    """
+    if fuente not in FUENTES:
+        raise ValueError(f"fuente desconocida: {fuente}")
+    from db import curves as C
+    from models.market_path import market_path
+
+    fecha = pd.Timestamp(as_of) if as_of is not None else C.ultima_fecha(db)
+    if fecha is None:
+        logger.warning("Sin curvas ajustadas; la senda queda con encuestas")
+        return
+    fecha = pd.Timestamp(fecha)
+    ipc = _monthly_series(db, HIST_SERIES["ipc_yoy"])
+    ipc = ipc[ipc.index <= fecha].dropna()
+    ipc_actual = float(ipc.iloc[-1]) if len(ipc) else None
+    mp, det = market_path(db, fecha, horizon_months, ipc_actual)
+    if mp.empty:
+        logger.warning("Senda de mercado vacía al %s; la senda queda con encuestas", fecha.date())
+        return
+    for var in ("tpm", "ipc_yoy"):
+        if var not in mp.columns or var not in future.columns:
+            continue
+        m = mp[var].to_numpy()[:len(future)]
+        if fuente == "mercado" or future[var].isna().all():
+            future[var] = m
+        else:
+            future[var] = 0.5 * future[var].to_numpy() + 0.5 * m
+    used_anchors["mercado"] = det
+
+
 def build_macro_path(db, horizon_months: int = 24,
-                     as_of: pd.Timestamp | str | None = None) -> MacroPath:
+                     as_of: pd.Timestamp | str | None = None,
+                     fuente: str = "encuestas") -> MacroPath:
     """
     Construye historia + senda futura consistentes para los modelos.
     Con `as_of`, tanto la historia como los anclajes EEE se truncan a esa fecha
@@ -202,7 +245,7 @@ def build_macro_path(db, horizon_months: int = 24,
     history = build_history(db)
     if as_of is not None:
         history = history[history.index <= pd.Timestamp(as_of)]
-    future, survey_month, anchors = build_future(db, horizon_months, as_of=as_of)
+    future, survey_month, anchors = build_future(db, horizon_months, as_of=as_of, fuente=fuente)
     # La historia no debe traslapar la senda futura
     history = history[history.index < future.index.min()]
     return MacroPath(history=history, future=future,
