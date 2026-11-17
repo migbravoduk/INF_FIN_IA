@@ -10,7 +10,7 @@
     Cómo están posicionados en derivados las AFP, las compañías de seguros, los fondos mutuos y
     otros sectores: en qué dirección, con qué instrumento y de qué tamaño.
     <br><span class="lead">Montos <strong>nocionales</strong> (tamaño y dirección), no valor de mercado ni
-    pérdida. Neto = comprador − vendedor. En monedas, neto negativo = vende dólares a plazo
+    pérdida, salvo la sección 4: ahí los swaps vienen a <strong>valorización</strong> (SP). Neto = comprador − vendedor. En monedas, neto negativo = vende dólares a plazo
     (protegido si el dólar cae). En swaps de tasa, neto negativo = vende tasa variable, o sea
     recibe fija: gana si las tasas bajan y pierde si suben (convención del Informe Mensual del
     Mercado de Derivados del Banco Central). Plan y validaciones: <code>docs/PLAN_DERIVADOS.md</code>.</span>
@@ -88,9 +88,10 @@ máximo histórico (+10% sobre el máximo previo y &gt; 1× los activos). Se mue
 </table></div>
 
 <h3 style="font-size:.95rem;margin-top:1.5rem">Hitos</h3>
-<ul class="lead" style="font-size:.8rem">{% for h in m.hitos %}
+<ol class="lead" style="font-size:.8rem">{% for h in m.hitos %}
     <li><strong>{{ h.fecha }}</strong> · {{ h.titulo }} — {{ h.detalle }} <a href="{{ h.fuente }}" target="_blank" rel="noopener">fuente</a></li>{% endfor %}
-</ul>
+</ol>
+<p class="lead">En los gráficos, cada hito es una línea punteada con su número.</p>
 <p class="lead">Las cifras de pérdida son de prensa (informes citados); el Banco Central no publica valor de mercado.</p>
 
 <details style="margin-top:.8rem"><summary class="lead">Cuadraturas de las series (validación automática)</summary>
@@ -139,7 +140,7 @@ dólares a plazo; positivo = los compra. Los bancos son la contraparte de casi t
 {{ sw.total|es(0) }} MMUSD ({{ sw.ext|es(0) }} con contrapartes extranjeras, {{ sw.nac|es(0) }} nacionales).
 {% if sw.var12 %}Respecto de {{ sw.hace12 }} la valorización cambió {{ sw.var12.values()|sum|es(0) }} MMUSD.{% endif %}</p>
 <div class="chart-grid">
-    <div class="chart-block"><h4>Valorización de los swaps por AFP (MMUSD, desde {{ sw.desde }})</h4><div id="d-swafp" class="chart"></div></div>
+    <div class="chart-block"><h4>Valorización de los swaps por AFP (MMUSD; datos desde {{ sw.desde }}, se muestra desde 2019)</h4><div id="d-swafp" class="chart"></div></div>
 </div>
 <div class="table-scroll"><table class="eeff-table">
     <thead><tr><th style="text-align:left">AFP ({{ sw.ultimo }}, MMUSD)</th>
@@ -156,7 +157,7 @@ dólares a plazo; positivo = los compra. Los bancos son la contraparte de casi t
 <div class="table-scroll"><table class="eeff-table">
     <thead><tr><th style="text-align:left">Contraparte (mayores por valor absoluto)</th><th style="text-align:left">Origen</th>
         <th style="text-align:right">Valorización (MMUSD)</th><th style="text-align:right">AFP con contratos</th></tr></thead>
-    <tbody>{% for c in sw.contrapartes %}<tr><td style="text-align:left">{{ c.contraparte|title }}</td><td style="text-align:left">{{ c.origen }}</td>
+    <tbody>{% for c in sw.contrapartes %}<tr><td style="text-align:left">{{ c.contraparte }}</td><td style="text-align:left">{{ c.origen }}</td>
         <td style="text-align:right" class="{{ 'neg' if c.valor < 0 else 'pos' }}">{{ c.valor|es(0) }}</td><td style="text-align:right">{{ c.afps }}</td></tr>{% endfor %}</tbody>
 </table></div>
 <div class="table-scroll"><table class="eeff-table">
@@ -249,10 +250,14 @@ posición y su contraria (forwards a ambos lados que se compensan).</p>
     var C = ["#38bdf8", "#fbbf24", "#a78bfa", "#4ade80", "#f87171", "#fb923c"];
     var X0 = M.meses[0], X1 = M.meses[M.meses.length - 1];
     function base(extra) {
-        var l = { margin: { t: 10, r: 10, b: 30, l: 55 }, height: 260, paper_bgcolor: "rgba(0,0,0,0)",
+        // Leyenda ARRIBA, dentro de un margen superior igual para todos: así el área de dibujo
+        // mide lo mismo con o sin leyenda y los ejes de gráficos vecinos quedan alineados
+        // (con la leyenda abajo, en y negativo, se montaba sobre las fechas o achicaba el gráfico).
+        var l = { margin: { t: 34, r: 10, b: 36, l: 55 }, height: 280, paper_bgcolor: "rgba(0,0,0,0)",
                   plot_bgcolor: "rgba(0,0,0,0)", font: { color: "#94a3b8", size: 11 }, separators: ",.",
-                  legend: { orientation: "h", y: -0.18 }, hovermode: "x unified",
-                  xaxis: { gridcolor: "rgba(0,0,0,0)", range: [X0, X1] },
+                  legend: { orientation: "h", x: 0, y: 1.0, yanchor: "bottom", font: { size: 10 } },
+                  hovermode: "x unified",
+                  xaxis: { gridcolor: "rgba(0,0,0,0)", range: [X0, X1], automargin: true },
                   yaxis: { gridcolor: "#334155", zerolinecolor: "#64748b" } };
         for (var k in (extra || {})) l[k] = extra[k];
         return l;
@@ -262,8 +267,9 @@ posición y su contraria (forwards a ambos lados que se compensan).</p>
             return { type: "line", x0: h.fecha, x1: h.fecha, yref: "paper", y0: 0, y1: 1,
                      line: { color: "#fbbf24", width: 1, dash: "dot" } }; });
         layout.annotations = (M.hitos || []).map(function (h, i) {
-            return { x: h.fecha, yref: "paper", y: 1 - 0.09 * i, text: h.titulo.slice(0, 28), showarrow: false,
-                     xanchor: "right", font: { size: 9, color: "#fbbf24" } }; });
+            return { x: h.fecha, yref: "paper", y: i % 2 ? 0.93 : 1, yanchor: "top", text: String(i + 1),
+                     showarrow: false, xanchor: "right", font: { size: 10, color: "#fbbf24" },
+                     hovertext: h.fecha + " · " + h.titulo }; });
         return layout;
     }
     function line(id, x, series, layout) {
@@ -288,8 +294,8 @@ posición y su contraria (forwards a ambos lados que se compensan).</p>
             Plotly.newPlot("d-ret", [
                 { x: r.meses, y: r.meses.map(function (_, i) { return mean(r, i); }), name: "Fondo E", type: "bar", marker: { color: C[0] }, hovertemplate: "%{y:.2f}%" },
                 { x: d.meses, y: d.meses.map(function (_, i) { return mean(d, i); }), name: "Fondo D", type: "bar", marker: { color: C[1] }, hovertemplate: "%{y:.2f}%" }
-            ], hitos(base({ barmode: "group", bargap: 0.3, xaxis: { gridcolor: "rgba(0,0,0,0)" }, yaxis: { gridcolor: "#334155", ticksuffix: "%" } })), { displayModeBar: false, responsive: true });
-            line("d-disp", r.meses, [{ y: r.dispersion, name: "desvío entre AFP", ht: "%{y:.2f} pp" }], base({ showlegend: false, xaxis: { gridcolor: "rgba(0,0,0,0)" } }));
+            ], hitos(base({ barmode: "group", bargap: 0.3, xaxis: { gridcolor: "rgba(0,0,0,0)", automargin: true }, yaxis: { gridcolor: "#334155", ticksuffix: "%" } })), { displayModeBar: false, responsive: true });
+            line("d-disp", r.meses, [{ y: r.dispersion, name: "desvío entre AFP", ht: "%{y:.2f} pp" }], base({ showlegend: false, xaxis: { gridcolor: "rgba(0,0,0,0)", automargin: true } }));
         }
         // Sectores: small multiples con el mismo eje y
         var all = []; SEC.sectores.forEach(function (s) { s.valores.forEach(function (v) { if (v !== null) all.push(v); }); });
@@ -299,8 +305,12 @@ posición y su contraria (forwards a ambos lados que se compensan).</p>
             var div = document.createElement("div"); div.className = "chart-block";
             div.innerHTML = "<h4>" + s.nombre + " <span class='lead'>(" + s.nota + ")</span></h4><div id='d-sec-" + i + "' class='chart'></div>";
             cont.appendChild(div);
+        });
+        SEC.sectores.forEach(function (s, i) {
             line("d-sec-" + i, SEC.meses, [{ y: s.valores, name: s.nombre, color: C[i % C.length] }],
-                 base({ height: 200, showlegend: false, yaxis: { gridcolor: "#334155", zerolinecolor: "#e2e8f0", range: [lo - pad, hi + pad] } }));
+                 base({ height: 210, showlegend: false, margin: { t: 10, r: 10, b: 36, l: 55 },
+                        xaxis: { gridcolor: "rgba(0,0,0,0)", automargin: true },
+                        yaxis: { gridcolor: "#334155", zerolinecolor: "#e2e8f0", range: [lo - pad, hi + pad] } }));
         });
         if (DET && DET.serie_usd) {
             var u = DET.serie_usd;
@@ -311,7 +321,7 @@ posición y su contraria (forwards a ambos lados que se compensan).</p>
             ], base({ barmode: "relative", bargap: 0.3 }), { displayModeBar: false, responsive: true });
             Plotly.newPlot("d-plazo", [{ x: DET.plazos.map(function (p) { return p.plazo; }), y: DET.plazos.map(function (p) { return p.net; }),
                 type: "bar", marker: { color: C[0] }, hovertemplate: "%{y:,.0f} MMUSD<extra></extra>" }],
-                base({ showlegend: false, xaxis: { gridcolor: "rgba(0,0,0,0)", type: "category" } }), { displayModeBar: false, responsive: true });
+                base({ showlegend: false, xaxis: { gridcolor: "rgba(0,0,0,0)", type: "category", tickangle: 0, tickfont: { size: 10 }, automargin: true } }), { displayModeBar: false, responsive: true });
             line("d-cob", DET.cobertura.meses, [{ y: DET.cobertura.pct, name: "cobertura", ht: "%{y:.1f}%" }],
                  base({ showlegend: false, yaxis: { gridcolor: "#334155", ticksuffix: "%", rangemode: "tozero" } }));
         }
@@ -319,19 +329,20 @@ posición y su contraria (forwards a ambos lados que se compensan).</p>
             var afps = Object.keys(SW.serie.afp), PAL = ["#38bdf8", "#fbbf24", "#a78bfa", "#4ade80", "#f87171", "#fb923c", "#94a3b8"];
             line("d-swafp", SW.serie.meses, afps.map(function (a, i) {
                 return { y: SW.serie.afp[a], name: a.charAt(0) + a.slice(1).toLowerCase(), color: PAL[i % PAL.length], ht: "%{y:,.0f}" }; }),
-                 base({ xaxis: { gridcolor: "rgba(0,0,0,0)" }, yaxis: { gridcolor: "#334155", zerolinecolor: "#e2e8f0" } }));
+                 base({ height: 320, xaxis: { gridcolor: "rgba(0,0,0,0)", range: ["2019-01", SW.serie.meses[SW.serie.meses.length - 1]], automargin: true },
+                        yaxis: { gridcolor: "#334155", zerolinecolor: "#e2e8f0" } }));
         }
         if (SEG && SEG.serie) {
             line("d-seg", SEG.serie.meses, [{ y: SEG.serie.neto_me_usd, name: "B.7 (suma de compañías)" },
                                             { y: SEG.serie.bcch, name: "Banco Central, sector seguros" }],
-                 base({ xaxis: { gridcolor: "rgba(0,0,0,0)" } }));
+                 base({ xaxis: { gridcolor: "rgba(0,0,0,0)", automargin: true } }));
             line("d-segvr", SEG.serie.meses, [{ y: SEG.serie.vr_mmm, name: "valor razonable" }],
-                 base({ showlegend: false, xaxis: { gridcolor: "rgba(0,0,0,0)" } }));
+                 base({ showlegend: false, xaxis: { gridcolor: "rgba(0,0,0,0)", automargin: true } }));
         }
         if (FF && FF.serie) {
             line("d-ffmm", FF.serie.meses, [{ y: FF.serie.neto_usd, name: "Fondos mutuos (FUTU)" },
                                            { y: FF.serie.bcch_agf, name: "Banco Central, sector AGF" }],
-                 base({ xaxis: { gridcolor: "rgba(0,0,0,0)" } }));
+                 base({ xaxis: { gridcolor: "rgba(0,0,0,0)", automargin: true } }));
         }
     }
     draw();

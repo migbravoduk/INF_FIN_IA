@@ -26,6 +26,23 @@ def _mes(p: int) -> str:
     return f"{p // 100}-{p % 100:02d}"
 
 
+_SIGLAS = {"NA", "SA", "AG", "PLC", "BNP", "UBS", "USA", "BTG", "BCI", "JP", "HSBC", "BBVA", "ING"}
+_MENORES = {"DE", "DEL", "OF", "THE", "Y", "E", "LA", "LOS"}
+
+
+def nombre_contraparte(s: str) -> str:
+    """'BANK OF AMERICA NA' → 'Bank of America NA' (siglas en mayúscula, conectores en minúscula)."""
+    out = []
+    for i, w in enumerate((s or "").split()):
+        if w in _SIGLAS:
+            out.append(w)
+        elif i and w in _MENORES:
+            out.append(w.lower())
+        else:
+            out.append(w.capitalize())
+    return " ".join(out)
+
+
 def _tipo_swap(grupo: str | None) -> str:
     g = (grupo or "").upper()
     tipo = "moneda" if "MONEDA" in g else ("índices de tasas" if "INDICE" in g else "tasas")
@@ -76,7 +93,7 @@ def swaps_afp(db, top: int = 15) -> dict:
             "tot_fondo": tot_fondo, "total": float(u.valor.sum()),
             "nac": float(u[u.tabla == "swap_nac"].valor.sum()), "ext": float(u[u.tabla == "swap_ext"].valor.sum()),
             "var12": var12, "hace12": _mes(hace12) if var12 else None,
-            "contrapartes": [{"contraparte": r.glosa, "origen": r.origen, "valor": float(r.valor),
+            "contrapartes": [{"contraparte": nombre_contraparte(r.glosa), "origen": r.origen, "valor": float(r.valor),
                               "afps": int(r.afps)} for r in cp.itertuples()],
             "tipos": [{"origen": r.origen, "tipo": r.tipo, "valor": float(r.valor)} for r in tipos.itertuples()],
             "desde": _mes(int(per[0]))}

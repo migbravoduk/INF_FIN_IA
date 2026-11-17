@@ -367,6 +367,24 @@ pares pero empeora h3).
   de mitades vistas/nuevas, `compare_bt` sin empates. Híbrido nuevo vs anterior h1–4: ingresos
   56,4% de pares, Δ −0,110; ganancia 53,5%, Δ −0,060 → **ADOPTAR**. Limpieza de atípicos no
   adoptada en ningún modelo (solo se marcan en las vistas). pytest 54 pasan.
+- 2026-11-17 · institucionales · inversión por emisor, sectores curados (commit 938b69c); monitor
+  de derivados (PLAN_DERIVADOS fases 1–3: BCCh 75 series, FFMM FUTU/OPCI, seguros B.7 57 meses,
+  213 mil contratos; commits 5cc8c7a, a449368). pytest 64.
+- 2026-11-17 · emisores en común con montos MM$; corregido doble conteo (CTE de tipo de cambio
+  con el período repetido cuando seguros y FFMM cierran el mismo mes: montos ×2). Commit f3fb457.
+- 2026-11-17 · bancos/IMACEC (análisis, sin código en producción): ver PLAN_PROYECCIONES_MACRO §D.
+  El modelo de nivel pierde contra persistencia; la corrección por ΔIMACEC gana 5–15% a 3–6 meses
+  y la cifra a 12 meses está sesgada (usa IMACEC efectivo futuro). Decisión pendiente del dueño.
+- 2026-11-17 · SP cartera desagregada (PLAN_DERIVADOS fase 4): `sp_cartera_detalle` (migración
+  013), 2010-01→2026-06, 5,5 M filas; swaps por AFP × fondo × contraparte, forwards USD (C/V
+  validado vs BCCh), AFP en la vista por emisor (171/182 emisores por nombre, 99% del monto),
+  RUT de las 7 AFP. Commit 7221970. pytest 70; CI verde.
+- 2026-11-17 · revisión visual con capturas (Chrome headless, servidor de prueba en :8001):
+  corregidos ejes desalineados entre gráficos vecinos (CSS `.chart-grid`), leyendas abajo que
+  pisaban las fechas (monitor de derivados: leyenda arriba, márgenes iguales), small multiples
+  de sectores que se desbordaban, hitos superpuestos (ahora numerados), etiquetas cortadas,
+  colores repetidos en la deriva de seguros, rentabilidad neta negativa de AFP en verde,
+  enlaces en azul por defecto, texto "las AFP no aparecen". Pendientes visuales: Hoja de Ruta §0.
 
 ---
 

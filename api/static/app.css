@@ -11,6 +11,8 @@
 
 * { box-sizing: border-box; }
 
+a { color: var(--accent); }   /* sin esto, los enlaces de texto salían en el azul por defecto */
+
 body {
     margin: 0;
     font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
@@ -87,7 +89,8 @@ h1 { margin: 0 0 0.2rem; }
     margin-top: 2rem;
 }
 .chart-block { margin-top: 2rem; }
-.chart-grid .chart-block { margin-top: 0; }
+.chart-grid .chart-block { margin-top: 0; display: flex; flex-direction: column; }
+.chart-grid .chart-block > .chart { margin-top: auto; }   /* alinea los ejes de gráficos vecinos */
 .chart-block h2, .chart-block h4 { font-size: 0.95rem; color: var(--muted); font-weight: 500; margin: 0 0 0.4rem; }
 .chart { background: var(--panel); border-radius: 12px; padding: 0.5rem; }
 

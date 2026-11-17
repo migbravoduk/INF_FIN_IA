@@ -37,7 +37,7 @@
                 <td class="num">{{ "{:,.0f}".format(r.desembolso).replace(",", ".") }}</td>
                 <td class="num">{{ "{:,.0f}".format(r.saldo).replace(",", ".") }}</td>
                 <td class="num">{{ "%.2f%%"|format(r.rent_fondo_pct) }}</td>
-                <td class="num strong">{{ "%.2f%%"|format(r.rent_neta_pct) }}</td>
+                <td class="num strong {{ 'neg' if r.rent_neta_pct < 0 }}" {% if r.rent_neta_pct < 0 %}style="color:var(--bad, #f87171)"{% endif %}>{{ "%.2f%%"|format(r.rent_neta_pct) }}</td>
                 <td class="num">
                     {% if r.umbral_inicial != None %}
                         {% if r.umbral_inicial == 0 %}

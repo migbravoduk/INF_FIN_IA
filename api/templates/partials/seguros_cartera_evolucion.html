@@ -48,18 +48,23 @@
     var series  = {{ series | tojson }};
     function draw() {
         if (!window.Plotly) { return setTimeout(draw, 100); }
-        var traces = series.map(function (s) {
+        // 14 colores distintos (la paleta por defecto de Plotly tiene 10 y repetía colores).
+        // Tonos separados entre sí (base Tableau 10 + 4); ninguno repite familia de color.
+        var PAL = ["#4e79a7", "#f28e2b", "#e15759", "#76b7b2", "#59a14f", "#edc948", "#b07aa1",
+                   "#ff9da7", "#9c755f", "#bab0ac", "#bcbd22", "#17becf", "#7f3c8d", "#f1f5f9"];
+        var traces = series.map(function (s, i) {
             return {
                 x: periods, y: s.puntos, name: s.clase,
+                line: { color: PAL[i % PAL.length], width: 1 }, fillcolor: PAL[i % PAL.length] + "b3",
                 type: "scatter", mode: "lines", stackgroup: "one",
                 hovertemplate: "<b>%{fullData.name}</b><br>%{x} · %{y:.1f}%<extra></extra>"
             };
         });
         Plotly.newPlot("cartera-evol-chart", traces, {
-            margin: { t: 10, r: 20, b: 70, l: 50 }, height: 420,
+            margin: { t: 70, r: 20, b: 60, l: 50 }, height: 460,
             paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)",
             font: { color: "#94a3b8" }, hovermode: "x unified",
-            legend: { orientation: "h", y: -0.28, font: { size: 10 } },
+            legend: { orientation: "h", x: 0, y: 1.02, yanchor: "bottom", font: { size: 10 }, traceorder: "reversed" },
             // type category: los períodos son etiquetas (202001…), no números — sin esto
             // Plotly los escala y los rotula como "202.1k".
             xaxis: { gridcolor: "#334155", tickangle: -45, nticks: 14, type: "category" },

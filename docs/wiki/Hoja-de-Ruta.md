@@ -36,7 +36,45 @@ eficiente, opcional) y las decisiones del §6 de ese plan. Detalle de modelos en
 17-nov: inversión por emisor (`/inversion-institucional/emisor`), arreglos de AFP (fecha
 común) y productos, sectores curados; y el **monitor de derivados institucionales**
 (`/inversion-institucional/derivados`, [`docs/PLAN_DERIVADOS.md`](../PLAN_DERIVADOS.md)):
-BCCh por sector, fondos mutuos por fondo y seguros por compañía (B.7).
+BCCh por sector, fondos mutuos por fondo y seguros por compañía (B.7). Además, la **cartera
+desagregada de la SP** (`sp_cartera_detalle`, 2010→2026-06): swaps y forwards por AFP, fondo y
+contraparte, y las AFP en la vista por emisor. Revisión visual con capturas y correcciones de
+gráficos (bitácora de `docs/PLAN_SEMANA.md` §7).
+
+### Pendientes consolidados (17-nov-2026)
+
+Modelos y análisis:
+- [ ] **Bancos y seguros con driver de crecimiento** (colocaciones / reservas reales ← IMACEC):
+  repetir la prueba con la senda EEE vintage y decidir (`docs/PLAN_PROYECCIONES_MACRO.md` §D).
+- [ ] Modelos específicos de bancos y seguros: naive estacional en bancos h ≥ 9, limpieza de
+  atípicos en bancos (gana 58% de pares, empeora a 3 meses).
+- [ ] Sectores curados en el modelo estructural: reintentar con más shrinkage (`LAMBDA_SECTOR`).
+- [ ] Frontera eficiente (S5, opcional). Costos financieros como deuda × tasa. Narrativa con LLM.
+- [ ] Valorización de mercado de la renta fija de seguros (B.1) sin reconciliar: bloquea las
+  curvas de crédito por emisor. Clasificaciones de riesgo por emisor.
+
+Datos y fuentes:
+- [ ] Derivados: verificar el cierre del 5-nov con el BCCh de nov-2026 (~enero); seguros antes
+  de 2024-12 (formato antiguo), futuros de seguros sin cuadrar, objetivo `1512` sin documentar;
+  diccionario W/Y y M/N de los códigos de forwards de la SP; forwards SP antes de 2017-08.
+- [ ] 11 emisores de la SP sin RUT asignado (1% del monto; lista en `config/sp_emisores.yaml`).
+- [ ] RUT 77844703 (BTBD/FNTBD) y 16 empresas sin sector (BK y Vivo ya clasificadas).
+
+Vistas (revisión con capturas del 17-nov; lo corregido está en la bitácora):
+- [ ] `/proyecciones/corporativos` abre con una empresa sin serie (117 Telecomunicaciones):
+  página vacía. Elegir por defecto una con proyección.
+- [ ] `/banca` y `/fondos-mutuos`: miles con coma y decimales con punto (formato inglés), el
+  resto del sitio usa formato chileno. En `/fondos-mutuos` los encabezados "Patrimonio" y
+  "Partícipes" se pegan, y el gráfico de "3 peores" toma series rotas (MONEY MARKET · P cae a 0:
+  error de dato, no desempeño); filtrar series con saltos imposibles.
+- [ ] `/banca`: toda la columna Total en verde (sin significado).
+- [ ] `/afp` (neta de comisiones): las barras "Rent. del fondo" casi no se ven (gris sobre fondo oscuro).
+- [ ] Vista por emisor, bloque AFP: "vs 12 meses" sale "—" y los últimos 3 meses vacíos porque
+  la ventana es la de seguros/FFMM (la SP va ~3 meses atrás). Usar la ventana propia de la SP.
+- [ ] Otras vistas con la leyenda abajo en `y` negativo (curvas, proyecciones, fondos, banca
+  evolutiva, comparar BCCh, AFP neta): mismo riesgo de montarse sobre las fechas; revisar con
+  capturas y llevar la leyenda arriba como en el monitor de derivados.
+- [ ] Cajas de texto con fondo blanco (Empresa, Emisor) frente a selectores oscuros.
 
 Pendiente que requiere decisión o curaduría humana:
 
@@ -66,7 +104,7 @@ Pendiente que requiere decisión o curaduría humana:
 - **CMF seguros** (`cmf_insurer_statements`): ~581k filas, FECU trimestral **vida + generales**, 2015Q1→2026Q1, plan de cuentas propio (Circulares 2022/2050), en miles de CLP.
 - **CMF intermediarios** (`cmf_broker_statements`): ~210k filas, corredores de bolsa + agentes de valores, 2015Q1→2026Q1.
 - **Cartera de seguros (Circular 1.835)**: control B.8 (~72k filas) + **renta fija B.1 (~7,9M filas, la tabla más grande del repo)**, mensual 2020-01→2026-06, ambos ramos. Descarga automática.
-- **SP pensiones**: cuotas (~209k, 2008+), precios (~120k, tramo 2026), **cartera (~341k, 133 meses 2015-01→2026-01)** con `section`/`row_order`.
+- **SP pensiones**: cuotas (~209k, 2008+), precios (~120k, tramo 2026), **cartera (198 meses 2010-01→2026-06)** con `section`/`row_order`, y **detalle de la cartera desagregada** (`sp_cartera_detalle`, ~5,5 M filas: derivados desde 2010, emisores/riesgo/plazos desde 2022).
 
 ### Capa web (FastAPI + Jinja2 + HTMX + Plotly) — `iniciar_web.bat` / `main.py serve`
 - **Panel** `/`: KPIs multi-fuente (PIB/IMACEC var, IPC, USD/CLP; top-5 bancos; rentabilidad 12m AFP + líder por rentabilidad y patrimonio; mercado) + gráficos UF y TPM.
