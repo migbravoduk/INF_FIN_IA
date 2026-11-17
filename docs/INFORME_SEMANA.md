@@ -25,7 +25,17 @@ plan). Cifras: pares (misma empresa, origen y horizonte), h2–4 salvo indicaci�
 | Spread depósito − swap 1a (V4) | 46,9%, Δ +0,133 | ídem |
 | Exposición a la UF en seguros de vida | 49,5% de pares, Δ −0,026 (medianas mejoran) | spec `uf` en `backtest_simple` |
 
-## Lo que necesita tu decisión (detalle en el §6 del plan)
+## Actualización 17-nov: decisiones 1–4 resueltas (ronda 6)
+
+Medido en 80 empresas (las 40 de siempre + 40 nuevas como confirmación). El híbrido de
+producción cambió a: SARIMAX en h1 (con tope si explota) · promedio SARIMAX + estructural en
+h2–3 · estructural en h4+, con la tasa real swap UF 5a en lugar de la TPM y el margen anclado en
+la mediana de 4 trimestres. Contra el anterior gana en 56% de los pares en ingresos (MASE −0,11)
+y 54% en ganancia (−0,06), en ambas mitades de la muestra. Bandas regeneradas (más angostas).
+Atípicos: se detectan y se marcan en las vistas, pero eliminarlos antes de calibrar no pasó la
+regla en ningún modelo. Detalle: `docs/wiki/Backtest-Modelos.md`, Ronda 6.
+
+## Lo que necesitaba tu decisión al 16-nov (puntos 1–4 resueltos arriba)
 
 1. **V2 (tasa real en lugar de TPM).** Pasa en h2–4 con la evidencia más fuerte de la semana
    (z = 2,6). Falla solo en h1, que en producción cubre el SARIMAX. Activarlo es un cambio de

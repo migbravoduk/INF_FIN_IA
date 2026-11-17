@@ -95,18 +95,25 @@ def backtest_clase(db, clase: str, uf: bool = False, limite: int | None = None) 
                 origin = int(s.index[i])
                 targets = next_periods(origin, hmax, monthly)
                 preds = {}
-                fc = forecast_series(train, hmax, monthly=monthly, is_stock=acc["stock"])
-                if fc is not None:
-                    preds["sarimax"] = fc["mean"].values
+                for sfx, lim, aco in (("", False, False), ("_acot", False, True),
+                                      ("_lim", True, False), ("_lim_acot", True, True)):
+                    if lim and acc["stock"]:
+                        continue   # en stocks la limpieza no aplica (forecast_series)
+                    fc = forecast_series(train, hmax, monthly=monthly, is_stock=acc["stock"],
+                                         limpiar=lim, acotar=aco)
+                    if fc is not None:
+                        preds["sarimax" + sfx] = fc["mean"].values
                 if acc["stock"]:
                     preds["snaive"] = np.full(hmax, float(train.iloc[-1]))
                 else:
                     preds["snaive"] = np.array([_snaive(train, p) for p in targets])
                 if uf and not acc["stock"] and (clase == "bancos" or kind == "vida"):
                     pi = infl.get(origin, monthly, c["lag"])
-                    fu = forecast_series_uf(train, hmax, monthly, pi)
-                    if fu is not None:
-                        preds["uf"] = fu["mean"].values
+                    for sfx, lim, aco in (("", False, False), ("_acot", False, True),
+                                          ("_lim", True, False), ("_lim_acot", True, True)):
+                        fu = forecast_series_uf(train, hmax, monthly, pi, limpiar=lim, acotar=aco)
+                        if fu is not None:
+                            preds["uf" + sfx] = fu["mean"].values
                 for h in c["horizons"]:
                     p = targets[h - 1]
                     actual = s.get(p, np.nan)
@@ -120,7 +127,7 @@ def backtest_clase(db, clase: str, uf: bool = False, limite: int | None = None) 
                                      "account": acc["label"], "origin": str(origin), "h": h,
                                      "target": str(p), "spec": spec, "actual": float(actual),
                                      "forecast": f, "abs_err": abs(actual - f),
-                                     "mase": abs(actual - f) / scale})
+                                     "mase": abs(actual - f) / scale, "scale": scale})
         print(f"[{n}/{len(ents)}] {str(nombre)[:45]:<45} filas={len(rows)} t={time.time()-t0:.0f}s",
               flush=True)
     return rows

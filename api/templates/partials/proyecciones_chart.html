@@ -18,6 +18,15 @@
 {% for r in results %}
 <div class="chart-block" style="margin-top:1.5rem">
     <h4>{{ r.account }} — trimestral (desacumulado) y proyección</h4>
+    {% if r.atipicos %}<p class="lead" style="margin:0.25rem 0 0">
+        {{ r.atipicos | length }} dato(s) atípico(s) en la historia
+        ({% for a in r.atipicos %}{{ a.period }}{% if not loop.last %}, {% endif %}{% endfor %}, marcados con ✕).
+        {% if r.atipicos_usados %}El modelo usa tendencia + estacionalidad en su lugar.
+        {% else %}Solo se informan: el margen se ancla en la mediana de 4 trimestres, que ya
+        es robusta a un trimestre atípico (eliminarlos se midió y no mejoró la proyección).{% endif %}</p>{% endif %}
+    {% if r.acotado %}<p class="lead" style="margin:0.25rem 0 0; color:#fbbf24">
+        El SARIMAX salió fuera del rango histórico (proyección explosiva) y se reemplazó por el
+        naive estacional en los trimestres que le tocan (1 a 3).</p>{% endif %}
     <div id="proy-chart-{{ loop.index }}" class="chart"></div>
 </div>
 {% endfor %}
@@ -99,17 +108,21 @@
     <summary>Nota metodológica</summary>
     <p style="color:#94a3b8; font-size:.9rem; line-height:1.5">
         Modelo <strong>híbrido por horizonte</strong>, calibrado por backtest fuera de
-        muestra (40 empresas × 8 orígenes): el primer trimestre usa un SARIMAX puro
-        (momentum de la propia serie); del segundo en adelante manda el modelo
+        muestra (80 empresas × 8 orígenes, nov-2026): el primer trimestre usa un SARIMAX puro
+        (momentum de la propia serie, con un tope que lo reemplaza por el naive estacional si
+        la proyección explota); el segundo y el tercero, el <strong>promedio</strong> del
+        SARIMAX y del modelo estructural; del cuarto en adelante manda el modelo
         <strong>estructural</strong>: los activos operacionales (PP&amp;E + inventarios +
-        deudores) se proyectan según factores macro —con elasticidades estimadas en panel
-        sectorial—. Los factores macro futuros <strong>no se proyectan</strong>: se anclan
-        a las medianas de las dos encuestas oficiales del BCCh —la <strong>Encuesta de
-        Expectativas Económicas</strong> (economistas, mensual) y la <strong>Encuesta de
-        Operadores Financieros</strong> (mercado, quincenal)— interpolando linealmente
-        entre sus horizontes publicados. Los resultados se derivan manteniendo las
-        relaciones de productividad de activos (rotación y margen, con reversión suave a
-        la media histórica). El reajuste por UF y las diferencias de cambio se separan de la
+        deudores) se proyectan según factores macro —actividad, inflación, tipo de cambio y
+        la <strong>tasa real swap UF a 5 años</strong> (su forward implícita en la curva del
+        día), con elasticidades estimadas en panel sectorial—. Los factores macro futuros
+        <strong>no se proyectan</strong>: se anclan a las medianas de las dos encuestas
+        oficiales del BCCh —la <strong>Encuesta de Expectativas Económicas</strong>
+        (economistas, mensual) y la <strong>Encuesta de Operadores Financieros</strong>
+        (mercado, quincenal)— interpolando linealmente entre sus horizontes publicados, y a la
+        curva swap UF para la tasa real. Los resultados se derivan manteniendo las
+        relaciones de productividad de activos (rotación desde el último trimestre y margen
+        desde la mediana de los últimos 4, ambos con reversión suave a la media histórica). El reajuste por UF y las diferencias de cambio se separan de la
         ganancia y se proyectan con la exposición de cada empresa por la senda de inflación y
         de tipo de cambio de las mismas encuestas. Las bandas del 80% y 95% son <strong>empíricas</strong>:
         cuantiles del error real medido en el backtest, reescalados por la volatilidad de
@@ -155,6 +168,14 @@
                 { x: fxc, y: mean, mode: "lines+markers", name: "Proyección",
                   line: { color: "#f472b6", width: 2, dash: "dash" }, marker: { size: 4 } }
             ];
+            if (r.atipicos && r.atipicos.length) {
+                traces.push({ x: r.atipicos.map(function (a) { return a.period; }),
+                    y: r.atipicos.map(function (a) { return a.valor; }),
+                    customdata: r.atipicos.map(function (a) { return a.limpio; }),
+                    mode: "markers", name: "Atípico aislado",
+                    marker: { symbol: "x", size: 11, color: "#fbbf24", line: { width: 2 } },
+                    hovertemplate: "%{x}<br>dato: %{y:,.0f}<br>calibrado con: %{customdata:,.0f}<extra>atípico</extra>" });
+            }
 
             Plotly.newPlot(el, traces, {
                 margin: { t: 10, r: 10, b: 60, l: 80 }, height: 360,

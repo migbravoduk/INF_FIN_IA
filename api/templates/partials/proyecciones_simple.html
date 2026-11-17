@@ -39,6 +39,15 @@
     <h4>{{ r.account }}
         <span class="lead">— {{ r.unit_note }} · {{ r.spec }} · {{ r.n_obs }} obs.</span></h4>
     {% if r.uf_note %}<p class="lead" style="margin:0.25rem 0 0">{{ r.uf_note }}</p>{% endif %}
+    {% if r.atipicos %}<p class="lead" style="margin:0.25rem 0 0">
+        {{ r.atipicos | length }} dato(s) atípico(s) en la historia
+        ({% for a in r.atipicos %}{{ a.period }}{% if not loop.last %}, {% endif %}{% endfor %}, marcados con ✕).
+        {% if r.atipicos_usados %}El modelo usa tendencia + estacionalidad en su lugar.
+        {% else %}Solo se informan: eliminarlos antes de calibrar se midió en esta clasificación
+        y no pasó la regla de adopción.{% endif %}</p>{% endif %}
+    {% if r.acotado %}<p class="lead" style="margin:0.25rem 0 0; color:#fbbf24">
+        El SARIMAX salió fuera del rango histórico y se reemplazó por
+        {{ "el último valor" if r.stock else "el naive estacional" }}.</p>{% endif %}
     <div id="proys-chart-{{ loop.index }}" class="chart"></div>
 </div>
 {% endfor %}
@@ -80,6 +89,14 @@
                 { x: fxc, y: mean, mode: "lines+markers", name: "Proyección",
                   line: { color: "#f472b6", width: 2, dash: "dash" }, marker: { size: 4 } }
             ];
+            if (r.atipicos && r.atipicos.length) {
+                traces.push({ x: r.atipicos.map(function (a) { return a.period; }),
+                    y: r.atipicos.map(function (a) { return a.valor; }),
+                    customdata: r.atipicos.map(function (a) { return a.limpio; }),
+                    mode: "markers", name: "Atípico aislado",
+                    marker: { symbol: "x", size: 11, color: "#fbbf24", line: { width: 2 } },
+                    hovertemplate: "%{x}<br>dato: %{y:,.0f}<br>calibrado con: %{customdata:,.0f}<extra>atípico</extra>" });
+            }
 
             Plotly.newPlot(el, traces, {
                 margin: { t: 10, r: 10, b: 70, l: 90 }, height: 360,

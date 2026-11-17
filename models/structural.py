@@ -262,7 +262,12 @@ def _revert_ratio(series: pd.Series, steps: int, anchor: str = "mean4") -> np.nd
     s = series.dropna()
     if s.empty:
         return np.full(steps, np.nan)
-    r0 = float(s.iloc[-1]) if anchor == "last" else float(s.tail(RATIO_SHORT_Q).mean())
+    if anchor == "last":
+        r0 = float(s.iloc[-1])
+    elif anchor == "median4":   # robusto a un trimestre atípico dentro de la ventana
+        r0 = float(s.tail(RATIO_SHORT_Q).median())
+    else:
+        r0 = float(s.tail(RATIO_SHORT_Q).mean())
     mu = float(s.tail(RATIO_LONG_Q).mean())
     return np.array([mu + (r0 - mu) * RATIO_PHI ** (h + 1) for h in range(steps)])
 
@@ -275,7 +280,9 @@ def forecast_structural(db, rut: str, steps: int = 8,
                         ratio_anchor: str = "mean4",
                         nonop: bool = False,
                         drv: pd.DataFrame | None = None,
-                        factors_q: pd.DataFrame | None = None) -> dict | None:
+                        factors_q: pd.DataFrame | None = None,
+                        limpiar: bool = False,
+                        ancla_margen: str | None = None) -> dict | None:
     """
     Proyección estructural. Devuelve dict con series trimestrales proyectadas
     para ingresos y ganancia + trayectoria de activos y ratios (narrativa).
@@ -321,6 +328,18 @@ def forecast_structural(db, rut: str, steps: int = 8,
         adj_hist, adj_fc, nonop_det = split_and_forecast(rut, panel.nonop, drv, list(inc.index), fc_periods)
         inc = inc - adj_hist.reindex(inc.index).fillna(0.0)
 
+    # Datos atípicos (models/robusto.py): fuera de los ratios y de la telescopía, que si no
+    # repite el atípico de hace un año en el mismo trimestre proyectado.
+    atipicos = {}
+    if limpiar:
+        from models.robusto import detalle, limpiar_outliers
+        rev_l, m_rev = limpiar_outliers(rev, 4)
+        inc_l, m_inc = limpiar_outliers(inc, 4)
+        # ganancia: el detalle se informa sobre la operacional (sin reajuste ni dif. de cambio)
+        atipicos = {"ingresos": detalle(rev, rev_l, m_rev),
+                    "ganancia": detalle(inc, inc_l, m_inc)}
+        rev, inc = rev_l, inc_l
+
     # Ratios históricos sobre sumas móviles 4T
     rev4 = rev.rolling(4).sum()
     inc4 = inc.rolling(4).sum()
@@ -342,7 +361,8 @@ def forecast_structural(db, rut: str, steps: int = 8,
 
     # Paso 2: ratios con reversión
     rot_path = _revert_ratio(rot, steps, anchor=ratio_anchor)
-    mgn_path = _revert_ratio(mgn, steps, anchor=ratio_anchor)
+    # El margen puede llevar su propia ancla (ronda 6: 'median4' en el margen, 'last' en la rotación)
+    mgn_path = _revert_ratio(mgn, steps, anchor=ancla_margen or ratio_anchor)
     if not np.isfinite(rot_path).all():
         return None
 
@@ -390,4 +410,5 @@ def forecast_structural(db, rut: str, steps: int = 8,
         "beta": dict(zip(model.factor_names, np.round(beta, 4))),
         "alpha": round(alpha, 4), "sigma_dlog": round(sigma, 4),
         "no_operacional": nonop_det,
+        "atipicos": atipicos,
     }

@@ -84,9 +84,10 @@ spec de todos (mediana 0.886).
 
 ## Modelo de PRODUCCIÓN (decisión jul-2026)
 
-`/proyecciones` usa el **híbrido por horizonte** (`models/hybrid.py`):
+`/proyecciones` usa el **híbrido por horizonte** (`models/hybrid.py`; versión vigente en la
+ronda 6, más abajo):
 - h=1 → SARIMAX(1,0,0)×(0,1,1,4) sin exógenas.
-- h≥2 → estructural con ancla `last`.
+- h≥2 → estructural con ancla `last` (desde la ronda 6: promedio con el SARIMAX en h2–3).
 - **Bandas empíricas**: cuantiles 80/95 de |error|/escala medidos en este backtest,
   reescalados por la volatilidad de cada empresa (`BAND_QUANTILES` en hybrid.py —
   regenerar si se re-corre el backtest con specs nuevos).
@@ -173,3 +174,68 @@ seguros 73 × 8 trimestrales, h = 1–4). MASE mediana:
 `uf` = resultado − k·π_UF con el SARIMAX + k·π de la senda (k: MCO con intercepto, 36 meses).
 Bancos h3/6/12 en pares: 51,7%, Δ −0,021 → **adoptado**. Seguros de vida h2–4: 49,5%, Δ −0,026
 → no adoptado. Bandas de ambas vistas: cuantiles de esta corrida (`BANDAS_SIMPLE`).
+
+## Ronda 6: decisiones del dueño y atípicos (17-nov-2026)
+
+Encargo: resolver las decisiones 1–4 del §6 de [`PLAN_SEMANA.md`](../PLAN_SEMANA.md) y aislar
+atípicos en la calibración de los modelos generales (los específicos de bancos y seguros
+quedan para después).
+
+**Diseño contra el sobreajuste.** La muestra se duplica a 80 empresas (8 orígenes, h1–4,
+640 pares por celda): las 40 de siempre ("vistas", sobre las que se formularon las preguntas)
+y las 40 siguientes por materialidad ("nuevas", nunca usadas). Además de la regla de
+`compare_bt` sobre las 80, un cambio entra solo si el Δ MASE medio tiene el mismo signo en
+ambas mitades. Las decisiones se toman una dimensión a la vez y no se elige "la mejor fila"
+de la grilla. `compare_bt` pasa a descartar los empates (test de signo): la limpieza y el
+tope solo tocan parte de las series, y contar los empates como derrotas los castigaba por no
+hacer nada donde no hace falta; no cambia ninguna decisión previa (allí no había empates).
+
+Corridas: `scratch/bt_r6.csv` (todos los specs, factores actuales, 449 s), `bt_r6_v2.csv`
+(estructural con V2), `bt_r6_v2m.csv` (ancla de margen separada), `bt_bancos_r6.csv`,
+`bt_seguros_r6.csv`; análisis en `scratch/decisiones_r6.py` (no versionados).
+
+**Nuevos componentes** (`models/robusto.py`):
+
+- `limpiar_outliers`: STL robusto; atípico = residuo > 4 desvíos robustos (1,4826·MAD) **y
+  aislado** (vecinos < 2 desvíos). Lo segundo distingue un atípico aditivo de un cambio de nivel
+  (Chen y Liu 1993): sin esa condición, una fusión hacía marcar los trimestres del quiebre.
+  Umbral fijado a priori (≈ `tsclean` de R), no ajustado al backtest.
+- `acotar`: si la proyección sale de [mín − rango, máx + rango] de la historia, se reemplaza
+  por naive estacional (flujos) o último valor (stocks).
+- Ancla `median4` del ratio y `ancla_margen` separada de la de rotación (`structural.py`).
+
+| Decisión | Comparación (h2–4 salvo indicación) | Pares | Δ medio | Vistas / nuevas (Δ) | Veredicto |
+|---|---|---|---|---|---|
+| 4 · Tope | SARIMAX acotado vs sin tope, h1–4 | se activa en 1 de 640 | — | — | **adoptado** (seguros: MASE máx 6·10⁸ → 10) |
+| 1 · V2 (tasa real 5a por TPM) | ingresos, ancla med4 | 53,4% | −0,032 | −0,058 / −0,006 | **adoptado** |
+| 1 · V2 | ganancia (otra partida) | 46,5% | +0,001 | +0,002 / +0,001 | dentro de tolerancia |
+| 2 · Ancla rotación med4 vs last (con V2) | ingresos | 52,6% | −0,006 | **+0,014** / −0,026 | no (mitades se contradicen) |
+| 2 · Ancla margen med4 (rotación last, V2) | ganancia | 51,2% | −0,013 | −0,019 / −0,007 | **adoptado** |
+| 3 · h2: promedio SARIMAX + estructural | ingresos, h2 | 59,5% | −0,091 | −0,028 / −0,155 | **adoptado** |
+| 3 · h2: promedio | ganancia, h2 | 57,7% | −0,067 | −0,057 / −0,078 | **adoptado** |
+| 3 · extensión a h3 | ingresos / ganancia, h3 | 54,2% / 56,7% | −0,075 / −0,069 | consistentes | **adoptado** |
+| 3 · extensión a h4 | ingresos / ganancia, h4 | 50,9% / 53,1% | +0,012 / −0,043 | se contradicen | no |
+| Atípicos · SARIMAX h1 | ingresos / ganancia, h1 | 51,5% / 51,5% | −0,003 / −0,011 | se contradicen | no |
+| Atípicos · estructural | ganancia sobre ancla med4 | 49,2% | −0,011 | +0,017 / −0,040 | no (la mediana ya los cubre) |
+| Atípicos · estructural | ingresos sobre V2 | 55,2% | −0,012 | −0,026 / +0,003 | no (h4 +0,029) |
+| Atípicos · bancos | resultado (uf), h1/3/6/12 | 57,6% | −0,041 | — | no (h3 +0,037) |
+| Atípicos · seguros | resultado, h1–4 | 49,4% | 0,000 | — | no |
+
+**Híbrido nuevo vs anterior** (compuesto con las mismas filas; `scratch/bt_r6_hibridos.csv`):
+
+| Partida | h | anterior (mediana / media) | nuevo (mediana / media) |
+|---|---|---|---|
+| Ingresos | 1 | 0,570 / 1,040 | 0,570 / 0,960 |
+| Ingresos | 2 | 0,837 / 1,280 | **0,647** / 1,081 |
+| Ingresos | 3 | 0,806 / 1,288 | **0,682** / 1,176 |
+| Ingresos | 4 | 0,786 / 1,318 | **0,746** / 1,271 |
+| Ganancia | 1 | 0,690 / 1,085 | 0,690 / 1,065 |
+| Ganancia | 2 | 0,856 / 1,352 | **0,714** / 1,201 |
+| Ganancia | 3 | 0,802 / 1,309 | **0,701** / 1,218 |
+| Ganancia | 4 | 0,792 / 1,324 | 0,788 / 1,346 |
+
+En pares h1–4: ingresos 56,4% (Δ −0,110; vistas −0,142, nuevas −0,077); ganancia 53,5%
+(Δ −0,060; −0,039 / −0,080). **ADOPTAR**. `BAND_QUANTILES` regenerado desde el compuesto
+(640 pares por celda): las bandas del 95% de ingresos se angostan ~45% (h2: 5,48 → 3,01).
+Configuración en `models/hybrid.PRODUCCION`; bancos y seguros en `simple_forecast.ROBUSTO_SIMPLE`
+(tope sí, limpieza no). Las vistas marcan los atípicos detectados (✕) como información.

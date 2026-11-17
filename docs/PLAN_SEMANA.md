@@ -305,7 +305,11 @@ Estacionado a propósito (no cabe en la semana o depende de lo anterior):
 
 El ejecutor agrega aquí lo que encuentre y no pueda resolver, con una línea cada cosa.
 
-Encontrado en la ejecución (16-nov):
+Encontrado en la ejecución (16-nov). **Resueltos el 17-nov (ronda 6):** V2 adoptado, ancla del
+margen = mediana 4T, h2–3 = promedio SARIMAX + estructural, tope al SARIMAX explosivo; detalle
+en `docs/wiki/Backtest-Modelos.md` (Ronda 6). Sigue abierto: `snaive` en bancos h ≥ 9 (va con
+el modelo específico de bancos, igual que la limpieza de atípicos de bancos, que ganó 58% de
+pares pero empeora h3).
 
 - **Decidir S2-V2** (tasa real 5a en lugar de TPM): en ingresos h2–4 gana 54,3% de pares
   (z = 2,6), Δ medio −0,040, medianas −0,03; falla solo la condición extra de h1–4 porque la
@@ -359,6 +363,10 @@ Encontrado en la ejecución (16-nov):
   −0,02/−0,05/−0,05 → **ADOPTAR** (también en h1–12: 52,0%, Δ −0,023). Seguros de vida h2–4:
   49,5%, Δ −0,026, medianas −0,05 a −0,09 → **NO ADOPTAR** (pares < 50%).
 - 2026-11-16 · S6 · pytest 50 pasan. Validación y documentación: ver INFORME_SEMANA.
+- 2026-11-17 · ronda 6 (encargo del dueño: decisiones 1–4 + atípicos) · 80 empresas, criterio
+  de mitades vistas/nuevas, `compare_bt` sin empates. Híbrido nuevo vs anterior h1–4: ingresos
+  56,4% de pares, Δ −0,110; ganancia 53,5%, Δ −0,060 → **ADOPTAR**. Limpieza de atípicos no
+  adoptada en ningún modelo (solo se marcan en las vistas). pytest 54 pasan.
 
 ---
 

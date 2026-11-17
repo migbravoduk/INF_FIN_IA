@@ -12,7 +12,7 @@ nombre de la partida (p. ej. "Resultado" para bancos, models/backtest_simple.py)
 
 Regla (las cuatro a la vez, sobre los horizontes pedidos; por defecto 2–4, que es donde manda
 el estructural en producción):
-  1. gana en ≥ 50% de los pares,
+  1. gana en ≥ 50% de los pares distintos (empates fuera, test de signo; nov-2026),
   2. ΔMASE medio < 0,
   3. la mediana mejora en promedio entre horizontes,
   4. en ningún horizonte la mediana empeora más de 0,02.
@@ -47,8 +47,12 @@ def comparar(base: pd.Series, nuevo: pd.Series, horizontes: list[int]) -> dict:
     w = pd.concat([base.rename("base"), nuevo.rename("nuevo")], axis=1).dropna()
     w = w[w.index.get_level_values("h").isin(horizontes)]
     d = w["nuevo"] - w["base"]
-    n = len(d)
-    win = float((d < 0).mean())
+    # Test de signo: los empates (misma proyección) no informan y se descartan. Importa en
+    # cambios que solo tocan parte de las series (limpieza de atípicos, tope): contarlos como
+    # derrotas castigaría un cambio por no hacer nada donde no hace falta.
+    dist = d[d != 0]
+    n = len(dist)
+    win = float((dist < 0).mean()) if n else 0.0
     med = w.groupby("h").median()
     cambio = med["nuevo"] - med["base"]
     peor = float(cambio.max())
@@ -68,7 +72,7 @@ def main():
     a = ap.parse_args()
     hs = [int(x) for x in a.horizontes.split(",")]
     r = comparar(_load(a.base, a.cuenta), _load(a.nuevo, a.cuenta), hs)
-    print(f"{a.cuenta} · h={hs} · {r['n']} pares")
+    print(f"{a.cuenta} · h={hs} · {r['n']} pares distintos")
     print(r["medianas"].to_string())
     print(f"gana {r['win']:.1%} (z={r['z']:+.1f}) · dMASE medio {r['d_media']:+.3f} · "
           f"cambio medio de mediana {r['d_mediana']:+.3f} · peor horizonte {r['peor_h']:+.3f}")

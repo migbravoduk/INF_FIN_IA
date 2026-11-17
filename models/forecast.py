@@ -96,12 +96,15 @@ def get_quarterly_deaccumulated(db, rut: str, account: str) -> pd.Series:
 
 def forecast_account(db, rut: str, account: str, steps: int = 8,
                      macro: MacroPath | None = None,
-                     use_exog: bool = True) -> ForecastResult | None:
+                     use_exog: bool = True, limpiar: bool = False,
+                     acotar: bool = False) -> ForecastResult | None:
     """
     Ajusta el SARIMAX y proyecta `steps` trimestres. None si no hay datos.
     `use_exog=False`: SARIMAX puro sin exógenas macro — el backtest (jul-2026)
     mostró que las exógenas dañan la precisión en flujos trimestrales; el modo
     puro es el mejor spec a horizonte de 1 trimestre.
+    `limpiar`: ajusta sin los datos atípicos; `acotar`: si la proyección explota, naive
+    estacional (models/robusto.py). `model_info` informa "atipicos" y "acotado".
     """
     from statsmodels.tsa.statespace.sarimax import SARIMAX
 
@@ -139,7 +142,13 @@ def forecast_account(db, rut: str, account: str, steps: int = 8,
     exog_hist_z = (exog_hist - mu) / sd
     exog_fc_z = (exog_fc - mu) / sd
     scale = max(float(np.nanstd(endog.values)), 1.0)
-    endog_s = endog / scale
+    atipicos = []
+    endog_fit = endog
+    if limpiar:
+        from models.robusto import detalle, limpiar_outliers
+        endog_fit, marcados = limpiar_outliers(endog, 4)
+        atipicos = detalle(endog, endog_fit, marcados)
+    endog_s = endog_fit / scale
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
@@ -157,6 +166,14 @@ def forecast_account(db, rut: str, account: str, steps: int = 8,
     ci80 = pd.DataFrame({"low": ci80_raw[:, 0], "high": ci80_raw[:, 1]}, index=fc_periods)
     ci95 = pd.DataFrame({"low": ci95_raw[:, 0], "high": ci95_raw[:, 1]}, index=fc_periods)
 
+    acotado = False
+    if acotar:
+        from models.robusto import acotar as _acotar
+        nuevo, acotado = _acotar(mean.values, endog_fit, 4)
+        if acotado:
+            mean = pd.Series(nuevo, index=fc_periods)
+            ci80 = ci95 = pd.DataFrame({"low": nuevo, "high": nuevo}, index=fc_periods)
+
     return ForecastResult(
         rut=rut, account=account,
         history=endog, mean=mean, ci80=ci80, ci95=ci95,
@@ -167,6 +184,7 @@ def forecast_account(db, rut: str, account: str, steps: int = 8,
             "exog": EXOG_VARS if use_exog else [],
             "n_obs": int(endog.dropna().shape[0]),
             "aic": round(float(fitted.aic), 1),
+            "atipicos": atipicos, "acotado": acotado,
         },
     )
 

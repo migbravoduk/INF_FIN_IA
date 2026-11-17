@@ -14,6 +14,11 @@ Especificaciones comparadas:
   snaive    — naive estacional: y[T+h] = y[T+h-4] (benchmark mínimo)
   estr_m4   — modelo ESTRUCTURAL (activos←macro, rotación→margen), ancla móvil 4T
   estr_last — estructural con ancla en el último ratio observado ("mantener")
+  estr_med4 — ancla mediana 4T; estr_last_mmed4_nop — rotación last, margen mediana 4T
+  sufijos   _nop (no operacional separado), _lim (atípicos aislados antes de calibrar),
+            _acot (SARIMAX con tope); ver models/robusto.py. `eee` solo con --con-eee.
+  Ronda 6 (nov-2026): el híbrido de producción se compone desde estos specs
+  (scratch/decisiones_r6.py final).
 
 Métricas (por partida, spec y horizonte):
   MASE  — |error| / escala, con escala = media|y_t - y_{t-4}| del tramo de
@@ -120,10 +125,16 @@ class _StructuralCache:
         return self._fq.get(as_of_period)
 
 
+# (nombre corto, ancla de la rotación, ancla del margen)
+ANCLAS = (("m4", "mean4", None), ("last", "last", None), ("med4", "median4", None),
+          ("last_mmed4", "last", "median4"))
+
+
 def backtest_series(db, rut: str, nombre: str, account: str,
                     origins: int = 8, horizon: int = 4,
                     structural: "_StructuralCache | None" = None,
-                    solo_estructural: bool = False) -> list[dict]:
+                    solo_estructural: bool = False, con_eee: bool = False,
+                    robusto: bool = True) -> list[dict]:
     """Backtest rolling-origin de una (empresa, partida). Devuelve filas de resultados."""
     endog = get_quarterly_deaccumulated(db, rut, account)
     if endog.dropna().shape[0] < MIN_OBS + origins + horizon:
@@ -161,14 +172,23 @@ def backtest_series(db, rut: str, nombre: str, account: str,
             mu, sd = exog_hist.mean(), exog_hist.std().replace(0.0, 1.0)
             ehz, efz = (exog_hist - mu) / sd, (exog_fc - mu) / sd
             endog_scale = max(float(np.nanstd(train.values)), 1.0)
-            endog_s = train.values / endog_scale
-            sarimax_specs = (("eee", ehz.values, efz.values), ("noexog", None, None))
+            sarimax_specs = [("noexog", train, None, None)]
+            if con_eee:
+                sarimax_specs.append(("eee", train, ehz.values, efz.values))
+            if robusto:
+                from models.robusto import limpiar_outliers
+                sarimax_specs.append(("noexog_lim", limpiar_outliers(train, 4)[0], None, None))
 
-        for spec, ex_h, ex_f in sarimax_specs:
+        for spec, serie, ex_h, ex_f in sarimax_specs:
             try:
-                preds[spec] = _fit_and_forecast(endog_s, ex_h, ex_f, horizon) * endog_scale
+                preds[spec] = _fit_and_forecast(serie.values / endog_scale, ex_h, ex_f,
+                                                horizon) * endog_scale
             except Exception:
                 logger.exception("%s falló %s/%s @%s", spec, rut, account, origin_p)
+                continue
+            if robusto:   # tope a la proyección explosiva (models/robusto.py)
+                from models.robusto import acotar
+                preds[spec + "_acot"] = acotar(preds[spec], train, 4)[0]
         # Naive estacional: y[T+h] = y[T+h-4] (para h<=4 siempre cae dentro del train)
         preds["snaive"] = np.array([endog.iloc[i + 1 + h - 4] for h in range(horizon)])
 
@@ -177,16 +197,22 @@ def backtest_series(db, rut: str, nombre: str, account: str,
             from models.structural import forecast_structural
             key = "ingresos" if account == "Ingresos de actividades ordinarias" else "ganancia"
             panel, amodel, mp_s = structural.get(origin_p, as_of, horizon)
-            specs = [("estr_m4", "mean4", False), ("estr_last", "last", False)]
-            if key == "ganancia":
-                specs += [("estr_m4_nop", "mean4", True), ("estr_last_nop", "last", True)]
-            for spec, anchor, nop in specs:
+            specs = []
+            for corto, anchor, a_mgn in ANCLAS:
+                for lim in ((False, True) if robusto else (False,)):
+                    sfx = "_lim" if lim else ""
+                    if a_mgn is None:   # con ancla de margen propia, ingresos = spec sin ella
+                        specs.append((f"estr_{corto}{sfx}", anchor, False, lim, a_mgn))
+                    if key == "ganancia":
+                        specs.append((f"estr_{corto}_nop{sfx}", anchor, True, lim, a_mgn))
+            for spec, anchor, nop, lim, a_mgn in specs:
                 try:
                     r = forecast_structural(db, rut, steps=horizon, panel=panel,
                                             model=amodel, macro=mp_s,
                                             as_of_period=origin_p, ratio_anchor=anchor,
                                             nonop=nop, drv=structural.drv(origin_p),
-                                            factors_q=structural.fq(origin_p))
+                                            factors_q=structural.fq(origin_p), limpiar=lim,
+                                            ancla_margen=a_mgn)
                     if r is not None and r.get(key) is not None:
                         s = r[key]
                         preds[spec] = np.array([s.get(p, np.nan) for p in targets])
@@ -207,6 +233,7 @@ def backtest_series(db, rut: str, nombre: str, account: str,
                     "origin": origin_p, "h": h + 1, "target": target_p,
                     "spec": spec, "actual": actual, "forecast": fc,
                     "abs_err": abs(actual - fc), "mase": abs(actual - fc) / scale,
+                    "scale": scale,
                 })
     return rows
 
@@ -239,6 +266,10 @@ def main():
                     help="Partidas separadas por coma (default: todas las proyectables)")
     ap.add_argument("--senda", default="encuestas", choices=["encuestas", "mercado", "mezcla"],
                     help="Fuente de tpm/ipc_yoy futuras del estructural (models/macro_path.py)")
+    ap.add_argument("--con-eee", action="store_true",
+                    help="Incluir el SARIMAX con exógenas (descartado en jul-2026)")
+    ap.add_argument("--sin-robusto", action="store_true",
+                    help="Omitir los specs con limpieza de atípicos (_lim) y tope (_acot)")
     ap.add_argument("--factores", default="",
                     help="Factores de la ecuación de activos separados por coma "
                          "(default: models.structural.FACTORS; ver models/curve_factors.py)")
@@ -262,7 +293,9 @@ def main():
             all_rows.extend(backtest_series(db, rut, nombre, account,
                                             args.origins, args.horizon,
                                             structural=structural,
-                                            solo_estructural=args.solo_estructural))
+                                            solo_estructural=args.solo_estructural,
+                                            con_eee=args.con_eee,
+                                            robusto=not args.sin_robusto))
         print(f"[{k}/{len(companies)}] {nombre[:50]:<50} filas acumuladas={len(all_rows)} "
               f"t={time.time()-t0:.0f}s", flush=True)
 

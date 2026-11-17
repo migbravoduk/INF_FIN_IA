@@ -75,8 +75,9 @@ def proyecciones_simple_chart(
     db: Database = Depends(get_db),
 ):
     """Fragmento HTMX: fan charts SARIMAX de una entidad no corporativa."""
-    from models.simple_forecast import (bandas_empiricas, cargar_serie, forecast_series,
-                                        forecast_series_uf, inflacion_uf_periodos)
+    from models.simple_forecast import (ROBUSTO_SIMPLE, bandas_empiricas, cargar_serie,
+                                        forecast_series, forecast_series_uf,
+                                        inflacion_uf_periodos)
 
     clase = request.url.path.split("/")[2]
     cfg = _PROY_SIMPLE.get(clase)
@@ -116,14 +117,21 @@ def proyecciones_simple_chart(
             # Resultado de bancos: base + exposición a la UF (backtest nov-2026, S4)
             try:
                 fc = forecast_series_uf(serie, steps, monthly,
-                                        inflacion_uf_periodos(db, monthly, steps + 6))
+                                        inflacion_uf_periodos(db, monthly, steps + 6),
+                                        **ROBUSTO_SIMPLE)
             except Exception:
                 fc = None
         if fc is None:
-            fc = forecast_series(serie, steps, monthly=monthly, is_stock=acc["stock"])
+            fc = forecast_series(serie, steps, monthly=monthly, is_stock=acc["stock"],
+                                 **ROBUSTO_SIMPLE)
         if fc is None:
             continue
         calibradas = bandas_empiricas(fc, clase, acc["label"], monthly)
+        if not ROBUSTO_SIMPLE["limpiar"] and not acc["stock"]:
+            # Solo se informan (la limpieza no pasó el backtest de esta clase)
+            from models.robusto import detalle, limpiar_outliers
+            limpia, marcados = limpiar_outliers(fc["history"], 12 if monthly else 4)
+            fc["atipicos"] = detalle(fc["history"], limpia, marcados)
         uf_note = ""
         if fc.get("k_uf") is not None:
             uf_note = (f"exposición a la UF: +1 pp de inflación mensual ≈ "
@@ -136,7 +144,12 @@ def proyecciones_simple_chart(
             # El spec es POR SERIE: stocks y flujos usan specs distintos, así que no puede
             # ir en `meta` (se pisarían entre sí).
             "spec": fc["spec"], "n_obs": fc["n_obs"], "calibradas": calibradas,
-            "uf_note": uf_note,
+            "uf_note": uf_note, "stock": acc["stock"],
+            "atipicos_usados": ROBUSTO_SIMPLE["limpiar"],
+            "acotado": bool(fc.get("acotado")),
+            "atipicos": [{"period": _proy_period_label(a["period"], monthly),
+                          "valor": a["valor"], "limpio": a["limpio"]}
+                         for a in fc.get("atipicos", [])],
             "history": [{"period": _proy_period_label(p, monthly), "value": float(v)}
                         for p, v in fc["history"].items()],
             "forecast": [{"period": _proy_period_label(p, monthly),
@@ -188,7 +201,11 @@ def proyecciones_chart(
                "lo80": r.ci80.loc[p, "low"], "hi80": r.ci80.loc[p, "high"],
                "lo95": r.ci95.loc[p, "low"], "hi95": r.ci95.loc[p, "high"]}
               for p in r.mean.index]
-        results.append({"account": account, "history": hist, "forecast": fc})
+        atip = [{"period": _period_label(a["period"]), "valor": a["valor"], "limpio": a["limpio"]}
+                for a in r.model_info.get("atipicos", [])]
+        results.append({"account": account, "history": hist, "forecast": fc,
+                        "atipicos": atip, "acotado": r.model_info.get("acotado", False),
+                        "atipicos_usados": r.model_info.get("atipicos_usados", False)})
         survey_month, model_info = r.survey_month, r.model_info
         if assumptions is None:
             assumptions = [{"period": _period_label(p), **row.to_dict()}

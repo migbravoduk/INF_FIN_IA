@@ -21,7 +21,7 @@ error / error del naive estacional dentro de muestra; < 1 es mejor que repetir e
 |---|---|---|
 | B | Ganancia = operacional + no operacional (reajuste UF, diferencias de cambio) | **Hecho, en producción** |
 | A | Anclas de mercado en la senda (TPM implícita, inflación implícita) | Medido, **no adoptado** (`fuente=` en `build_macro_path`; mercado y mezcla < 50% de pares) |
-| C | Tasa real y pendiente como factores de la ecuación de activos | Medido, **no adoptado**; la tasa real en lugar de la TPM pasa en h2–4 (54% de pares, Δ −0,040) y falla en h1: decisión del dueño |
+| C | Tasa real y pendiente como factores de la ecuación de activos | **Tasa real 5a en lugar de la TPM: adoptada** (ronda 6, 17-nov); pendiente y spread no |
 | D | Bancos y aseguradoras | Bandas calibradas en ambos; **bancos: exposición a la UF adoptada** (52% de pares, Δ −0,021); seguros de vida no pasa |
 | B′ | Empresas que informan por naturaleza (ERNG) | **Hecho**: panel 402 → 483 empresas |
 

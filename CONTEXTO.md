@@ -544,28 +544,38 @@ Fuentes (BCCh BDE API · CMF XBRL plano · CMF/SBIF API · SP scraping)
   (income acumulado en el año para trimestres). Se muestran en `/eeff` (tarjeta) y en
   `/comparar` (tabla comparativa entre empresas). El export estático también los incluye.
 - **Proyecciones de EEFF** (`models/`, servidas en `/proyecciones`): modelo **híbrido** de
-  producción (`hybrid.forecast_company_hybrid`) — SARIMAX puro para el 1er trimestre y modelo
-  **estructural** (activos operacionales ← macro → rotación → margen) del 2° en adelante.
+  producción (`hybrid.forecast_company_hybrid`, configuración en `hybrid.PRODUCCION`) —
+  SARIMAX puro para el 1er trimestre, promedio SARIMAX + estructural en el 2° y 3°, y modelo
+  **estructural** (activos operacionales ← macro → rotación → margen) del 4° en adelante.
   Bandas de confianza **empíricas** = cuantiles del error del backtest (`hybrid.BAND_QUANTILES`;
   regenerar si cambian specs/anclajes). Toda decisión de diseño está arbitrada por el arnés
   `models/backtest.py` (rolling-origin con vintages honestos de encuestas). **Metodología y
   resultados en `docs/wiki/Backtest-Modelos.md`** (leer antes de tocar los modelos).
 - **Regla de adopción programada** (`models/compare_bt.py`): un cambio entra si en pares
-  (misma empresa, origen y horizonte) gana ≥ 50%, baja el MASE medio y la mediana, y ningún
-  horizonte empeora > 0,02. No adoptar es un resultado válido; el código queda tras un parámetro.
+  (misma empresa, origen y horizonte) gana ≥ 50% de los pares distintos (los empates se
+  descartan, test de signo), baja el MASE medio y la mediana, y ningún horizonte empeora
+  > 0,02. Desde la ronda 6 se exige además que el Δ medio tenga el mismo signo en las 40
+  empresas del backtest original y en 40 nuevas. No adoptar es un resultado válido; el código
+  queda tras un parámetro.
 - **Decisiones medidas (nov-2026):**
   - Estado de resultados: se lee ERFG o, si la empresa solo informa por naturaleza, ERNG
     (`models.forecast.VALOR_ER`; con ambos manda ERFG). +81 empresas, Aguas Andinas incluida.
   - Senda anclada a swaps (`build_macro_path(fuente="mercado"|"mezcla")`): **no adoptada**
     (gana < 50% de pares). Por defecto siguen las encuestas.
   - Factores de curva en la ecuación de activos (`models/curve_factors.py`,
-    `backtest --factores`): tasa real 5a en lugar de TPM pasa en h2–4 y falla en h1 → no
-    adoptada, a decisión del dueño; pendiente y spread bancario empeoran.
+    `backtest --factores`): pendiente y spread bancario empeoran. La tasa real 5a en lugar de
+    la TPM **se adoptó en la ronda 6** (decisión del dueño de evaluar solo h2–4, donde manda).
+  - **Ronda 6 (17-nov):** ancla del margen = mediana 4T (rotación sigue con `last`); h2–3 =
+    promedio SARIMAX + estructural; tope al SARIMAX explosivo (`models/robusto.acotar`) en
+    todos los modelos. Limpieza de atípicos (`robusto.limpiar_outliers`, STL robusto, solo
+    atípicos aislados) medida en corporativos, bancos y seguros: **no adoptada** (la mediana
+    del margen ya la cubre; en bancos empeora h3) — las vistas solo los marcan.
   - Bancos y seguros: arnés `models/backtest_simple.py`; bandas calibradas
     (`simple_forecast.BANDAS_SIMPLE`). El resultado de bancos se proyecta como base +
     exposición a la UF (`forecast_series_uf`; k por MCO 36 meses). En seguros de vida no pasa.
   - Gotcha: el SARIMAX de flujos (`enforce_stationarity=False`) puede explotar en series
-    cortas de seguros (MASE 10⁸ medido); sin tope en producción todavía.
+    cortas (MASE 10⁸ medido en seguros). Desde la ronda 6 lo ataja `robusto.acotar` (rango
+    histórico ± 1 rango → naive estacional / último valor); se activa en ~1 de 640 casos.
 
 ## Estado y roadmap
 

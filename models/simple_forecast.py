@@ -137,10 +137,17 @@ def bandas_empiricas(fc: dict, clase: str, account_label: str, monthly: bool) ->
     return True
 
 
+# Robustez en producción (models/robusto.py), backtest ronda 6 (nov-2026):
+#   acotar  — sí: corrige la explosión de seguros (MASE 6·10⁸ → 10) y no toca nada más.
+#   limpiar — no: bancos gana 55% de pares pero empeora la mediana a 3 meses (+0,037);
+#             seguros 49% de pares. Queda para los modelos específicos de bancos y seguros.
+ROBUSTO_SIMPLE = {"limpiar": False, "acotar": True}
+
 UF_VENTANA = {True: 36, False: 12}   # meses / trimestres para estimar la exposición
 
 
-def forecast_series_uf(history: pd.Series, steps: int, monthly: bool, pi: pd.Series) -> dict | None:
+def forecast_series_uf(history: pd.Series, steps: int, monthly: bool, pi: pd.Series,
+                       limpiar: bool = False, acotar: bool = False) -> dict | None:
     """
     Resultado con exposición a la UF: resultado = a + k·π_UF (MCO con intercepto en la ventana
     `UF_VENTANA` hasta el último dato); el SARIMAX de producción proyecta resultado − k·π y se
@@ -149,6 +156,12 @@ def forecast_series_uf(history: pd.Series, steps: int, monthly: bool, pi: pd.Ser
     en h = 3, 6, 12). Devuelve el dict de `forecast_series` con `k_uf`, o None.
     """
     s = history.dropna().sort_index()
+    atipicos = []
+    if limpiar:   # la exposición k se estima sin los meses atípicos (models/robusto.py)
+        from models.robusto import detalle, limpiar_outliers
+        s0 = s
+        s, marcados = limpiar_outliers(s, 12 if monthly else 4)
+        atipicos = detalle(s0, s, marcados)
     t = s.tail(UF_VENTANA[monthly])
     x = pi.reindex(t.index)
     ok = x.notna()
@@ -158,7 +171,7 @@ def forecast_series_uf(history: pd.Series, steps: int, monthly: bool, pi: pd.Ser
     coef, *_ = np.linalg.lstsq(X, t[ok].values.astype(float), rcond=None)
     k = float(coef[1])
     fc = forecast_series(s - k * pi.reindex(s.index).fillna(0.0), steps, monthly=monthly,
-                         is_stock=False)
+                         is_stock=False, acotar=acotar)
     if fc is None:
         return None
     fut = pi.reindex(fc["mean"].index)
@@ -168,8 +181,11 @@ def forecast_series_uf(history: pd.Series, steps: int, monthly: bool, pi: pd.Ser
     fc["mean"] = fc["mean"] + add
     for ci in ("ci80", "ci95"):
         fc[ci] = fc[ci].add(add, axis=0)
-    fc["history"] = s
+    fc["history"] = history.dropna().sort_index()
+    fc["atipicos"] = atipicos
     fc["spec"] += " + exposición UF"
+    if atipicos:
+        fc["spec"] += f" · {len(atipicos)} atípico(s) aislados"
     fc["k_uf"] = k
     return fc
 
@@ -200,12 +216,16 @@ def next_periods(last: int, steps: int, monthly: bool) -> list[int]:
 
 
 def forecast_series(history: pd.Series, steps: int, monthly: bool,
-                    is_stock: bool = False) -> dict | None:
+                    is_stock: bool = False, limpiar: bool = False,
+                    acotar: bool = False) -> dict | None:
     """
     Ajusta SARIMAX sobre `history` (índice YYYYMM, ya desacumulada si es flujo) y proyecta
     `steps` períodos. `is_stock=True` para niveles con tendencia (activos); False para
-    flujos del período. Devuelve {"history", "mean", "ci80", "ci95", "n_obs", "spec"} o
-    None si no hay serie suficiente.
+    flujos del período. Devuelve {"history", "mean", "ci80", "ci95", "n_obs", "spec",
+    "atipicos", "acotado"} o None si no hay serie suficiente.
+    `limpiar`: ajusta sobre la serie sin datos atípicos (solo flujos; en un stock un salto es
+    un cambio de perímetro, no un atípico). `acotar`: si la proyección explota, naive
+    estacional / último valor (models/robusto.py).
     """
     import warnings
 
@@ -216,7 +236,13 @@ def forecast_series(history: pd.Series, steps: int, monthly: bool,
         return None
 
     season = 12 if monthly else 4
-    y = s.values.astype(float)
+    atipicos = []
+    s_fit = s
+    if limpiar and not is_stock:
+        from models.robusto import detalle, limpiar_outliers
+        s_fit, marcados = limpiar_outliers(s, season)
+        atipicos = detalle(s, s_fit, marcados)
+    y = s_fit.values.astype(float)
     order = ORDER_STOCK if is_stock else ORDER_FLOW
     seasonal_order = SEASONAL_STOCK if is_stock else (0, 1, 1, season)
 
@@ -244,14 +270,26 @@ def forecast_series(history: pd.Series, steps: int, monthly: bool,
 
     fc = res.get_forecast(steps=steps)
     periods = next_periods(int(s.index[-1]), steps, monthly)
-    mean = pd.Series(np.asarray(fc.predicted_mean, dtype=float), index=periods)
+    mean = np.asarray(fc.predicted_mean, dtype=float)
     ci80 = np.asarray(fc.conf_int(alpha=0.20), dtype=float)
     ci95 = np.asarray(fc.conf_int(alpha=0.05), dtype=float)
+    acotado = False
+    if acotar:
+        from models.robusto import acotar as _acotar
+        nuevo, acotado = _acotar(mean, s_fit, season, stock=is_stock)
+        if acotado:   # bandas del modelo explosivo sin sentido: se recentran en el reemplazo
+            ci80 = ci95 = np.column_stack([nuevo, nuevo])
+            mean = nuevo
+            spec += " → acotado a naive" if not is_stock else " → acotado al último valor"
+    if atipicos:
+        spec += f" · {len(atipicos)} atípico(s) aislados"
     return {
         "history": s,
-        "mean": mean,
+        "mean": pd.Series(mean, index=periods),
         "ci80": pd.DataFrame({"low": ci80[:, 0], "high": ci80[:, 1]}, index=periods),
         "ci95": pd.DataFrame({"low": ci95[:, 0], "high": ci95[:, 1]}, index=periods),
         "n_obs": len(s),
         "spec": spec,
+        "atipicos": atipicos,
+        "acotado": acotado,
     }
