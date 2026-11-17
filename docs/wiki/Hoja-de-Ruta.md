@@ -124,8 +124,10 @@ Pendiente que requiere decisión o curaduría humana:
 
 ## 3. Backfills/datos pendientes
 - [x] Cartera SP: backfill completo 2015-01 → 2026-01 (133 meses, ~341k filas, 132/132 disponibles en la SP, `section` resuelta en todos los años; el esquema pasó de 8 a 9 secciones en 2018 con los activos alternativos).
-- [ ] **Precios SP: solo está cargado 2026-01 → hoy.** El histórico nunca se backfilleó (el catch-up topa en 10 días hábiles por corrida); se reconstruye con `fetch-sp-precios --history`.
-- [ ] **FECU anual de seguros**: `report_freq='anual'` (diciembre auditado) está disponible en la CMF pero no cargado; solo se ingesta el trimestral.
+- [x] **Precios SP**: historia cargada 2016-11 → hoy (verificado 17-nov-2026).
+- [x] **FECU anual de seguros**: `report_freq='anual'` cargado (143 mil filas, verificado 17-nov-2026).
+- [x] **Cuotas FFMM desde 2018** (D1 del PLAN_MEJORAS): cargadas 2018-01 → hoy. La cartera
+  FFMM (y sus derivados) empieza en 2024-07.
 - [ ] **Renta fija B.1: montos de valoración de mercado sin reconciliar.** Se cargan solo los campos que validan al 100% (identificación + valor nominal, offsets 0-154). Cerrarlo requiere el catálogo de descriptores (archivo B.9).
 - [x] Bancos: historia mensual **2019 → hoy** (backfill jul-2026: 1.920 reportes, 0 fallas, ~977k filas nuevas; 16 bancos × 12 meses/año). La serie evolutiva empalma el cambio de plan de cuentas 2022 (nombres + unidades millones→pesos). Extensible con `fetch-banks --history --year-start N`.
 
