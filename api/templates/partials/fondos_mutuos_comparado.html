@@ -11,7 +11,7 @@
     <h4>
         Desempeño comparado · base 100 en {{ desde }}
         <span class="eeff-meta">
-            3 mejores y 3 peores de {{ "{:,}".format(n_universo) }} fondos
+            3 mejores y 3 peores de {{ n_universo|es(0) }} fondos
             {%- if agf %} de {{ agf }}{% endif %}
             {%- if tipo_label %} · {{ tipo_label }}{% endif %}
         </span>
@@ -21,9 +21,13 @@
     <p class="afp-hint">
         <strong>Clic en una línea</strong> para ver la composición y el desempeño de ese fondo.
         La línea blanca punteada es la <strong>mediana del grupo filtrado</strong>, calculada
-        sobre los {{ "{:,}".format(n_universo) }} fondos que pasan el filtro y no solo sobre
+        sobre los {{ n_universo|es(0) }} fondos que pasan el filtro y no solo sobre
         los seis dibujados. Es la referencia que importa: una línea que sube solo dice que el
         fondo subió; contra la mediana dice si le fue mejor o peor que a su categoría.
+        {% if excluidas %}<br><strong>Fuera del ranking por dato inconsistente</strong>
+        (el valor cuota cae más de 90% o se multiplica por 10 en un mes, típicamente un corte en
+        cero o un cambio de base): {{ excluidas[:6]|join(', ') }}{% if excluidas|length > 6 %} y
+        {{ excluidas|length - 6 }} más{% endif %}.{% endif %}
     </p>
 </div>
 
@@ -31,7 +35,8 @@
 (function () {
     var paths = {{ paths | tojson }};
     var mediana = {{ mediana | tojson }};
-    var palette = ["#4ade80", "#38bdf8", "#a78bfa", "#fbbf24", "#fb923c", "#f87171"];
+    // Mejores en tonos fríos, peores en cálidos: el color ya dice de qué lado está cada fondo.
+    var palette = ["#38bdf8", "#60a5fa", "#a78bfa", "#fbbf24", "#fb923c", "#f87171"];
 
     document.getElementById("fm-cmp-legend").innerHTML =
         paths.map(function (s, i) {
@@ -60,9 +65,31 @@
             line: { color: "#e2e8f0", width: 2, dash: "dot" },
             hovertemplate: "%{x}<br><b>%{y:.1f}</b> (mediana)<extra></extra>"
         });
+        // Etiqueta directa al final de cada línea: el valor de llegada, que es el dato que se lee.
+        var finales = paths.map(function (s, i) {
+            var u = s.points[s.points.length - 1];
+            return { x: u.x, y: u.value, xanchor: "left", xshift: 4, showarrow: false,
+                     text: u.value.toLocaleString("es-CL", {maximumFractionDigits: 0}),
+                     font: { size: 10, color: palette[i % palette.length] } };
+        });
+        if (mediana.length) {
+            var um = mediana[mediana.length - 1];
+            finales.push({ x: um.x, y: um.value, xanchor: "left", xshift: 4, showarrow: false,
+                           text: "mediana " + um.value.toLocaleString("es-CL", {maximumFractionDigits: 0}),
+                           font: { size: 10, color: "#e2e8f0" } });
+        }
+        // Etiquetas que caerían encima de otra se apilan hacia abajo (12 px por nivel).
+        var ys = finales.map(function (a) { return a.y; });
+        var rango = (Math.max.apply(null, ys) - Math.min.apply(null, ys)) || 1;
+        finales.sort(function (a, b) { return b.y - a.y; });
+        var prevY = null, nivel = 0;
+        finales.forEach(function (a) {
+            if (prevY !== null && (prevY - a.y) < rango * 0.04) { nivel += 1; a.yshift = -12 * nivel; }
+            else { nivel = 0; prevY = a.y; }
+        });
 
         Plotly.newPlot("fm-cmp-container", traces, {
-            margin: { t: 10, r: 20, b: 40, l: 60 }, height: 420,
+            margin: { t: 10, r: 70, b: 40, l: 60 }, height: 420, annotations: finales,
             paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)",
             font: { color: "#94a3b8" },
             showlegend: false,

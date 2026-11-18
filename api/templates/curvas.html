@@ -31,11 +31,11 @@
         {% for k, c in curvas.items() %}
         <tr><td>{{ c.titulo }}</td><td>{{ c.fecha }}</td>
             <td>{{ {'nss': 'Svensson', 'ns': 'Nelson-Siegel', 'ns_tau_fijo': 'Nelson-Siegel, τ fijo'}[c.modelo] }}</td>
-            <td style="text-align:right">{{ ("%.1f pb"|format(c.rmse_pb)) if c.rmse_pb is not none else 'exacto (3 puntos)' }}</td>
+            <td style="text-align:right">{{ ((c.rmse_pb|es(1) ~ ' pb')) if c.rmse_pb is not none else 'exacto (3 puntos)' }}</td>
             {% for t in [1, 2, 5, 10] %}
             {% set ns = namespace(v=None) %}
             {% for i in range(c.plazos|length) %}{% if ns.v is none and c.plazos[i] >= t - 0.0001 %}{% set ns.v = c.cero[i] %}{% endif %}{% endfor %}
-            <td style="text-align:right">{{ ("%.2f%%"|format(ns.v)) if ns.v is not none and c.plazos[0] <= t + 0.0001 else '—' }}</td>
+            <td style="text-align:right">{{ ((ns.v|es(2) ~ '%')) if ns.v is not none and c.plazos[0] <= t + 0.0001 else '—' }}</td>
             {% endfor %}
         </tr>
         {% endfor %}
@@ -50,10 +50,10 @@
         <tr><th>Plazo</th><th style="text-align:right">Con swaps</th><th style="text-align:right">Con bonos</th><th style="text-align:right">Publicada BCCh (swaps)</th><th style="text-align:right">Diferencia</th></tr>
         {% for r in bei %}
         <tr><td>{{ r.plazo }} {{ 'año' if r.plazo == 1 else 'años' }}</td>
-            <td style="text-align:right">{{ ("%.2f%%"|format(r.swap)) if r.swap is defined else '—' }}</td>
-            <td style="text-align:right">{{ ("%.2f%%"|format(r.bono)) if r.bono is defined else '—' }}</td>
-            <td style="text-align:right">{{ ("%.2f%%"|format(r.bcch)) if r.bcch is defined else '—' }}</td>
-            <td style="text-align:right">{{ ("%+.0f pb"|format((r.swap - r.bcch) * 100)) if r.swap is defined and r.bcch is defined else '' }}</td></tr>
+            <td style="text-align:right">{{ ((r.swap|es(2) ~ '%')) if r.swap is defined else '—' }}</td>
+            <td style="text-align:right">{{ ((r.bono|es(2) ~ '%')) if r.bono is defined else '—' }}</td>
+            <td style="text-align:right">{{ ((r.bcch|es(2) ~ '%')) if r.bcch is defined else '—' }}</td>
+            <td style="text-align:right">{{ ((((r.swap - r.bcch) * 100)|es(0, True) ~ ' pb')) if r.swap is defined and r.bcch is defined else '' }}</td></tr>
         {% endfor %}
     </table>
     <p class="lead">Meta del Banco Central: 3%. A 1 año la diferencia con el BCCh es mayor porque la UF sigue al IPC
@@ -77,9 +77,9 @@
     <table class="eeff-table">
         <tr><th>Plazo</th><th style="text-align:right">Depósito</th><th style="text-align:right">Swap</th><th style="text-align:right">Spread</th></tr>
         {% for r in spread %}
-        <tr><td>{{ r.dias }} días</td><td style="text-align:right">{{ "%.2f%%"|format(r.deposito) }}</td>
-            <td style="text-align:right">{{ "%.2f%%"|format(r.swap) }}</td>
-            <td style="text-align:right">{{ "%+.0f pb"|format(r.spread_pb) }}</td></tr>
+        <tr><td>{{ r.dias }} días</td><td style="text-align:right">{{ (r.deposito|es(2) ~ '%') }}</td>
+            <td style="text-align:right">{{ (r.swap|es(2) ~ '%') }}</td>
+            <td style="text-align:right">{{ (r.spread_pb|es(0, True) ~ ' pb') }}</td></tr>
         {% endfor %}
     </table>
 </section>
@@ -143,7 +143,7 @@
         shapes: tpm.tpm_actual != null ? [{type: 'line', xref: 'paper', x0: 0, x1: 1, y0: tpm.tpm_actual, y1: tpm.tpm_actual,
                                            line: {color: grid, width: 1, dash: 'dot'}}] : [],
         annotations: tpm.tpm_actual != null ? [{xref: 'paper', x: 0, y: tpm.tpm_actual, yanchor: 'bottom', xanchor: 'left',
-                                                text: 'TPM vigente ' + tpm.tpm_actual.toFixed(2) + '%', showarrow: false, font: {size: 11, color: ink}}] : []}, cfg);
+                                                text: 'TPM vigente ' + tpm.tpm_actual.toLocaleString('es-CL', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '%', showarrow: false, font: {size: 11, color: ink}}] : []}, cfg);
   }
 
   // 3) Historia

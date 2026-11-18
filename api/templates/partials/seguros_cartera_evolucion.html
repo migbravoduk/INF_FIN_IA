@@ -2,7 +2,7 @@
   partials/seguros_cartera_evolucion.html — Deriva del asset allocation.
   periods = ["202001", ...]; series = [{clase, puntos[%]}]; deriva = [{clase, inicio, fin, delta}]
 #}
-{% macro pct(v) %}{% if v is none %}—{% else %}{{ "{:,.1f}".format(v) }}%{% endif %}{% endmacro %}
+{% macro pct(v) %}{% if v is none %}—{% else %}{{ v|es(1) }}%{% endif %}{% endmacro %}
 
 {% if series %}
 <div class="chart-block" style="margin-top:.8rem">
@@ -29,7 +29,7 @@
                 <td style="text-align:right">{{ pct(d.inicio) }}</td>
                 <td style="text-align:right">{{ pct(d.fin) }}</td>
                 <td style="text-align:right">
-                    <b class="{{ 'pos' if d.delta >= 0 else 'neg' }}">{{ "{:+,.1f}".format(d.delta) }}</b>
+                    <b class="{{ 'pos' if d.delta >= 0 else 'neg' }}">{{ d.delta|es(1, True) }}</b>
                 </td>
             </tr>
             {% endfor %}

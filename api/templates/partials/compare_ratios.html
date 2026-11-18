@@ -3,7 +3,7 @@
   cols = [{name, period, ratios}]. Ratios "del período" (último de cada empresa).
 #}
 {% if cols %}
-{% macro cell(v, suf="%") %}{% if v is none %}<td>—</td>{% else %}<td class="{{ 'pos' if v >= 0 else 'neg' }}">{{ "{:+,.1f}".format(v) if suf == "%" else "{:,.2f}".format(v) }}{{ suf }}</td>{% endif %}{% endmacro %}
+{% macro cell(v, suf="%") %}{% if v is none %}<td>—</td>{% else %}<td class="{{ 'pos' if v >= 0 else 'neg' }}">{{ v|es(1, True) if suf == "%" else v|es(2) }}{{ suf }}</td>{% endif %}{% endmacro %}
 <div class="chart-block" style="margin-top:1.5rem">
     <h4>Comparación de indicadores financieros <span class="lead">(último período de cada empresa)</span></h4>
     <div class="table-scroll">

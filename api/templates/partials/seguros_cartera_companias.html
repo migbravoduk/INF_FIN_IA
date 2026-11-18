@@ -2,13 +2,13 @@
   partials/seguros_cartera_companias.html — Comparación entre compañías del ramo.
   rows = [{rut, name, total(MMM$), share, pct_extranjero, pct_rf, pct_cui, pct_repr}]
 #}
-{% macro pct(v) %}{% if v is none %}—{% else %}{{ "{:,.1f}".format(v) }}%{% endif %}{% endmacro %}
+{% macro pct(v) %}{% if v is none %}—{% else %}{{ v|es(1) }}%{% endif %}{% endmacro %}
 
 {% if rows %}
 <div class="eeff-meta" style="margin:.6rem 0 1rem">
     {{ ramo_label }} · período {{ period }} · {{ rows|length }} compañías ·
-    mercado <strong>{{ "{:,.0f}".format(total_mercado) }} MMM$</strong> ·
-    HHI <strong>{{ "{:,.0f}".format(hhi) }}</strong>
+    mercado <strong>{{ total_mercado|es(0) }} MMM$</strong> ·
+    HHI <strong>{{ hhi|es(0) }}</strong>
     <span class="lead">(bajo 1.500 = desconcentrado; sobre 2.500 = concentrado)</span>
 </div>
 
@@ -28,7 +28,7 @@
         {% for r in rows %}
         <tr>
             <td>{{ r.name }} <span class="lead">{{ r.rut }}</span></td>
-            <td style="text-align:right">{{ "{:,.0f}".format(r.total) }}</td>
+            <td style="text-align:right">{{ r.total|es(0) }}</td>
             <td style="text-align:right">{{ pct(r.share) }}</td>
             <td style="text-align:right">{{ pct(r.pct_extranjero) }}</td>
             <td style="text-align:right">{{ pct(r.pct_rf) }}</td>

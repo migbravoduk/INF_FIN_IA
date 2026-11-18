@@ -23,7 +23,7 @@
             <tr class="{{ 'total-row' if loop.first else '' }}">
                 <td class="acct">{{ a.afp }}</td>
                 {% for v in a["values"] %}
-                <td class="num">{{ "%.2f%%"|format(v) if v is not none else "—" }}</td>
+                <td class="num">{{ (v|es(2) ~ '%') if v is not none else "—" }}</td>
                 {% endfor %}
             </tr>
         {% endfor %}

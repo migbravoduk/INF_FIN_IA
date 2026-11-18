@@ -87,7 +87,10 @@ def issuer_holdings(db, rut: str, n_periods: int = 13) -> dict:
       tipo de cambio cargado (euro) se cuentan pero no se suman.
     - Fondos mutuos (cartera nacional): valorización de mercado al cierre, en MM$; los
       fondos en dólares se pasan a pesos con el dólar observado del mes.
-    - AFP: la SP publica la cartera agregada por categoría, sin emisor. No entran.
+    - AFP: cartera desagregada de la SP (valor de mercado, MM$), cruzada por nombre de
+      emisor. La SP publica con ~4 meses de rezago, así que este bloque usa SUS últimos
+      meses y no la ventana de seguros y fondos mutuos (si no, el "vs 12 meses" quedaba
+      vacío y los últimos meses en blanco).
 
     Devuelve {rut, nombre, tipo, periodos, seguros: {serie, por_tenedor}, ffmm: {...}}.
     """
@@ -154,15 +157,18 @@ def issuer_holdings(db, rut: str, n_periods: int = 13) -> dict:
 
     # --- AFP: por AFP y mes (cartera desagregada SP, por nombre de emisor) -------------------
     glosas = [g for g, r in mapa_emisores_sp(db).items() if r == rut]
-    afp = None
+    afp, afp_per = None, []
     if glosas:
-        import pandas as _pd
+        afp_per = [r[0] for r in db.conn.execute(
+            """SELECT DISTINCT period FROM sp_cartera_detalle WHERE tabla = 'emisor_nac'
+               ORDER BY 1 DESC LIMIT ?""", [n_periods]).fetchall()][::-1]
+        lista_afp = ",".join(str(int(p)) for p in afp_per) or "0"
         afp = db.conn.execute(f"""
             SELECT period, afp AS tenedor, string_agg(DISTINCT fondo, ', ' ORDER BY fondo) AS fondos,
                    COUNT(*) AS pos, SUM(valor) AS mm
             FROM sp_cartera_detalle
             WHERE tabla = 'emisor_nac' AND columna = 'total' AND metrica = 'monto_pesos'
-              AND afp <> 'TOTAL' AND period IN ({lista})
+              AND afp <> 'TOTAL' AND period IN ({lista_afp})
               AND glosa IN ({','.join('?' * len(glosas))})
             GROUP BY 1, 2 ORDER BY 1, 2""", glosas).fetchdf()
 
@@ -171,7 +177,7 @@ def issuer_holdings(db, rut: str, n_periods: int = 13) -> dict:
         SELECT rut, arg_max(company_name, period) FROM cmf_insurer_portfolio_control
         WHERE company_name <> '' GROUP BY 1""").fetchall())
 
-    def bloque(df, etiqueta):
+    def bloque(df, etiqueta, periodos=periodos):
         if df.empty:
             return None
         tot = df.groupby("period").agg(mm=("mm", "sum"), pos=("pos", "sum"),
@@ -219,7 +225,7 @@ def issuer_holdings(db, rut: str, n_periods: int = 13) -> dict:
     return {"rut": rut, "nombre": nombre, "razon": razon, "tipo": tipo,
             "tipo_label": TIPO_LABEL.get(tipo or "", tipo),
             "periodos": periodos, "seguros": bloque(seg, "seguros"), "ffmm": bloque(ffm, "ffmm"),
-            "afp": bloque(afp, "afp") if afp is not None else None, "afp_glosas": glosas}
+            "afp": bloque(afp, "afp", afp_per) if afp is not None else None, "afp_glosas": glosas}
 
 
 def common_issuers(db, limit: int = 40) -> dict:

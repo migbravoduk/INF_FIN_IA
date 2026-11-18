@@ -30,8 +30,11 @@ def proyecciones(request: Request, db: Database = Depends(get_db)):
     """Vista de proyecciones con el modelo híbrido (corporativos o AGF)."""
     scope = "agf" if request.url.path.endswith("/agf") else "corporativos"
     cfg = _PROY_HYBRID[scope]
+    companies = records(db.get_cmf_companies(agf=cfg["agf"]))
+    default = db.get_cmf_default_company(agf=cfg["agf"]) or (
+        companies[0]["company_name"] if companies else "")
     return templates.TemplateResponse(request, "proyecciones.html", {
-        "companies": records(db.get_cmf_companies(agf=cfg["agf"])),
+        "companies": companies, "default_company": default,
         "page_title": cfg["title"],
         "page_subtitle": cfg["subtitle"],
     })

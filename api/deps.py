@@ -51,16 +51,14 @@ templates.env.globals["asof_banner"] = asof_banner
 
 
 def _pct(x, digits: int = 1, signo: bool = True) -> str:
-    """Fracción → porcentaje legible ('—' si falta). 0.0123 → '+1.2%'."""
+    """Fracción → porcentaje legible ('—' si falta). 0.0123 → '+1,2%'."""
     if x is None or x != x:
         return "—"
-    return f"{x * 100:{'+' if signo else ''},.{digits}f}%"
+    return _es(x * 100, digits, signo) + "%"
 
 
 def _num(x, digits: int = 0) -> str:
-    if x is None or x != x:
-        return "—"
-    return f"{x:,.{digits}f}"
+    return _es(x, digits)
 
 
 def _es(x, digits: int = 1, signo: bool = False) -> str:
@@ -71,6 +69,20 @@ def _es(x, digits: int = 1, signo: bool = False) -> str:
     return s.replace(",", "X").replace(".", ",").replace("X", ".")
 
 
+def _agf_corto(s) -> str:
+    """'BICE INVERSIONES ADMINISTRADORA GENERAL DE FONDOS S.A.' → 'BICE Inversiones AGF'.
+    En tablas el nombre legal completo ocupaba tres líneas por fila."""
+    import re
+    t = " ".join(str(s or "").split())
+    t = re.sub(r"\s*ADMINISTRADORA GENERAL DE FONDOS\s*", " AGF ", t, flags=re.I)
+    t = re.sub(r"\bS\.\s?A\.?(?=\s|$)|\s+SA$", "", t.strip(), flags=re.I)
+    t = " ".join(t.split())
+    siglas = {"AGF", "BCI", "BICE", "BTG", "SURA", "ITAU", "BBVA", "HSBC", "LV", "UBS"}
+    return " ".join(w if w.upper() in siglas or len(w) <= 2 and w.isupper() else w.capitalize()
+                    for w in t.split()).replace("Itau", "Itaú").replace("ITAU", "Itaú")
+
+
+templates.env.filters["agf_corto"] = _agf_corto
 templates.env.filters["pct"] = _pct
 templates.env.filters["num"] = _num
 templates.env.filters["es"] = _es

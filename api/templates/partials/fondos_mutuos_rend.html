@@ -12,7 +12,7 @@
     {{ desde }} → {{ hasta }}
     {%- if agf %} · <strong>{{ agf }}</strong>{% endif %}
     {%- if tipo_label %} · {{ tipo_label }}{% endif %}
-    · mostrando {{ rows|length }} de {{ "{:,}".format(n_total) }} pares fondo-serie
+    · mostrando {{ rows|length }} de {{ n_total|es(0) }} pares fondo-serie
     · <span class="lead">clic en una fila para ver su composición y desempeño</span>
 </div>
 
@@ -27,7 +27,7 @@
                 <th style="text-align:right">Valor cuota inicio</th>
                 <th style="text-align:right">Valor cuota fin</th>
                 <th style="text-align:right">Variación</th>
-                <th style="text-align:right">Patrimonio</th>
+                <th style="text-align:right">Patrimonio (millones)</th>
                 <th style="text-align:right">Partícipes</th>
             </tr>
         </thead>
@@ -42,18 +42,18 @@
                 title="Ver composición y desempeño de {{ r.fund_name }} · serie {{ r.series }}">
                 <td>{{ r.fund_name }} <span class="go">→</span><br><span class="lead">RUN {{ r.fund_run }}</span></td>
                 <td>{{ r.series }}</td>
-                <td><span class="lead">{{ r.agf_name }}</span></td>
+                <td><span class="lead" title="{{ r.agf_name }}">{{ r.agf_name|agf_corto }}</span></td>
                 <td><span class="lead">{{ tipos.get(r.fund_type, r.fund_type) }}</span></td>
-                <td style="text-align:right">{{ "{:,.2f}".format(r.vc_ini) }}</td>
-                <td style="text-align:right">{{ "{:,.2f}".format(r.vc_fin) }}</td>
+                <td style="text-align:right">{{ r.vc_ini|es(2) }}</td>
+                <td style="text-align:right">{{ r.vc_fin|es(2) }}</td>
                 <td style="text-align:right" class="{{ 'pos' if r.var_pct >= 0 else 'neg' }}">
-                    <b>{{ "{:+,.2f}".format(r.var_pct) }}%</b>
+                    <b>{{ r.var_pct|es(2, True) }}%</b>
                 </td>
                 <td style="text-align:right">
-                    {% if r.patrimonio is not none %}{{ "{:,.0f}".format(r.patrimonio) }}{% else %}—{% endif %}
+                    {% if r.patrimonio is not none %}{{ r.patrimonio|es(0) }}{% else %}—{% endif %}
                 </td>
                 <td style="text-align:right">
-                    {% if r.participes is not none %}{{ "{:,}".format(r.participes) }}{% else %}—{% endif %}
+                    {% if r.participes is not none %}{{ r.participes|es(0) }}{% else %}—{% endif %}
                 </td>
             </tr>
             {% endfor %}

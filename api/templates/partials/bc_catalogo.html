@@ -41,13 +41,13 @@
                 <td>{{ freq_label.get(f.frequency, f.frequency or "—") }}</td>
                 <td style="text-align:right">
                     {% if f.last_value is not none %}
-                        {{ "{:,.2f}".format(f.last_value) }}
+                        {{ f.last_value|es(2) }}
                         <span class="eeff-meta">{{ f.unit_label }}</span>
                     {% else %}—{% endif %}
                 </td>
-                <td>{{ f.last_date or "—" }}</td>
-                <td class="eeff-meta">{{ f.first_date or "—" }} → {{ f.last_date or "—" }}</td>
-                <td style="text-align:right">{{ "{:,}".format(f.n_obs) }}</td>
+                <td style="white-space:nowrap">{{ f.last_date or "—" }}</td>
+                <td class="eeff-meta" style="white-space:nowrap">{{ ((f.first_date or "—")|string)[:7] }} → {{ ((f.last_date or "—")|string)[:7] }}</td>
+                <td style="text-align:right">{{ f.n_obs|es(0) }}</td>
             </tr>
             {% endfor %}
         </tbody>

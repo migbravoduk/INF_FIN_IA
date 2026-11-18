@@ -8,8 +8,8 @@
 {% elif multi %}
 {% if latest %}
 <div class="afp-stats">
-    <div><span>Valor cuota ($)</span><b>{{ "{:,.2f}".format(latest.quota_value).replace(',', 'X').replace('.', ',').replace('X', '.') }}</b></div>
-    <div><span>Patrimonio (MMM$)</span><b>{{ "{:,.0f}".format(latest.equity_value / 1e9).replace(',', '.') }}</b></div>
+    <div><span>Valor cuota ($)</span><b>{{ latest.quota_value|es(2) }}</b></div>
+    <div><span>Patrimonio (MMM$)</span><b>{{ (latest.equity_value / 1e9)|es(0) }}</b></div>
     <div><span>Al</span><b>{{ latest.date[:10] }}</b></div>
 </div>
 {% endif %}
@@ -21,7 +21,8 @@
 <script>
 (function () {
     var multi = {{ multi | tojson }};
-    var fundColors = {"Fondo A":"#f87171","Fondo B":"#fbbf24","Fondo C":"#38bdf8","Fondo D":"#4ade80","Fondo E":"#a78bfa"};
+    // A→E va de más a menos riesgo: escala ordenada de cálido (riesgoso) a frío (conservador).
+    var fundColors = {"Fondo A":"#ef4444","Fondo B":"#f97316","Fondo C":"#eab308","Fondo D":"#38bdf8","Fondo E":"#6366f1"};
     var palette = ["#38bdf8","#fbbf24","#4ade80","#f87171","#a78bfa","#fb923c","#22d3ee"];
     function draw() {
         if (!window.Plotly) { return setTimeout(draw, 100); }

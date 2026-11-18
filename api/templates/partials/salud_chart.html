@@ -12,7 +12,7 @@
         
         var xData = rawData.map(d => d.deuda);
         var yData = rawData.map(d => d.roe);
-        var textData = rawData.map(d => d.name + "<br>Liquidez: " + d.liquidez.toFixed(2));
+        var textData = rawData.map(d => d.name + "<br>Liquidez: " + d.liquidez.toLocaleString("es-CL", {minimumFractionDigits: 2, maximumFractionDigits: 2}));
         var sizeData = rawData.map(d => Math.max(5, Math.min(d.liquidez * 10, 40)));
 
         var trace = {

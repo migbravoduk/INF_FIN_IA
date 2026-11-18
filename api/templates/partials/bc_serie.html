@@ -19,7 +19,7 @@
 <div class="kpi-grid">
     <div class="kpi-card">
         <span class="kpi-sub">Último dato</span>
-        <span class="kpi-big">{{ "{:,.2f}".format(stats.last) }}</span>
+        <span class="kpi-big">{{ stats.last|es(2) }}</span>
         <span class="kpi-sub">{{ meta.unit_label }} · {{ stats.last_date }}</span>
     </div>
 
@@ -30,14 +30,14 @@
         {% if meta.es_tasa %}
             {% if stats.yoy_abs is not none %}
             <span class="kpi-big {{ 'pos' if stats.yoy_abs >= 0 else 'neg' }}">
-                {{ "{:+,.2f}".format(stats.yoy_abs) }} pp
+                {{ stats.yoy_abs|es(2, True) }} pp
             </span>
             <span class="kpi-sub">puntos porcentuales</span>
             {% else %}<span class="kpi-big">—</span><span class="kpi-sub">sin dato comparable</span>{% endif %}
         {% else %}
             {% if stats.yoy_pct is not none %}
             <span class="kpi-big {{ 'pos' if stats.yoy_pct >= 0 else 'neg' }}">
-                {{ "{:+,.1f}".format(stats.yoy_pct) }}%
+                {{ stats.yoy_pct|es(1, True) }}%
             </span>
             <span class="kpi-sub">vs. mismo mes del año anterior</span>
             {% else %}<span class="kpi-big">—</span><span class="kpi-sub">sin dato comparable</span>{% endif %}
@@ -46,13 +46,13 @@
 
     <div class="kpi-card">
         <span class="kpi-sub">Rango del período</span>
-        <span class="kpi-big">{{ "{:,.2f}".format(stats.min) }} – {{ "{:,.2f}".format(stats.max) }}</span>
+        <span class="kpi-big">{{ stats.min|es(2) }} – {{ stats.max|es(2) }}</span>
         <span class="kpi-sub">mínimo y máximo</span>
     </div>
 
     <div class="kpi-card">
         <span class="kpi-sub">Observaciones</span>
-        <span class="kpi-big">{{ "{:,}".format(stats.n_obs) }}</span>
+        <span class="kpi-big">{{ stats.n_obs|es(0) }}</span>
         <span class="kpi-sub">en el rango mostrado</span>
     </div>
 </div>

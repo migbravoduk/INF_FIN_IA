@@ -197,13 +197,20 @@ class FfmmRepo:
 
         # Solo entran las series presentes en AMBOS extremos: si no, la variación mediría
         # una serie que nació o murió dentro de la ventana (mismo criterio que la tabla).
-        rebasadas = []
+        rebasadas, excluidas = [], []
         for (run, serie), d in por_serie.items():
             p = d["puntos"]
             if cortes[0] not in p or cortes[-1] not in p or not p[cortes[0]]:
                 continue
             base = p[cortes[0]]
             curva = [{"x": c, "value": (p[c] / base) * 100} for c in cortes if c in p]
+            # Un fondo mutuo no pierde el 90% ni se multiplica por 10 en un mes: un salto así
+            # es un error de dato o un cambio de base de la serie (ej. valor cuota en 0), y
+            # dibujarlo se lleva el "peor" del gráfico. Queda fuera de ranking y mediana.
+            saltos = [b["value"] / a["value"] for a, b in zip(curva, curva[1:]) if a["value"]]
+            if any(s <= 0.1 or s >= 10 for s in saltos):
+                excluidas.append(f'{d["nombre"]} · {serie}')
+                continue
             rebasadas.append({
                 "run": run, "series": serie, "nombre": d["nombre"], "agf": d["agf"],
                 "curva": curva, "final": curva[-1]["value"] if curva else 100.0,
@@ -234,7 +241,7 @@ class FfmmRepo:
                           "run": r["run"], "series": r["series"],
                           "points": r["curva"], "final": r["final"]})
         return {"paths": paths, "mediana": mediana, "cortes": cortes,
-                "n_universo": len(rebasadas)}
+                "n_universo": len(rebasadas), "excluidas": excluidas}
 
     def get_mutual_fund_quote_series(self, fund_run: str, series: str = "") -> list:
         """Serie temporal del valor cuota de un fondo (una serie, o la de mayor patrimonio)."""

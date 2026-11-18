@@ -7,6 +7,9 @@
     --ok: #4ade80;
     --warn: #fbbf24;
     --border: #334155;
+    --neg: #f87171;
+    --ink-2: #cbd5e1;          /* cifras de tabla: legibles sin competir con los totales */
+    --font: "Segoe UI", system-ui, -apple-system, sans-serif;
 }
 
 * { box-sizing: border-box; }
@@ -15,31 +18,62 @@ a { color: var(--accent); }   /* sin esto, los enlaces de texto salían en el az
 
 body {
     margin: 0;
-    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    font-family: var(--font);
     background: var(--bg);
     color: var(--ink);
+    line-height: 1.45;
 }
+
+/* Cifras siempre en dígitos de ancho fijo: las columnas numéricas quedan alineadas */
+td, .kpi-big, .afp-stats b, .kpi-row b { font-variant-numeric: tabular-nums; }
+
+/* Campos de formulario: un solo estilo oscuro para selects, textos, fechas y números
+   (antes los <input> quedaban blancos junto a selects oscuros). */
+select, input[type="text"], input[type="search"], input[type="number"], input[type="date"],
+input:not([type]), textarea {
+    background: var(--panel);
+    color: var(--ink);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.5rem 0.7rem;
+    font: inherit;
+    font-size: 0.9rem;
+    color-scheme: dark;          /* calendario y flechas nativas en tema oscuro */
+}
+select:focus, input:focus, textarea:focus { outline: none; border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.18); }
+input::placeholder { color: #64748b; }
+input[type="checkbox"] { accent-color: var(--accent); }
 
 .topbar {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 0.6rem 1.5rem;
+    flex-wrap: wrap;
     padding: 0.8rem 1.5rem;
     background: var(--panel);
     border-bottom: 1px solid var(--border);
 }
-.brand { font-weight: 700; font-size: 1.1rem; }
+.brand { font-weight: 700; font-size: 1.1rem; white-space: nowrap; }
+.topbar nav { display: flex; flex-wrap: wrap; gap: 0.3rem 1.1rem; }
 .topbar nav a {
     color: var(--muted);
     text-decoration: none;
-    margin-left: 1.2rem;
+    font-size: 0.9rem;
+    white-space: nowrap;
 }
 .topbar nav a:hover { color: var(--accent); }
 
 .container { max-width: 1100px; margin: 0 auto; padding: 1.5rem; }
 
-h1 { margin: 0 0 0.2rem; }
-.subtitle { color: var(--muted); margin-top: 0; }
+h1 { margin: 0 0 0.3rem; font-size: 1.85rem; letter-spacing: -0.01em; }
+.subtitle { color: var(--muted); margin-top: 0; max-width: 60rem; }
+/* Títulos de sección de las vistas largas: una regla fina separa los capítulos */
+.container > h2, section > h2:first-child {
+    font-size: 1.15rem; font-weight: 600; margin: 2.2rem 0 0.6rem;
+    padding-bottom: 0.35rem; border-bottom: 1px solid var(--border);
+}
 
 .kpi-grid {
     display: grid;
@@ -67,8 +101,12 @@ h1 { margin: 0 0 0.2rem; }
     border-bottom: 1px dashed var(--border);
 }
 .kpi-row span { color: var(--muted); }
-.kpi-big { font-size: 1.6rem; font-weight: 700; color: var(--ok); }
+.kpi-big { font-size: 1.6rem; font-weight: 700; color: var(--ink); }
 .kpi-sub { color: var(--muted); font-size: 0.8rem; margin-top: 0.3rem; }
+/* Tarjeta de indicador: rótulo, cifra y nota en líneas propias (en línea se partían) */
+.kpi-card > span.kpi-sub, .kpi-card > span.kpi-big { display: block; }
+.kpi-card > span.kpi-sub:first-child { margin: 0 0 0.25rem; text-transform: uppercase;
+    letter-spacing: 0.04em; font-size: 0.7rem; }
 
 .toolbar { margin: 0.5rem 0 1rem; }
 .btn {
@@ -92,11 +130,11 @@ h1 { margin: 0 0 0.2rem; }
 .chart-grid .chart-block { margin-top: 0; display: flex; flex-direction: column; }
 .chart-grid .chart-block > .chart { margin-top: auto; }   /* alinea los ejes de gráficos vecinos */
 .chart-block h2, .chart-block h4 { font-size: 0.95rem; color: var(--muted); font-weight: 500; margin: 0 0 0.4rem; }
-.chart { background: var(--panel); border-radius: 12px; padding: 0.5rem; }
+.chart { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 0.5rem; }
 
 /* Signo en variaciones / rentabilidades */
 .pos { color: var(--ok); }
-.neg { color: #f87171; }
+.neg { color: var(--neg); }
 .lead { color: var(--muted); font-size: 0.72rem; font-style: normal; }
 
 /* Selector para graficar partidas en /eeff */
@@ -269,9 +307,16 @@ h1 { margin: 0 0 0.2rem; }
     margin-left: 0.4rem;
 }
 .eeff-table { width: 100%; border-collapse: collapse; }
-.eeff-table td { padding: 0.3rem 0; border-bottom: 1px dashed var(--border); font-size: 0.88rem; }
+.eeff-table th {
+    color: var(--muted); font-weight: 600; font-size: 0.72rem; text-transform: uppercase;
+    letter-spacing: 0.04em; padding: 0.45rem 0.6rem; border-bottom: 1px solid var(--border);
+    vertical-align: bottom; text-align: left; line-height: 1.25;
+}
+.eeff-table td { padding: 0.35rem 0.6rem; border-bottom: 1px dashed var(--border); font-size: 0.88rem; vertical-align: middle; }
+.eeff-table th:first-child, .eeff-table td:first-child { padding-left: 0; }
 .eeff-table td.acct { color: var(--ink); }
-.eeff-table td.num { text-align: right; font-variant-numeric: tabular-nums; color: var(--ok); white-space: nowrap; padding-left: 1rem; }
+.eeff-table td.num { text-align: right; color: var(--ink-2); white-space: nowrap; padding-left: 1rem; }
+.eeff-table tbody tr:hover td { background: rgba(148, 163, 184, 0.05); }
 
 /* Leyenda HTML del gráfico comparativo */
 .cmp-legend { display: flex; flex-wrap: wrap; gap: 0.4rem 1.2rem; margin: 0.2rem 0 0.5rem; font-size: 0.82rem; color: var(--ink); }
@@ -284,8 +329,8 @@ h1 { margin: 0 0 0.2rem; }
 .evol-table th.acct, .evol-table td.acct { text-align: left; position: sticky; left: 0; background: var(--bg); }
 .evol-table td { padding: 0.3rem 0.7rem; border-bottom: 1px dashed var(--border); white-space: nowrap; }
 .evol-table td.acct { color: var(--ink); white-space: normal; min-width: 240px; }
-.evol-table td.num { text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); }
-.evol-table .total-row td.num { color: var(--ok); }
+.evol-table td.num { text-align: right; color: var(--ink-2); }
+.evol-table .total-row td.num { color: var(--ink); }
 
 /* Tabla de ranking de empresas */
 .rank-table { width: 100%; border-collapse: collapse; }
@@ -332,7 +377,8 @@ h1 { margin: 0 0 0.2rem; }
 /* Filas de totales (resaltadas en negrita, incluido el monto) */
 .total-row td { font-weight: 700; border-bottom: 1px solid var(--border); }
 .total-row td.acct { color: var(--ink); }
-.total-row td.num, .total-row td.num.strong { color: var(--ok); font-weight: 700; }
+.total-row td.num, .total-row td.num.strong { color: var(--ink); font-weight: 700; }
+.total-row td { background: rgba(148, 163, 184, 0.06); }
 
 /* Tabla bancaria (desglose por moneda) */
 .table-scroll { overflow-x: auto; }
@@ -348,8 +394,13 @@ h1 { margin: 0 0 0.2rem; }
 .bank-table th.acct { text-align: left; }
 .bank-table td { padding: 0.3rem 0.6rem; border-bottom: 1px dashed var(--border); white-space: nowrap; }
 .bank-table td.acct { text-align: left; color: var(--ink); white-space: normal; min-width: 220px; }
-.bank-table td.num { text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); }
-.bank-table td.num.strong { color: var(--ok); font-weight: 500; }
+.bank-table td.num { text-align: right; color: var(--ink-2); }
+/* La columna Total se destaca por peso y un filete, no por color: el verde se reserva
+   para variaciones positivas. */
+.bank-table td.num.strong { color: var(--ink); font-weight: 600; border-left: 1px solid var(--border); }
+.bank-table th.strong { color: var(--ink); border-left: 1px solid var(--border); }
+.bank-table td.num.neg-val { color: var(--neg); }
+.bank-table tbody tr:hover td { background: rgba(148, 163, 184, 0.05); }
 
 /* Stats AFP */
 .afp-hint { color: var(--muted); font-size: 0.78rem; margin: 0 0 1rem; }
@@ -357,7 +408,18 @@ h1 { margin: 0 0 0.2rem; }
 .afp-stats { display: flex; flex-wrap: wrap; gap: 1.5rem; margin: 0.5rem 0 1rem; }
 .afp-stats div { display: flex; flex-direction: column; }
 .afp-stats span { color: var(--muted); font-size: 0.75rem; }
-.afp-stats b { font-size: 1.3rem; font-weight: 500; color: var(--ok); }
+.afp-stats b { font-size: 1.3rem; font-weight: 600; color: var(--ink); }
+.afp-stats b.pos { color: var(--ok); }
+.afp-stats b.neg { color: var(--neg); }
+/* En grillas de bloques (vista por emisor) los indicadores van en una grilla fija: cifra
+   principal arriba y cuatro indicadores en una fila, igual en todos los bloques. */
+.chart-grid .afp-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.5rem 0.8rem; }
+.chart-grid .afp-stats > div:first-child { grid-column: 1 / -1; }
+.chart-grid .afp-stats span { font-size: 0.7rem; line-height: 1.2; }
+/* La variación va dentro de <b> como <span class="pos|neg">: hereda tamaño y toma el color. */
+.afp-stats b span { font-size: inherit; line-height: inherit; color: inherit; }
+.afp-stats b span.pos { color: var(--ok); }
+.afp-stats b span.neg { color: var(--neg); }
 
 .loading { color: var(--muted); }
 .mock-note { color: var(--warn); font-size: 0.8rem; }

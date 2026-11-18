@@ -23,7 +23,7 @@
                 {% endif %}
                 <tr class="{{ 'total-row' if a.is_total else '' }}">
                     <td class="acct">{{ a.account_name }}</td>
-                    {% for v in a.vals %}<td class="num">{{ "{:,.0f}".format(v) if v is not none else "—" }}</td>{% endfor %}
+                    {% for v in a.vals %}<td class="num">{{ v|es(0) if v is not none else "—" }}</td>{% endfor %}
                 </tr>
             {% endfor %}
             </tbody>

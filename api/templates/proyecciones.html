@@ -17,7 +17,7 @@
     <label>Empresa
         <input list="companies-list" name="company" autocomplete="off"
                placeholder="Escribe para buscar… ({{ companies|length }} empresas)"
-               value="{{ companies[0].company_name if companies else '' }}">
+               value="{{ default_company }}">
         <datalist id="companies-list">
             {% for c in companies %}
             <option value="{{ c.company_name }}"></option>

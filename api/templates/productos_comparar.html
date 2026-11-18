@@ -69,7 +69,7 @@ Alto Patrimonio o APV tienen requisitos de entrada y costos distintos a las Reta
     <p class="lead">Porcentaje de la cartera que dos fondos tienen en los mismos instrumentos (suma de los
     pesos mínimos por nemotécnico). Un traslape alto significa que tener ambos diversifica poco.</p>
     <table class="eeff-table">
-    {% for a, b, t in traslape %}<tr><td>{{ a }} ↔ {{ b }}</td><td style="text-align:right"><b>{{ "%.1f"|format(t) if t is not none else '—' }}%</b></td></tr>{% endfor %}
+    {% for a, b, t in traslape %}<tr><td>{{ a }} ↔ {{ b }}</td><td style="text-align:right"><b>{{ t|es(1) if t is not none else '—' }}%</b></td></tr>{% endfor %}
     </table>
 </section>
 {% endif %}

@@ -125,7 +125,9 @@ mutuos ni AFP en los últimos {{ h.periodos|length }} meses.</p>
             });
             Plotly.newPlot(b.id, [{
                 x: x, y: y, type: "bar", text: txt, hoverinfo: "text", textposition: "none",
-                marker: { color: "#38bdf8", line: { color: "#1e293b", width: 2 } }
+                // El último mes en color y los anteriores atenuados: el ojo va al dato vigente.
+                marker: { color: b.serie.map(function (s, i) { return i === b.serie.length - 1 ? "#38bdf8" : "#2f5f86"; }),
+                          line: { color: "#1e293b", width: 2 } }
             }], {
                 margin: { t: 10, r: 10, b: 60, l: 60 }, height: 280, bargap: 0.35,
                 paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)",

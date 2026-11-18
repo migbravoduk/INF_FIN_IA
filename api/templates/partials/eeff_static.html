@@ -16,8 +16,8 @@
 </div>
 
 {% if ratios %}
-{% macro rr(v, suf="%") %}{% if v is none %}—{% else %}<b class="{{ 'pos' if v >= 0 else 'neg' }}">{{ "{:+,.1f}".format(v) if suf == "%" else "{:,.2f}".format(v) if suf in ("x", "") else v }}{{ suf }}</b>{% endif %}{% endmacro %}
-{% macro r_curr(v, currency) %}{% if v is none %}—{% else %}<b class="{{ 'pos' if v >= 0 else 'neg' }}">{{ "{:,.0f}".format(v) }} {{ currency }}</b>{% endif %}{% endmacro %}
+{% macro rr(v, suf="%") %}{% if v is none %}—{% else %}<b class="{{ 'pos' if v >= 0 else 'neg' }}">{{ v|es(1, True) if suf == "%" else v|es(2) if suf in ("x", "") else v }}{{ suf }}</b>{% endif %}{% endmacro %}
+{% macro r_curr(v, currency) %}{% if v is none %}—{% else %}<b class="{{ 'pos' if v >= 0 else 'neg' }}">{{ v|es(0) }} {{ currency }}</b>{% endif %}{% endmacro %}
 <div class="ratios">
     <h4>Indicadores financieros <span class="lead">(del período)</span></h4>
     <div class="ratio-grid">
@@ -41,28 +41,28 @@
         <div style="text-align: center;">
             <div style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.25rem;">Margen Neto</div>
             <div style="font-size: 1.25rem; font-weight: bold; color: #e2e8f0;">
-                {% if ratios.margen_neto is not none %}{{ "{:,.2f}%".format(ratios.margen_neto) }}{% else %}—{% endif %}
+                {% if ratios.margen_neto is not none %}{{ ratios.margen_neto|es(2) ~ "%" }}{% else %}—{% endif %}
             </div>
         </div>
         <div style="font-size: 1.25rem; color: #64748b; font-weight: bold;">&times;</div>
         <div style="text-align: center;">
             <div style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.25rem;">Rotación Activos</div>
             <div style="font-size: 1.25rem; font-weight: bold; color: #e2e8f0;">
-                {% if ratios.rotacion_activos is not none %}{{ "{:,.2f}x".format(ratios.rotacion_activos) }}{% else %}—{% endif %}
+                {% if ratios.rotacion_activos is not none %}{{ ratios.rotacion_activos|es(2) ~ "x" }}{% else %}—{% endif %}
             </div>
         </div>
         <div style="font-size: 1.25rem; color: #64748b; font-weight: bold;">&times;</div>
         <div style="text-align: center;">
             <div style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.25rem;">Apalancamiento</div>
             <div style="font-size: 1.25rem; font-weight: bold; color: #e2e8f0;">
-                {% if ratios.apalancamiento is not none %}{{ "{:,.2f}x".format(ratios.apalancamiento) }}{% else %}—{% endif %}
+                {% if ratios.apalancamiento is not none %}{{ ratios.apalancamiento|es(2) ~ "x" }}{% else %}—{% endif %}
             </div>
         </div>
         <div style="font-size: 1.25rem; color: #64748b; font-weight: bold;">=</div>
         <div style="text-align: center; background: #334155; padding: 0.5rem 1rem; border-radius: 6px; border: 1px solid #475569;">
             <div style="font-size: 0.85rem; color: #38bdf8; font-weight: bold; margin-bottom: 0.25rem;">ROE</div>
             <div style="font-size: 1.35rem; font-weight: bold; color: #38bdf8;">
-                {% if ratios.roe is not none %}{{ "{:,.2f}%".format(ratios.roe) }}{% else %}—{% endif %}
+                {% if ratios.roe is not none %}{{ ratios.roe|es(2) ~ "%" }}{% else %}—{% endif %}
             </div>
         </div>
     </div>
@@ -82,7 +82,7 @@
             {% endif %}
             <tr class="{{ 'total-row' if row.is_total else '' }}">
                 <td class="acct">{{ row.account_name }}</td>
-                <td class="num">{{ "{:,.0f}".format(row.value) if row.value is not none else "—" }}</td>
+                <td class="num">{{ row.value|es(0) if row.value is not none else "—" }}</td>
             </tr>
         {% endfor %}
         </tbody>

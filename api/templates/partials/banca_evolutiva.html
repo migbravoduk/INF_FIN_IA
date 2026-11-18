@@ -2,7 +2,8 @@
   partials/banca_evolutiva.html — Evolución por período de una cuenta bancaria con desglose por moneda.
   series = [{period, value, clp_no_reaj, clp_reaj_ipc, clp_reaj_tc, extranjera}], account = nombre de la partida.
 #}
-{% macro fmt(v) %}{{ "{:,.0f}".format(v) if v not in (none, 0, 0.0) else "—" }}{% endmacro %}
+{% macro fmt(v) %}{{ v|es(0) if v not in (none, 0, 0.0) else "—" }}{% endmacro %}
+{% macro cell(v, extra="") %}<td class="num{{ ' ' ~ extra if extra }}{{ ' neg-val' if v and v < 0 }}">{{ fmt(v) }}</td>{% endmacro %}
 
 {% if series %}
 <div class="chart-block" style="margin-top:1rem">
@@ -19,18 +20,18 @@
                 <th>Reaj. UF</th>
                 <th>Reaj. USD</th>
                 <th>M. extranjera</th>
-                <th>Total</th>
+                <th class="strong">Total</th>
             </tr>
         </thead>
         <tbody>
         {% for r in series %}
             <tr>
                 <td class="acct">{{ r.period }}</td>
-                <td class="num">{{ fmt(r.clp_no_reaj) }}</td>
-                <td class="num">{{ fmt(r.clp_reaj_ipc) }}</td>
-                <td class="num">{{ fmt(r.clp_reaj_tc) }}</td>
-                <td class="num">{{ fmt(r.extranjera) }}</td>
-                <td class="num strong">{{ fmt(r.value) }}</td>
+                {{ cell(r.clp_no_reaj) }}
+                {{ cell(r.clp_reaj_ipc) }}
+                {{ cell(r.clp_reaj_tc) }}
+                {{ cell(r.extranjera) }}
+                {{ cell(r.value, "strong") }}
             </tr>
         {% endfor %}
         </tbody>
@@ -44,6 +45,9 @@
         if (!window.Plotly) { return setTimeout(draw, 100); }
         
         var periods = data.map(function(d) { return d.period; });
+        // Cuatro monedas = cuatro primeros colores de la paleta validada (antes eran cuatro
+        // morados casi indistinguibles); el filete del color del panel separa los tramos.
+        var pal = window.INF_PALETA || ["#3987e5", "#d95926", "#199e70", "#c98500"];
         
         var traces = [
             {
@@ -51,28 +55,28 @@
                 y: data.map(function(d) { return d.clp_no_reaj; }),
                 name: 'CLP no reaj.',
                 type: 'bar',
-                marker: { color: '#38bdf8' }
+                marker: { color: pal[0], line: { color: '#1e293b', width: 1 } }
             },
             {
                 x: periods,
                 y: data.map(function(d) { return d.clp_reaj_ipc; }),
                 name: 'Reaj. UF',
                 type: 'bar',
-                marker: { color: '#818cf8' }
+                marker: { color: pal[1], line: { color: '#1e293b', width: 1 } }
             },
             {
                 x: periods,
                 y: data.map(function(d) { return d.clp_reaj_tc; }),
                 name: 'Reaj. USD',
                 type: 'bar',
-                marker: { color: '#c084fc' }
+                marker: { color: pal[2], line: { color: '#1e293b', width: 1 } }
             },
             {
                 x: periods,
                 y: data.map(function(d) { return d.extranjera; }),
                 name: 'M. Extranjera',
                 type: 'bar',
-                marker: { color: '#f472b6' }
+                marker: { color: pal[3], line: { color: '#1e293b', width: 1 } }
             }
         ];
 
@@ -83,7 +87,8 @@
             barmode: 'stack',
             xaxis: { type: "category", gridcolor: "#334155" },
             yaxis: { gridcolor: "#334155" },
-            legend: { orientation: "h", y: -0.2 }
+            hovermode: "x unified",
+            legend: { orientation: "h", y: 1, yanchor: "bottom", x: 0, traceorder: "normal" }
         }, { displayModeBar: false, responsive: true });
     }
     draw();

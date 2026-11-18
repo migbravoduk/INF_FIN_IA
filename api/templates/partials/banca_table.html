@@ -2,7 +2,9 @@
   partials/banca_table.html — Balance o resultados de un banco.
   Recibe `meta`, `rows` (registros), `report_type` ('balance'|'resultado').
 #}
-{% macro fmt(v) %}{{ "{:,.0f}".format(v) if v not in (none, 0, 0.0) else "—" }}{% endmacro %}
+{% macro fmt(v) %}{{ v|es(0) if v not in (none, 0, 0.0) else "—" }}{% endmacro %}
+{# Celda numérica: negativos en rojo (provisiones, pérdidas, ajustes), resto en tinta. #}
+{% macro cell(v, extra="") %}<td class="num{{ ' ' ~ extra if extra }}{{ ' neg-val' if v and v < 0 }}">{{ fmt(v) }}</td>{% endmacro %}
 
 {% if meta %}
 <div class="eeff-head">
@@ -10,7 +12,7 @@
     <span class="eeff-meta">
         Ficha {{ meta.bank_code }} · período {{ meta.period }} ·
         {{ "Balance" if report_type == "balance" else "Estado de resultados" }} ·
-        pesos (CLP; plan CMF pre-2022 reportaba en millones)
+        cifras en pesos (CLP; el plan CMF previo a 2022 reportaba en millones) · negativos en rojo
     </span>
 </div>
 
@@ -41,12 +43,12 @@
                 <th>Reaj. UF</th>
                 <th>Reaj. USD</th>
                 <th>M. extranjera</th>
-                <th>Total ({{ meta.period }})</th>
+                <th class="strong">Total ({{ meta.period }})</th>
             </tr>
             {% else %}
             <tr>
                 <th class="acct">Cuenta</th>
-                <th>Total ({{ meta.period }})</th>
+                <th class="strong">Total ({{ meta.period }})</th>
             </tr>
             {% endif %}
         </thead>
@@ -55,12 +57,12 @@
             <tr class="{{ 'total-row' if r.is_total else '' }}">
                 <td class="acct">{{ r.account_name }}</td>
                 {% if report_type == "balance" %}
-                <td class="num">{{ fmt(r.val_clp_no_reaj) }}</td>
-                <td class="num">{{ fmt(r.val_clp_reaj_ipc) }}</td>
-                <td class="num">{{ fmt(r.val_clp_reaj_tc) }}</td>
-                <td class="num">{{ fmt(r.val_extranjera) }}</td>
+                {{ cell(r.val_clp_no_reaj) }}
+                {{ cell(r.val_clp_reaj_ipc) }}
+                {{ cell(r.val_clp_reaj_tc) }}
+                {{ cell(r.val_extranjera) }}
                 {% endif %}
-                <td class="num strong">{{ fmt(r.val_total) }}</td>
+                {{ cell(r.val_total, "strong") }}
             </tr>
         {% endfor %}
         </tbody>
@@ -73,7 +75,7 @@
         <thead>
             <tr>
                 <th class="acct">Cuenta</th>
-                <th>Total ({{ meta.period }})</th>
+                <th class="strong">Total ({{ meta.period }})</th>
                 {% for p in history_periods %}
                 <th>Hist. {{ p }}</th>
                 {% endfor %}
@@ -83,9 +85,9 @@
         {% for r in rows %}
             <tr class="{{ 'total-row' if r.is_total else '' }}">
                 <td class="acct">{{ r.account_name }}</td>
-                <td class="num strong">{{ fmt(r.val_total) }}</td>
+                {{ cell(r.val_total, "strong") }}
                 {% for h in r.history %}
-                <td class="num" style="color: #64748b;">{{ fmt(h) }}</td>
+                <td class="num{{ ' neg-val' if h and h < 0 }}" style="color: #94a3b8;">{{ fmt(h) }}</td>
                 {% endfor %}
             </tr>
         {% endfor %}

@@ -60,21 +60,26 @@ Datos y fuentes:
 - [ ] 11 emisores de la SP sin RUT asignado (1% del monto; lista en `config/sp_emisores.yaml`).
 - [ ] RUT 77844703 (BTBD/FNTBD) y 16 empresas sin sector (BK y Vivo ya clasificadas).
 
-Vistas (revisión con capturas del 17-nov; lo corregido está en la bitácora):
-- [ ] `/proyecciones/corporativos` abre con una empresa sin serie (117 Telecomunicaciones):
-  página vacía. Elegir por defecto una con proyección.
-- [ ] `/banca` y `/fondos-mutuos`: miles con coma y decimales con punto (formato inglés), el
-  resto del sitio usa formato chileno. En `/fondos-mutuos` los encabezados "Patrimonio" y
-  "Partícipes" se pegan, y el gráfico de "3 peores" toma series rotas (MONEY MARKET · P cae a 0:
-  error de dato, no desempeño); filtrar series con saltos imposibles.
-- [ ] `/banca`: toda la columna Total en verde (sin significado).
-- [ ] `/afp` (neta de comisiones): las barras "Rent. del fondo" casi no se ven (gris sobre fondo oscuro).
-- [ ] Vista por emisor, bloque AFP: "vs 12 meses" sale "—" y los últimos 3 meses vacíos porque
-  la ventana es la de seguros/FFMM (la SP va ~3 meses atrás). Usar la ventana propia de la SP.
-- [ ] Otras vistas con la leyenda abajo en `y` negativo (curvas, proyecciones, fondos, banca
-  evolutiva, comparar BCCh, AFP neta): mismo riesgo de montarse sobre las fechas; revisar con
-  capturas y llevar la leyenda arriba como en el monitor de derivados.
-- [ ] Cajas de texto con fondo blanco (Empresa, Emisor) frente a selectores oscuros.
+Vistas — **rediseño del 17-nov (segunda ronda) cerrado**; quedan detalles menores:
+- [x] `/proyecciones/corporativos` abre con la empresa de mayores ingresos con ≥ 24 trimestres
+  (Cencosud) y no con la primera alfabética (vacía).
+- [x] Formato chileno en todo el sitio (≈ 110 expresiones `"{:,.Nf}"` / `"%.Nf"` → filtro `es`;
+  `pct` y `num` también); fechas de Plotly en castellano; ejes sin sufijos SI ingleses ("4T").
+- [x] `/fondos-mutuos`: encabezados con estilo y espacio; AGF abreviadas; series con saltos
+  imposibles (−90% o ×10 en un mes) fuera del ranking y la mediana, con aviso; etiquetas finales.
+- [x] `/banca`: Total destacado con peso y filete (no verde); negativos en rojo; paleta de monedas.
+- [x] `/afp` neta: gráfico de pesas (fondo → neta; el tramo es la comisión). Nominal vs real
+  con la real en color. Fondos A–E en escala cálido→frío por riesgo. Valores directos en carteras.
+- [x] Vista por emisor: bloque AFP con su propia ventana SP (vs 12 meses ya se calcula);
+  indicadores en grilla común; último mes destacado.
+- [x] Leyendas: capa común `api/static/charts.js` (envuelve `Plotly.newPlot/react`): leyenda
+  arriba, automargin, separadores `,.`, paleta validada (CVD/contraste), tooltip oscuro, alto
+  interno correcto en `.chart` con alto en línea.
+- [x] Campos de texto, fecha y número oscuros como los selectores (`app.css`); menú que se ajusta.
+- [ ] Menores: espacio en blanco sobre el resultado en `/proyecciones/*`; la tabla de AFP neta
+  pide scroll horizontal a 1.100 px; unidad de los ejes de `/banca` evolutiva (pesos crudos,
+  mezcla planes pre/post 2022); revisar `/eeff`, `/comparar`, `/ranking`, `/salud`, `/productos`
+  con capturas (no se revisaron en esta ronda, heredan el tema común).
 
 Pendiente que requiere decisión o curaduría humana:
 

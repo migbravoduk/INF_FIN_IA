@@ -26,7 +26,7 @@
 <div class="warn-box">
     Este fondo reparte beneficios. El valor cuota que publica la CMF no incluye esos repartos,
     así que nuestra rentabilidad calculada sale <strong>menor</strong> que la real. Para este
-    fondo usa la cifra oficial del comparador de la CMF{% if oficial %}: <strong>{{ "%+.2f"|format(oficial.nominal_1a) }}%</strong> a 1 año (corte {{ oficial.fecha }}){% endif %}.
+    fondo usa la cifra oficial del comparador de la CMF{% if oficial %}: <strong>{{ oficial.nominal_1a|es(2, True) }}%</strong> a 1 año (corte {{ oficial.fecha }}){% endif %}.
 </div>
 {% endif %}
 
@@ -53,8 +53,8 @@
         <div class="kpi-sub">Neta de remuneración y gastos; antes de comisión de colocación.</div>
     </div>
     <div class="kpi-card"><h3>Frente a su categoría</h3>
-        <div class="kpi-row"><span>Diferencia con la mediana (12m)</span><b>{{ "%+.2f pp"|format(m.exceso_mediana_cat_12m) if m.exceso_mediana_cat_12m is not none else '—' }}</b></div>
-        <div class="kpi-row"><span>Frente a un depósito a plazo (12m)</span><b>{{ "%+.2f pp"|format(m.exceso_deposito_12m) if m.exceso_deposito_12m is not none else '—' }}</b></div>
+        <div class="kpi-row"><span>Diferencia con la mediana (12m)</span><b>{{ (m.exceso_mediana_cat_12m|es(2, True) ~ ' pp') if m.exceso_mediana_cat_12m is not none else '—' }}</b></div>
+        <div class="kpi-row"><span>Frente a un depósito a plazo (12m)</span><b>{{ (m.exceso_deposito_12m|es(2, True) ~ ' pp') if m.exceso_deposito_12m is not none else '—' }}</b></div>
         <div class="kpi-row"><span>Posición (100 = mejor)</span><b>{{ m.percentil_cat_12m|num }}{% if p.n_categoria %} de {{ p.n_categoria }}{% endif %}</b></div>
         <div class="kpi-row"><span>Consistencia</span><b>{{ m.consistencia_12m|num }}%</b></div>
         <div class="kpi-sub">Consistencia = % de los últimos 36 meses en que su rentabilidad a 12 meses quedó en la mitad superior de su categoría.</div>
@@ -65,10 +65,10 @@
         <div class="kpi-row"><span>Peor caída desde un máximo</span><b>{{ m.caida_maxima|pct }}</b></div>
         <div class="kpi-row"><span>Meses en recuperarse</span><b>{{ m.meses_recuperacion if m.meses_recuperacion is not none else ('no se ha recuperado' if m.caida_maxima else '—') }}</b></div>
         <div class="kpi-row"><span>Peor mes</span><b>{{ m.peor_mes|pct }}</b></div>
-        <div class="kpi-row"><span>Sharpe</span><b>{{ "%.2f"|format(m.sharpe) if m.sharpe is not none else '—' }}</b></div>
+        <div class="kpi-row"><span>Sharpe</span><b>{{ m.sharpe|es(2) if m.sharpe is not none else '—' }}</b></div>
         {% if m.duracion_efectiva is not none %}
-        <div class="kpi-row"><span>Duración efectiva</span><b>{{ "%.1f"|format(m.duracion_efectiva) }} años <span class="lead">± {{ "%.1f"|format(2 * m.duracion_ee) }}</span></b></div>
-        <div class="kpi-sub">Si las tasas {{ 'en UF' if m.duracion_factor == 'UF' else 'en pesos' }} suben 1 punto, el valor cuota cae cerca de {{ "%.1f"|format(m.duracion_efectiva if m.duracion_efectiva > 0 else 0) }}%. Estimada con la reacción del fondo a los cambios de tasas de los últimos 5 años (<a href="/curvas">curvas</a>).</div>
+        <div class="kpi-row"><span>Duración efectiva</span><b>{{ m.duracion_efectiva|es(1) }} años <span class="lead">± {{ (2 * m.duracion_ee)|es(1) }}</span></b></div>
+        <div class="kpi-sub">Si las tasas {{ 'en UF' if m.duracion_factor == 'UF' else 'en pesos' }} suben 1 punto, el valor cuota cae cerca de {{ (m.duracion_efectiva if m.duracion_efectiva > 0 else 0)|es(1) }}%. Estimada con la reacción del fondo a los cambios de tasas de los últimos 5 años (<a href="/curvas">curvas</a>).</div>
         {% endif %}
     </div>
     {% if p.tipo == 'ffmm' %}
@@ -118,7 +118,7 @@
         <div style="flex:1;min-width:16rem">
             <h4>{{ titulo }}</h4>
             <table class="eeff-table">
-                {% for k, v in filas %}<tr><td>{{ k }}</td><td style="text-align:right">{{ "%.1f"|format(v) }}%</td></tr>{% endfor %}
+                {% for k, v in filas %}<tr><td>{{ k }}</td><td style="text-align:right">{{ v|es(1) }}%</td></tr>{% endfor %}
             </table>
         </div>
         {% endfor %}

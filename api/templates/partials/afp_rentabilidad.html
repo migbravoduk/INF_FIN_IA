@@ -4,7 +4,7 @@
 #}
 <div class="chart-block" style="margin-top:1.5rem">
     <h4>Rentabilidad 12m por fondo — nominal vs real
-        {% if ipc is not none %}<span class="lead">(IPC 12m: {{ "{:.2f}".format(ipc) }}%)</span>{% endif %}
+        {% if ipc is not none %}<span class="lead">(IPC 12m: {{ ipc|es(2) }}%)</span>{% endif %}
     </h4>
     <div id="afp-rent-chart" class="chart"></div>
 </div>
@@ -14,16 +14,25 @@
     function draw() {
         if (!window.Plotly) { return setTimeout(draw, 100); }
         var x = rows.map(function (r) { return "Fondo " + r.fund; });
+        // Holgura de 18% para que las etiquetas sobre/bajo las barras extremas no se corten.
+        var vals = rows.map(function (r) { return r.nominal; }).concat(rows.map(function (r) { return r.real; }))
+                       .filter(function (v) { return v !== null; });
+        var ymax = Math.max.apply(null, vals.concat([0])), ymin = Math.min.apply(null, vals.concat([0]));
+        var pad = (ymax - ymin) * 0.18 || 1;
         Plotly.newPlot("afp-rent-chart", [
             { x: x, y: rows.map(function (r) { return r.nominal; }), type: "bar",
-              name: "Nominal", marker: { color: "#38bdf8" } },
+              name: "Nominal", marker: { color: "#64748b" },
+              texttemplate: "%{y:.1f}%", textposition: "outside", textfont: { size: 10, color: "#94a3b8" } },
             { x: x, y: rows.map(function (r) { return r.real; }), type: "bar",
-              name: "Real (desc. IPC)", marker: { color: "#4ade80" } }
+              name: "Real (descontado el IPC)", marker: { color: "#3987e5" },
+              texttemplate: "%{y:.1f}%", textposition: "outside", textfont: { size: 10, color: "#e2e8f0" } }
         ], {
-            margin: { t: 10, r: 10, b: 30, l: 45 }, height: 300, barmode: "group",
+            // Lo que importa al afiliado es la real: va en color y la nominal en gris de fondo.
+            margin: { t: 10, r: 10, b: 30, l: 45 }, height: 320, barmode: "group", bargap: 0.3,
             paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)",
             font: { color: "#94a3b8" }, legend: { orientation: "h" },
-            xaxis: { gridcolor: "#334155" }, yaxis: { gridcolor: "#334155", ticksuffix: "%" }
+            xaxis: { gridcolor: "#334155" }, yaxis: { gridcolor: "#334155", ticksuffix: "%", zerolinecolor: "#94a3b8",
+                                                   range: [ymin - (ymin < 0 ? pad : 0), ymax + pad] }
         }, { displayModeBar: false, responsive: true });
     }
     draw();

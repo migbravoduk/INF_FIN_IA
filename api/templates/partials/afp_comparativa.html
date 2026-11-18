@@ -22,11 +22,11 @@
                 <td style="text-align:left; font-weight:600">{{ r.afp }}</td>
                 {% if fund == 'TODOS' %}<td>{{ r.fund }}</td>{% endif %}
                 <td style="text-align:right" class="{{ 'pos' if (r.rentabilidad or 0) > 0 else 'neg' if (r.rentabilidad or 0) < 0 }}">
-                    {% if r.rentabilidad is not none %}{{ "%.2f"|format(r.rentabilidad)|replace('.', ',') }}%{% else %}—{% endif %}
+                    {% if r.rentabilidad is not none %}{{ r.rentabilidad|es(2)|replace('.', ',') }}%{% else %}—{% endif %}
                 </td>
-                <td style="text-align:right">{{ "{:,.2f}".format(r.cuota).replace(',', 'X').replace('.', ',').replace('X', '.') }}</td>
-                <td style="text-align:right">{{ "{:,.0f}".format(r.patrimonio).replace(',', '.') }}</td>
-                <td style="text-align:right">{% if r.share is not none %}{{ "%.1f"|format(r.share)|replace('.', ',') }}%{% else %}—{% endif %}</td>
+                <td style="text-align:right">{{ r.cuota|es(2) }}</td>
+                <td style="text-align:right">{{ r.patrimonio|es(0) }}</td>
+                <td style="text-align:right">{% if r.share is not none %}{{ r.share|es(1)|replace('.', ',') }}%{% else %}—{% endif %}</td>
             </tr>
             {% endfor %}
         </tbody>

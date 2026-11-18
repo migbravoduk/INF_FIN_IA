@@ -6,7 +6,7 @@
 {% if sim.rows %}
 <div class="chart-block" style="margin-top:1rem">
     <h4>Rentabilidad neta de comisiones — Fondo {{ fund }}
-        <span class="lead">(sueldo bruto ${{ "{:,.0f}".format(salary).replace(",", ".") }} ·
+        <span class="lead">(sueldo bruto ${{ salary|es(0) }} ·
         aportes {{ sim.window.desde }} → {{ sim.window.hasta }} ·
         valorizado al {{ sim.window.valuacion }})</span></h4>
     <div id="afp-neta-chart" class="chart"></div>
@@ -23,7 +23,7 @@
                 <th>Desembolso total</th>
                 <th>Saldo final</th>
                 <th>Rent. del fondo</th>
-                <th>Rent. NETA</th>
+                <th class="strong">Rent. NETA</th>
                 <th>Fondo Mín. para Rent. (+)</th>
             </tr>
         </thead>
@@ -31,19 +31,19 @@
         {% for r in sim.rows %}
             <tr class="{{ 'total-row' if loop.first else '' }}">
                 <td class="acct">{{ r.afp }}{{ " 🏆" if loop.first else "" }}</td>
-                <td class="num">{{ "%.2f%%"|format(r.comision_pct) }}</td>
-                <td class="num">{{ "{:,.0f}".format(r.aportes).replace(",", ".") }}</td>
-                <td class="num">{{ "{:,.0f}".format(r.comisiones).replace(",", ".") }}</td>
-                <td class="num">{{ "{:,.0f}".format(r.desembolso).replace(",", ".") }}</td>
-                <td class="num">{{ "{:,.0f}".format(r.saldo).replace(",", ".") }}</td>
-                <td class="num">{{ "%.2f%%"|format(r.rent_fondo_pct) }}</td>
-                <td class="num strong {{ 'neg' if r.rent_neta_pct < 0 }}" {% if r.rent_neta_pct < 0 %}style="color:var(--bad, #f87171)"{% endif %}>{{ "%.2f%%"|format(r.rent_neta_pct) }}</td>
+                <td class="num">{{ r.comision_pct|es(2) }}%</td>
+                <td class="num">{{ r.aportes|es(0) }}</td>
+                <td class="num">{{ r.comisiones|es(0) }}</td>
+                <td class="num">{{ r.desembolso|es(0) }}</td>
+                <td class="num">{{ r.saldo|es(0) }}</td>
+                <td class="num">{{ r.rent_fondo_pct|es(2) }}%</td>
+                <td class="num strong {{ 'neg-val' if r.rent_neta_pct < 0 }}">{{ r.rent_neta_pct|es(2, True) }}%</td>
                 <td class="num">
                     {% if r.umbral_inicial != None %}
                         {% if r.umbral_inicial == 0 %}
                             $0
                         {% else %}
-                            ${{ "{:,.0f}".format(r.umbral_inicial).replace(",", ".") }}
+                            ${{ r.umbral_inicial|es(0) }}
                         {% endif %}
                     {% else %}
                         N/A
@@ -70,21 +70,41 @@
     function draw() {
         if (!window.Plotly) { return setTimeout(draw, 100); }
         var r = rows.slice().reverse();
-        Plotly.newPlot("afp-neta-chart", [
-            { y: r.map(function(d){return d.afp;}), x: r.map(function(d){return d.rent_fondo_pct;}),
-              name: "Rent. del fondo", type: "bar", orientation: "h",
-              marker: { color: "#334155" } },
-            { y: r.map(function(d){return d.afp;}), x: r.map(function(d){return d.rent_neta_pct;}),
-              name: "Rent. NETA de comisiones", type: "bar", orientation: "h",
-              marker: { color: r.map(function(d){ return d.rent_neta_pct >= 0 ? "#34d399" : "#f87171"; }) } }
-        ], {
-            margin: { t: 10, r: 10, b: 40, l: 90 }, height: 320,
-            paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)",
-            font: { color: "#94a3b8" }, barmode: "group",
-            xaxis: { gridcolor: "#334155", ticksuffix: "%", zerolinecolor: "#94a3b8" },
-            yaxis: { gridcolor: "#334155" },
-            legend: { orientation: "h", y: -0.2 }
-        }, { displayModeBar: false, responsive: true });
+        // Gráfico de pesas: el punto gris es lo que rentó el fondo y el de color lo que le
+        // quedó al afiliado; el tramo entre ambos es lo que se llevó la comisión. Así la
+        // diferencia entre AFP se lee como distancia, no como dos barras paralelas.
+        var y = r.map(function (d) { return d.afp; });
+        var seg = { x: [], y: [], mode: "lines", type: "scatter", hoverinfo: "skip",
+                    line: { color: "#475569", width: 3 }, showlegend: false };
+        r.forEach(function (d) {
+            seg.x.push(d.rent_fondo_pct, d.rent_neta_pct, null);
+            seg.y.push(d.afp, d.afp, null);
+        });
+        function fmt(v) { return v.toLocaleString("es-CL", {minimumFractionDigits: 2, maximumFractionDigits: 2}) + "%"; }
+        var fondo = { x: r.map(function (d) { return d.rent_fondo_pct; }), y: y,
+            name: "Rentabilidad del fondo", type: "scatter", mode: "markers",
+            marker: { color: "#94a3b8", size: 11, line: { color: "#1e293b", width: 2 } },
+            customdata: r.map(function (d) { return [fmt(d.rent_fondo_pct)]; }),
+            hovertemplate: "%{y}<br>Fondo: <b>%{customdata[0]}</b><extra></extra>" };
+        var neta = { x: r.map(function (d) { return d.rent_neta_pct; }), y: y,
+            name: "Rentabilidad neta de comisiones", type: "scatter", mode: "markers+text",
+            marker: { size: 13, line: { color: "#1e293b", width: 2 },
+                      color: r.map(function (d) { return d.rent_neta_pct >= 0 ? "#4ade80" : "#f87171"; }) },
+            text: r.map(function (d) { return fmt(d.rent_neta_pct); }),
+            textposition: r.map(function (d) { return d.rent_neta_pct < d.rent_fondo_pct ? "middle left" : "middle right"; }),
+            textfont: { color: "#e2e8f0", size: 11 },
+            customdata: r.map(function (d) { return [fmt(d.rent_neta_pct), fmt(d.rent_fondo_pct - d.rent_neta_pct), d.comision_pct.toLocaleString("es-CL", {minimumFractionDigits: 2})]; }),
+            hovertemplate: "%{y}<br>Neta: <b>%{customdata[0]}</b><br>Costo de la comisión (%{customdata[2]}% de la remuneración): %{customdata[1]}<extra></extra>" };
+        var xs = r.map(function (d) { return d.rent_fondo_pct; }).concat(r.map(function (d) { return d.rent_neta_pct; }));
+        var lo = Math.min.apply(null, xs.concat([0])), hi = Math.max.apply(null, xs.concat([0]));
+        var pad = (hi - lo) * 0.12 || 1;
+        Plotly.newPlot("afp-neta-chart", [seg, fondo, neta], {
+            margin: { t: 30, r: 20, b: 40, l: 90 }, height: 340,
+            xaxis: { ticksuffix: "%", zeroline: true, zerolinecolor: "#94a3b8", showgrid: true,
+                     range: [lo - pad, hi + pad], title: { text: "Rentabilidad en la ventana" } },
+            yaxis: { showgrid: false },
+            legend: { orientation: "h", y: 1, yanchor: "bottom", x: 0 }
+        });
     }
     draw();
 })();

@@ -385,6 +385,12 @@ pares pero empeora h3).
   de sectores que se desbordaban, hitos superpuestos (ahora numerados), etiquetas cortadas,
   colores repetidos en la deriva de seguros, rentabilidad neta negativa de AFP en verde,
   enlaces en azul por defecto, texto "las AFP no aparecen". Pendientes visuales: Hoja de Ruta §0.
+- 2026-11-17 · rediseño de vistas (pendientes visuales 15–21): tema común de gráficos
+  `api/static/charts.js` (leyenda arriba, automargin, formato y fechas en castellano, paleta
+  validada con el script de dataviz sobre #1e293b), formato chileno en todas las plantillas,
+  verde solo para variaciones positivas, campos oscuros; proyecciones por defecto Cencosud y en
+  miles de millones con línea "hoy"; AFP neta como gráfico de pesas; FFMM sin series rotas
+  (salto −90%/×10 en un mes); bloque AFP del emisor con ventana SP. Verificado con capturas.
 
 ---
 

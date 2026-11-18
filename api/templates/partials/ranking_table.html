@@ -12,7 +12,7 @@
                 <td class="pos-n">{{ loop.index }}</td>
                 <td class="acct">{{ r.company_name }}</td>
                 <td class="num {{ 'pos' if r.value >= 0 else 'neg' }}">
-                    {{ "{:+,.1f}%".format(r.value) if is_pct else "{:,.2f}x".format(r.value) }}
+                    {{ r.value|es(1, True) ~ "%" if is_pct else r.value|es(2) ~ "x" }}
                 </td>
             </tr>
         {% endfor %}

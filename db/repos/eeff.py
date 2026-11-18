@@ -84,6 +84,21 @@ class EeffRepo:
             ORDER BY company_name ASC
         """).fetchdf()
 
+    def get_cmf_default_company(self, agf: Optional[bool] = None) -> Optional[str]:
+        """Empresa con que abre una vista: la de mayores ingresos del último período entre
+        las que tienen ≥ 24 trimestres (la primera alfabética solía no tener datos)."""
+        row = self.conn.execute(f"""
+            WITH n AS (SELECT rut, COUNT(DISTINCT period) AS n FROM cmf_financial_statements
+                       GROUP BY rut),
+                 u AS (SELECT MAX(period) AS p FROM cmf_financial_statements)
+            SELECT f.company_name FROM cmf_financial_statements f JOIN n USING (rut), u
+            WHERE f.period = u.p AND n.n >= 24
+              AND f.account_name = 'Ingresos de actividades ordinarias'
+              {_agf_where(agf, 'AND')}
+            ORDER BY f.value DESC LIMIT 1
+        """).fetchone()
+        return row[0] if row else None
+
     def search_cmf_companies(self, query: str, limit: int = 15, agf: Optional[bool] = None):
         """
         Busca empresas por nombre para el autocompletar del selector EEFF.

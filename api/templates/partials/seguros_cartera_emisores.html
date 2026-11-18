@@ -16,7 +16,7 @@
         {{ ramo_label | lower }}
     {% endif %}
     · período {{ period }} ·
-    top {{ rows|length }} de {{ "{:,}".format(total_emisores) }} emisores, por número de posiciones
+    top {{ rows|length }} de {{ total_emisores|es(0) }} emisores, por número de posiciones
 </div>
 
 <table class="eeff-table">
@@ -48,12 +48,12 @@
                 {{ r.tipo }}
                 {% if not r.solo_un_tipo %}<span class="lead">(y otros)</span>{% endif %}
             </td>
-            <td style="text-align:right">{{ "{:,}".format(r.total) }}</td>
+            <td style="text-align:right">{{ r.total|es(0) }}</td>
             <td>
                 {% for m in r.monedas %}
                 <span style="display:inline-block; margin-right:1rem">
-                    <b>{{ m.unidad }}</b> {{ "{:,.0f}".format(m.nominal) }}
-                    <span class="lead">({{ "{:,}".format(m.n) }})</span>
+                    <b>{{ m.unidad }}</b> {{ m.nominal|es(0) }}
+                    <span class="lead">({{ m.n|es(0) }})</span>
                 </span>
                 {% endfor %}
             </td>
