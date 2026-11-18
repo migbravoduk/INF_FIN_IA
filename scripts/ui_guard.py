@@ -36,6 +36,8 @@ PAT = {
                            r"""|sec_head\([^)]*?\bid\s*=\s*["']([^"']+)["']""", re.S),
     # ui.viz("prefijo-" ~ loop.index, …): el id se arma en un bucle; equivale a id="prefijo-{{ loop.index }}"
     "id_macro_loop": re.compile(r"""ui\.viz\(\s*["']([^"']+)["']\s*~\s*loop\.index"""),
+    # ui.viz(variable, …) dentro de un macro (el id llega por parámetro): equivale a id="{{ variable }}"
+    "id_macro_var": re.compile(r"""ui\.viz\(\s*([A-Za-z_]\w*)\s*,"""),
     "plot": re.compile(r'Plotly\.(?:newPlot|react)\(\s*["\']([^"\']+)["\']'),
 }
 
@@ -47,7 +49,8 @@ def extraer() -> dict:
         rel = f.relative_to(TPL).as_posix()
         out[rel] = {
             "id": sorted(set(PAT["id"].findall(s)) | {x for t in PAT["id_macro"].findall(s) for x in t if x}
-                         | {pre + "{{ loop.index }}" for pre in PAT["id_macro_loop"].findall(s)}),
+                         | {pre + "{{ loop.index }}" for pre in PAT["id_macro_loop"].findall(s)}
+                         | {"{{ " + v + " }}" for v in PAT["id_macro_var"].findall(s)}),
             "name": sorted(set(PAT["name"].findall(s))),
             "hx": sorted({f"{k}={v}" for k, v in PAT["hx"].findall(s)}),
             "js_id": sorted(set(PAT["js_id"].findall(s))),
@@ -84,7 +87,7 @@ def main() -> int:
     base = json.loads(BASE.read_text(encoding="utf-8"))
     falta = []
     # Un id/name/hx puede mudarse de archivo (p. ej. a un partial nuevo): se exige globalmente.
-    CLAVES = [k for k in PAT if k not in ("id_macro", "id_macro_loop")]
+    CLAVES = [k for k in PAT if k not in ("id_macro", "id_macro_loop", "id_macro_var")]
     global_actual = {k: set() for k in CLAVES}
     for d in actual.values():
         for k in CLAVES:

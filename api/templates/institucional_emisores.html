@@ -1,26 +1,26 @@
 {% extends "base.html" %}
+{% import "partials/_ui.html" as ui %}
 
 {% block title %}Emisores en común · INF_FIN_IA{% endblock %}
 
 {% block content %}
-<p class="crumb"><a href="/inversion-institucional">← Inversión institucional</a></p>
-<h1>Emisores en común: aseguradoras y fondos mutuos</h1>
-<p class="subtitle">
-    Instrumentos que están a la vez en la renta fija de las compañías de seguros
-    (período {{ per_seg or '—' }}) y en la cartera de los fondos mutuos (período {{ per_ffm or '—' }}),
-    cruzados por nemotécnico y agrupados por emisor.
-    <br><span class="lead">Los montos son MM$ expuestos al emisor en esos instrumentos en común.
-    Seguros: valor nominal vigente (valor par, no de mercado) pasado a pesos con la UF y el dólar
-    del cierre; fondos mutuos: valorización de mercado (los fondos en dólares, al dólar del mes).
-    Las dos fuentes miden distinto, por eso se muestran separadas y su suma es referencial. Las AFP
-    no entran: la Superintendencia publica su cartera agregada por categoría, sin instrumento.</span>
-</p>
+{{ ui.page_head("Emisores en común: aseguradoras y fondos mutuos",
+    ("Instrumentos que están a la vez en la renta fija de las compañías de seguros (período " ~ (per_seg or '—') ~ ") y en la cartera de los fondos mutuos (período " ~ (per_ffm or '—') ~ "), cruzados por nemotécnico y agrupados por emisor."),
+    migas=[("Inversión institucional", "/inversion-institucional")]) }}
+
+{% call ui.metodo("Cómo leer los montos") %}
+<p>Los montos son MM$ expuestos al emisor en esos instrumentos en común.
+Seguros: valor nominal vigente (valor par, no de mercado) pasado a pesos con la UF y el dólar
+del cierre; fondos mutuos: valorización de mercado (los fondos en dólares, al dólar del mes).
+Las dos fuentes miden distinto, por eso se muestran separadas y su suma es referencial. Las AFP
+no entran: la Superintendencia publica su cartera agregada por categoría, sin instrumento.</p>
+{% endcall %}
 
 {% if not rows %}
-<p class="loading">Sin instrumentos en común para los períodos cargados.</p>
+{{ ui.vacio("Sin instrumentos en común para los períodos cargados.") }}
 {% else %}
-<div class="table-scroll">
-<table class="eeff-table">
+<div class="tbl-wrap tbl-wrap--alto">
+<table class="tbl tbl--fija-1" aria-label="Emisores en común entre aseguradoras y fondos mutuos">
     <thead><tr>
         <th>Emisor</th><th class="num">Instrumentos en común</th>
         <th class="num">Compañías de seguros</th><th class="num">Fondos mutuos</th>
@@ -30,18 +30,18 @@
     <tbody>
     {% for r in rows %}
     <tr>
-        <td><a href="/inversion-institucional/emisor?rut={{ r.rut }}">{{ r.emisor or 'Sin nombre en las fuentes' }}</a><br><span class="lead">RUT {{ r.rut }}{% if r.tipo %} · {{ r.tipo|replace('_', ' ') }}{% endif %}</span></td>
+        <td class="ent"><a href="/inversion-institucional/emisor?rut={{ r.rut }}">{{ (r.emisor or 'Sin nombre en las fuentes')|nombre }}</a><span class="sub">RUT {{ r.rut }}{% if r.tipo %} · {{ r.tipo|replace('_', ' ') }}{% endif %}</span></td>
         <td class="num">{{ r.instrumentos|num }}</td>
         <td class="num">{{ r.cias_seg|num }}</td>
         <td class="num">{{ r.fondos_ffm|num }}</td>
         <td class="num">{{ r.mm_seg|num }}</td>
         <td class="num">{{ r.mm_ffm|num }}</td>
-        <td class="num"><strong>{{ r.mm_total|num }}</strong></td>
+        <td class="num fuerte">{{ r.mm_total|num }}</td>
     </tr>
     {% endfor %}
     </tbody>
 </table>
 </div>
-<p class="lead">Las compañías y fondos se suman por instrumento: una compañía con dos bonos del mismo emisor cuenta dos veces.</p>
+<p class="nota">Las compañías y fondos se suman por instrumento: una compañía con dos bonos del mismo emisor cuenta dos veces.</p>
 {% endif %}
 {% endblock %}

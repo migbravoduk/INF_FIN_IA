@@ -4,6 +4,7 @@
         seguros|ffmm|afp: {serie:[{period, mm, pos, tenedores}], tenedores:[...], ult, prev, hace12, sin_fx}}
   Montos en MM$ en los datos; se muestran en MMM$ (miles de millones).
 #}
+{% import "partials/_ui.html" as ui %}
 {% macro per(p) %}{{ (p|string)[4:] }}/{{ (p|string)[:4] }}{% endmacro %}
 
 {% macro variacion(a, b) -%}
@@ -17,22 +18,26 @@
 {% set ult = (s|selectattr('period', 'equalto', b.ult)|first) %}
 {% set prev = (s|selectattr('period', 'equalto', b.prev)|first) if b.prev else none %}
 {% set h12 = (s|selectattr('period', 'equalto', b.hace12)|first) if b.hace12 else none %}
-<div class="chart-block">
-    <h2>{{ titulo }}</h2>
-    <div class="afp-stats">
-        <div><span>{{ unidad }} · {{ per(b.ult) }}</span><b>{{ (ult.mm / 1000)|es(1) }}</b></div>
-        <div><span>vs mes anterior</span><b style="font-size:1.05rem">{{ variacion(ult.mm, prev.mm if prev else none) }}</b></div>
-        <div><span>vs 12 meses</span><b style="font-size:1.05rem">{{ variacion(ult.mm, h12.mm if h12 else none) }}</b></div>
-        <div><span>{{ tenedor_label }}</span><b style="font-size:1.05rem">{{ ult.tenedores }}</b></div>
-        <div><span>posiciones</span><b style="font-size:1.05rem">{{ ult.pos|es(0) }}</b></div>
+{% set v_prev = ((ult.mm / prev.mm - 1) * 100) if (prev and prev.mm and ult.mm is not none) else none %}
+{% set v_12 = ((ult.mm / h12.mm - 1) * 100) if (h12 and h12.mm and ult.mm is not none) else none %}
+<section class="bloque-emisor">
+    <h3 class="sub-head mt-0">{{ titulo }}</h3>
+    <div class="stats stats--compactas">
+        {{ ui.stat(unidad ~ " · " ~ per(b.ult), (ult.mm / 1000)|es(1)) }}
+        {{ ui.stat("vs mes anterior", (v_prev|es(1, True) ~ "%") if v_prev is not none else "—",
+                   tono=(none if v_prev is none else ('pos' if v_prev > 0 else 'neg' if v_prev < 0 else none))) }}
+        {{ ui.stat("vs 12 meses", (v_12|es(1, True) ~ "%") if v_12 is not none else "—",
+                   tono=(none if v_12 is none else ('pos' if v_12 > 0 else 'neg' if v_12 < 0 else none))) }}
+        {{ ui.stat(tenedor_label, ult.tenedores) }}
+        {{ ui.stat("posiciones", ult.pos|es(0)) }}
     </div>
-    <div id="{{ chart_id }}" class="chart"></div>
-</div>
+    {{ ui.viz(chart_id, titulo, sub="MMM$ por mes · el último mes en color", alto="sm") }}
+</section>
 {% endmacro %}
 
 {% macro tabla(b, tenedor_label) %}
-<div class="table-scroll">
-<table class="eeff-table">
+<div class="tbl-wrap">
+<table class="tbl" aria-label="Tenedores: {{ tenedor_label }}">
     <thead><tr>
         <th>{{ tenedor_label }}</th>
         <th class="num">{{ per(b.ult) }} (MMM$)</th>
@@ -43,55 +48,58 @@
     <tbody>
     {% for f in b.tenedores[:25] %}
     <tr>
-        <td>{{ f.nombre }}{% if f.sub %}<br><span class="lead">{{ f.sub }}</span>{% endif %}</td>
+        <td class="ent">{{ f.nombre|nombre }}{% if f.sub %}<span class="sub">{{ f.sub }}</span>{% endif %}</td>
         <td class="num">{{ ((f.ult or 0) / 1000)|es(1) }}</td>
         <td class="num">{{ f.peso|es(1) }}%</td>
-        <td class="{{ 'pos' if (f.d_prev or 0) > 0 else 'neg' if (f.d_prev or 0) < 0 }}">
-            {% if f.d_prev is not none %}{{ (f.d_prev / 1000)|es(1, True) }}{% if f.prev is none %} <span class="lead">nuevo</span>{% elif f.ult is none %} <span class="lead">salió</span>{% endif %}{% else %}—{% endif %}</td>
-        <td class="{{ 'pos' if (f.d_12 or 0) > 0 else 'neg' if (f.d_12 or 0) < 0 }}">
+        <td class="num {{ 'pos' if (f.d_prev or 0) > 0 else 'neg' if (f.d_prev or 0) < 0 }}">
+            {% if f.d_prev is not none %}{{ (f.d_prev / 1000)|es(1, True) }}{% if f.prev is none %} <span class="muted">nuevo</span>{% elif f.ult is none %} <span class="muted">salió</span>{% endif %}{% else %}—{% endif %}</td>
+        <td class="num {{ 'pos' if (f.d_12 or 0) > 0 else 'neg' if (f.d_12 or 0) < 0 }}">
             {% if f.d_12 is not none %}{{ (f.d_12 / 1000)|es(1, True) }}{% else %}—{% endif %}</td>
     </tr>
     {% endfor %}
     </tbody>
 </table>
 </div>
-{% if b.tenedores|length > 25 %}<p class="lead">Se muestran los 25 mayores de {{ b.tenedores|length }}.</p>{% endif %}
+{% if b.tenedores|length > 25 %}<p class="nota">Se muestran los 25 mayores de {{ b.tenedores|length }}.</p>{% endif %}
 {% endmacro %}
 
 {% if not h %}
-<p class="loading">No reconozco {{ '«' ~ q ~ '»' if q else 'ese emisor' }}. Escribe un RUT o elige un nombre de la lista.</p>
+{{ ui.vacio("No reconozco " ~ (("«" ~ q ~ "»") if q else "ese emisor") ~ ". Escribe un RUT o elige un nombre de la lista.") }}
 {% elif not h.seguros and not h.ffmm and not h.afp %}
-<p class="loading">RUT {{ h.rut }}{% if h.nombre %} ({{ h.nombre }}){% endif %}: sin posiciones de seguros, fondos
-mutuos ni AFP en los últimos {{ h.periodos|length }} meses.</p>
+{{ ui.vacio("RUT " ~ h.rut ~ ((" (" ~ h.nombre ~ ")") if h.nombre else "") ~ ": sin posiciones de seguros, fondos mutuos ni AFP en los últimos " ~ (h.periodos|length) ~ " meses.") }}
 {% else %}
 
-<div class="eeff-meta" style="margin:1rem 0">
-    <strong style="font-size:1.1rem; color:var(--ink)">{{ h.nombre or 'Emisor sin nombre en las fuentes' }}</strong>
-    · RUT {{ h.rut }}{% if h.tipo_label %} · {{ h.tipo_label }}{% endif %}
-    {% if h.razon and h.razon != h.nombre %}<br><span class="lead">{{ h.razon }}</span>{% endif %}
-</div>
+<header class="page-head mt-0">
+    <h2 class="mb-3">{{ (h.nombre or 'Emisor sin nombre en las fuentes')|nombre }}</h2>
+    <div class="page-acciones mt-0">
+        <span class="chip">RUT {{ h.rut }}</span>
+        {% if h.tipo_label %}<span class="chip chip--acento">{{ h.tipo_label }}</span>{% endif %}
+        {% if h.razon and (h.razon|nombre|lower) != ((h.nombre or '')|nombre|lower) %}<span class="chip">{{ h.razon|nombre }}</span>{% endif %}
+    </div>
+</header>
 
-<div class="chart-grid">
+<div class="grid-viz">
     {% if h.seguros %}{{ bloque(h.seguros, "Compañías de seguros · renta fija", "MMM$ valor par", "em-seg-chart", "compañías") }}{% endif %}
     {% if h.ffmm %}{{ bloque(h.ffmm, "Fondos mutuos · cartera nacional", "MMM$ valor de mercado", "em-ffm-chart", "fondos") }}{% endif %}
     {% if h.afp %}{{ bloque(h.afp, "Fondos de pensiones · AFP", "MMM$ valor de mercado", "em-afp-chart", "AFP") }}{% endif %}
 </div>
 
 {% if h.seguros %}
-<h2 style="font-size:1rem;color:var(--muted);margin-top:2rem">Compañías de seguros con posiciones</h2>
+<h3 class="sub-head">Compañías de seguros con posiciones</h3>
 {{ tabla(h.seguros, "Compañía") }}
 {% endif %}
 {% if h.ffmm %}
-<h2 style="font-size:1rem;color:var(--muted);margin-top:2rem">Fondos mutuos con posiciones</h2>
+<h3 class="sub-head">Fondos mutuos con posiciones</h3>
 {{ tabla(h.ffmm, "Fondo") }}
 {% endif %}
 {% if h.afp %}
-<h2 style="font-size:1rem;color:var(--muted);margin-top:2rem">AFP con posiciones (fondos A–E sumados)</h2>
+<h3 class="sub-head">AFP con posiciones (fondos A–E sumados)</h3>
 {{ tabla(h.afp, "AFP") }}
 {% endif %}
 
-<p class="lead" style="margin-top:1rem">
-    <strong>Cómo leer los montos.</strong> Seguros: nominal vigente de la renta fija (archivo B.1 de la
+{% call ui.metodo("Cómo leer los montos") %}
+<p>
+    Seguros: nominal vigente de la renta fija (archivo B.1 de la
     Circular 1.835) pasado a pesos con la UF y el dólar del cierre de cada mes; es valor par, no de
     mercado, y una variación puede venir de compras, ventas, amortizaciones o del reajuste de la UF.
     {% if h.seguros and h.seguros.sin_fx %}{{ h.seguros.sin_fx }} posiciones en otras monedas (euro) se
@@ -104,6 +112,7 @@ mutuos ni AFP en los últimos {{ h.periodos|length }} meses.</p>
     Los montos no son sumables entre sí: miden cosas distintas y un mismo bono puede estar en
     ambas carteras.
 </p>
+{% endcall %}
 
 <script>
 (function () {
@@ -113,30 +122,25 @@ mutuos ni AFP en los últimos {{ h.periodos|length }} meses.</p>
         {% if h.afp %}{id: "em-afp-chart", serie: {{ h.afp.serie | tojson }}, label: "valor de mercado"},{% endif %}
     ];
     function etiqueta(p) { p = String(p); return p.slice(4) + "/" + p.slice(0, 4); }
-    function fmt(v) { return v.toLocaleString("es-CL", {maximumFractionDigits: 1, minimumFractionDigits: 1}); }
     function draw() {
         if (!window.Plotly) { return setTimeout(draw, 100); }
         bloques.forEach(function (b) {
             var x = b.serie.map(function (s) { return etiqueta(s.period); });
             var y = b.serie.map(function (s) { return s.mm === null ? null : s.mm / 1000; });
             var txt = b.serie.map(function (s) {
-                return (s.mm === null ? "sin dato" : fmt(s.mm / 1000) + " MMM$ " + b.label) +
+                return (s.mm === null ? "sin dato" : INF.fmt(s.mm / 1000, 1) + " MMM$ " + b.label) +
                        "<br>" + s.tenedores + " tenedores · " + s.pos + " posiciones";
             });
             Plotly.newPlot(b.id, [{
                 x: x, y: y, type: "bar", text: txt, hoverinfo: "text", textposition: "none",
                 // El último mes en color y los anteriores atenuados: el ojo va al dato vigente.
-                marker: { color: b.serie.map(function (s, i) { return i === b.serie.length - 1 ? "#38bdf8" : "#2f5f86"; }),
-                          line: { color: "#1e293b", width: 2 } }
+                marker: { color: b.serie.map(function (s, i) { return i === b.serie.length - 1 ? INF.COLOR.foco : INF.COLOR.contexto; }),
+                          line: { color: "#111a2c", width: 2 } }
             }], {
-                margin: { t: 10, r: 10, b: 60, l: 60 }, height: 280, bargap: 0.35,
-                paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)",
-                font: { color: "#94a3b8" }, showlegend: false,
-                xaxis: { gridcolor: "rgba(0,0,0,0)", type: "category", tickangle: -45, automargin: true },
-                yaxis: { gridcolor: "#334155", title: { text: "MMM$", font: { size: 11 } },
-                         separatethousands: true, rangemode: "tozero" },
-                separators: ",."
-            }, { displayModeBar: false, responsive: true });
+                margin: { t: 10, r: 10, b: 60, l: 60 }, bargap: 0.35, showlegend: false,
+                xaxis: { type: "category", tickangle: -45, automargin: true },
+                yaxis: { title: { text: "MMM$", font: { size: 11 } }, rangemode: "tozero" }
+            });
         });
     }
     draw();

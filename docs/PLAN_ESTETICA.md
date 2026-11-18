@@ -14,8 +14,8 @@ títulos y bajadas). No cambia datos, cálculos ni rutas.
 | F3 | Componentes (CSS + macros) | hecha | 8eb93dc |
 | F4 | Estándar de gráficos (`charts.js`) | hecha | 4da81dd |
 | F5a | Páginas grupo A | hecha | 9ef836d |
-| F5b | Páginas grupo B | hecha | HASH_F5B |
-| F5c | Páginas grupo C | pendiente | |
+| F5b | Páginas grupo B | hecha | bb7733d |
+| F5c | Páginas grupo C | hecha | HASH_F5C |
 | F6 | Celular y accesibilidad | pendiente | |
 | F7 | Limpieza y registros | pendiente | |
 

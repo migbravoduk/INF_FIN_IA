@@ -2,22 +2,25 @@
   partials/seguros_cartera_companias.html — Comparación entre compañías del ramo.
   rows = [{rut, name, total(MMM$), share, pct_extranjero, pct_rf, pct_cui, pct_repr}]
 #}
+{% import "partials/_ui.html" as ui %}
 {% macro pct(v) %}{% if v is none %}—{% else %}{{ v|es(1) }}%{% endif %}{% endmacro %}
 
 {% if rows %}
-<div class="eeff-meta" style="margin:.6rem 0 1rem">
-    {{ ramo_label }} · período {{ period }} · {{ rows|length }} compañías ·
+{% set max_share = rows|map(attribute='share')|reject('none')|list|max %}
+<p class="nota mt-0">
+    {{ ramo_label }} · {{ period|mes_es }} · {{ rows|length }} compañías ·
     mercado <strong>{{ total_mercado|es(0) }} MMM$</strong> ·
     HHI <strong>{{ hhi|es(0) }}</strong>
-    <span class="lead">(bajo 1.500 = desconcentrado; sobre 2.500 = concentrado)</span>
-</div>
+    (bajo 1.500 = desconcentrado; sobre 2.500 = concentrado)
+</p>
 
-<table class="eeff-table">
+<div class="tbl-wrap tbl-wrap--alto">
+<table class="tbl tbl--fija-1" aria-label="Comparación entre compañías de seguros">
     <thead>
         <tr>
             <th>Compañía</th>
             <th class="num">Cartera (MMM$)</th>
-            <th class="num">Cuota</th>
+            <th class="num">% del mercado</th>
             <th class="num">Extranjero</th>
             <th class="num">Renta fija</th>
             <th class="num">CUI/APV</th>
@@ -27,9 +30,9 @@
     <tbody>
         {% for r in rows %}
         <tr>
-            <td>{{ r.name }} <span class="lead">{{ r.rut }}</span></td>
+            <td class="ent">{{ r.name|nombre }}<span class="sub">{{ r.rut }}</span></td>
             <td class="num">{{ r.total|es(0) }}</td>
-            <td class="num">{{ pct(r.share) }}</td>
+            <td class="num">{{ pct(r.share) }}{% if r.share is not none %}{{ ui.barra(r.share, max_share) }}{% endif %}</td>
             <td class="num">{{ pct(r.pct_extranjero) }}</td>
             <td class="num">{{ pct(r.pct_rf) }}</td>
             <td class="num">{{ pct(r.pct_cui) }}</td>
@@ -38,11 +41,12 @@
         {% endfor %}
     </tbody>
 </table>
-<p class="lead" style="margin-top:.5rem">
+</div>
+<p class="nota">
     «Renta fija» agrupa las clases estatal, bancaria, corporativa e hipotecaria.
     «Respalda reservas» es la porción representativa de reservas técnicas y patrimonio de
     riesgo (DFL 251).
 </p>
 {% else %}
-<p class="loading">Sin compañías para ese período.</p>
+{{ ui.vacio("Sin compañías para ese período.") }}
 {% endif %}

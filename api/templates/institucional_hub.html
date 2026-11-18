@@ -1,14 +1,11 @@
 {% extends "base.html" %}
+{% import "partials/_ui.html" as ui %}
 
 {% block title %}Inversión institucional · INF_FIN_IA{% endblock %}
 
 {% block content %}
-<h1>Inversión institucional</h1>
-<p class="subtitle">
-    Los grandes administradores de activos del mercado local: fondos de pensiones y compañías
-    de seguros. Cada uno con su fuente y su periodicidad, pero la misma pregunta de fondo —
-    en qué están invertidos y cómo se mueve esa cartera.
-</p>
+{{ ui.page_head("Inversión institucional",
+    "Los grandes administradores de activos del mercado local: fondos de pensiones y compañías de seguros. Cada uno con su fuente y su periodicidad, pero la misma pregunta de fondo — en qué están invertidos y cómo se mueve esa cartera.") }}
 
 <div class="hub-grid">
     {% for c in classes %}
@@ -20,6 +17,4 @@
     </a>
     {% endfor %}
 </div>
-
-{# Estilos de .hub-grid / .hub-card: compartidos en api/static/app.css #}
 {% endblock %}

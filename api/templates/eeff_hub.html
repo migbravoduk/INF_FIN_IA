@@ -1,10 +1,10 @@
 {% extends "base.html" %}
+{% import "partials/_ui.html" as ui %}
 
 {% block title %}Estados Financieros · INF_FIN_IA{% endblock %}
 
 {% block content %}
-<h1>Estados financieros</h1>
-<p class="subtitle">Elige la clasificación de entidad. Cada una tiene su propio plan de cuentas y fuente.</p>
+{{ ui.page_head("Estados financieros", "Elige el tipo de entidad: cada una tiene su plan de cuentas y su fuente.") }}
 
 <div class="hub-grid">
     {% for c in classes %}
@@ -16,6 +16,4 @@
     </a>
     {% endfor %}
 </div>
-
-{# Estilos de .hub-grid / .hub-card: compartidos en api/static/app.css #}
 {% endblock %}

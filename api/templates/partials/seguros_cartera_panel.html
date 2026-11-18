@@ -4,76 +4,51 @@
   meta  = {period, ramo_label, scope, n_companies, is_market}
   Montos en MMM$ (miles de millones de CLP).
 #}
+{% import "partials/_ui.html" as ui %}
 {% macro pct(v) %}{% if v is none %}—{% else %}{{ v|es(1) }}%{% endif %}{% endmacro %}
 {% macro mmm(v) %}{% if v is none %}—{% else %}{{ v|es(0) }}{% endif %}{% endmacro %}
 
 {% if alloc %}
-<div class="eeff-meta" style="margin:.8rem 0 1rem">
-    <strong>{{ meta.scope }}</strong> · período {{ meta.period }}
-    {% if meta.is_market %}<span class="lead">· {{ meta.n_companies }} compañías</span>{% endif %}
+<p class="nota mt-0">
+    <strong>{{ meta.scope|nombre }}</strong> · {{ meta.period|mes_es }}
+    {% if meta.is_market %}· {{ meta.n_companies }} compañías{% endif %}
+</p>
+
+<div class="stats">
+    {{ ui.stat("Cartera total", mmm(alloc.total), unidad="MMM$", ctx="miles de millones de pesos", fecha=meta.period, fuente="CMF") }}
+    {{ ui.stat("Exposición extranjera", pct(alloc.geo.pct_extranjero),
+               ctx="Extranjero " ~ mmm(alloc.geo.extranjero) ~ " · Nacional " ~ mmm(alloc.geo.nacional) ~ " MMM$") }}
+    {{ ui.stat("Respaldo de reservas", pct(alloc.reservas.pct_repr),
+               ctx="Representativas (RT+PR) " ~ mmm(alloc.reservas.repr) ~ " · No representativas " ~ mmm(alloc.reservas.no_repr) ~ " MMM$") }}
+    {{ ui.stat("CUI / APV", pct(alloc.cui.pct),
+               ctx="Riesgo del asegurado: " ~ mmm(alloc.cui.monto) ~ " MMM$. Cuenta única de inversión y APV: el resultado no lo asume la compañía.") }}
 </div>
 
-<div class="kpi-grid">
-    <article class="kpi-card">
-        <h3>Cartera total</h3>
-        <div class="kpi-big">{{ mmm(alloc.total) }}</div>
-        <div class="kpi-row"><span>MMM$ (miles de millones de CLP)</span></div>
-    </article>
+{{ ui.viz("cartera-clases-chart", "Asset allocation por clase de activo", sub="% de la cartera", fuente="CMF", fecha=meta.period, alto="md") }}
 
-    <article class="kpi-card">
-        <h3>Exposición extranjera</h3>
-        <div class="kpi-big">{{ pct(alloc.geo.pct_extranjero) }}</div>
-        <div class="kpi-row"><span>Extranjero</span><b>{{ mmm(alloc.geo.extranjero) }}</b></div>
-        <div class="kpi-row"><span>Nacional</span><b>{{ mmm(alloc.geo.nacional) }}</b></div>
-    </article>
-
-    <article class="kpi-card">
-        <h3>Respaldo de reservas</h3>
-        <div class="kpi-big">{{ pct(alloc.reservas.pct_repr) }}</div>
-        <div class="kpi-row"><span>Representativas (RT+PR)</span><b>{{ mmm(alloc.reservas.repr) }}</b></div>
-        <div class="kpi-row"><span>No representativas</span><b>{{ mmm(alloc.reservas.no_repr) }}</b></div>
-    </article>
-
-    <article class="kpi-card">
-        <h3>CUI / APV</h3>
-        <div class="kpi-big">{{ pct(alloc.cui.pct) }}</div>
-        <div class="kpi-row"><span>Riesgo del asegurado</span><b>{{ mmm(alloc.cui.monto) }}</b></div>
-        <div class="kpi-row" style="font-size:.85em; color:var(--muted)">
-            <span>Cuenta única de inversión y APV: el resultado no lo asume la compañía.</span>
-        </div>
-    </article>
-</div>
-
-<div class="chart-block" style="margin-top:1.2rem">
-    <h4>Asset allocation por clase de activo <span class="lead">(% de la cartera)</span></h4>
-    <div id="cartera-clases-chart" class="chart"></div>
-</div>
-
-<div class="chart-block" style="margin-top:1rem">
-    <h4>Método de valorización
-        <span class="lead">(% de lo clasificado — {{ pct(alloc.pct_clasificado) }} de la cartera)</span>
-    </h4>
-    <table class="eeff-table">
+<h3 class="sub-head">Método de valorización <span class="chip">% de lo clasificado: {{ pct(alloc.pct_clasificado) }} de la cartera</span></h3>
+<div class="tbl-wrap">
+    <table class="tbl" aria-label="Método de valorización de la cartera">
         <thead><tr><th>Clasificación</th><th class="num">MMM$</th><th class="num">%</th></tr></thead>
         <tbody>
             {% for v in alloc.valorizacion %}
             <tr>
-                <td>{{ v.label }}</td>
+                <td class="ent">{{ v.label }}</td>
                 <td class="num">{{ mmm(v.monto) }}</td>
                 <td class="num">{{ pct(v.pct) }}</td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
-    <p class="lead" style="margin-top:.5rem">
-        La base excluye créditos, siniestros por cobrar y avances a tenedores de pólizas: no
-        llevan método de valorización en el archivo de la CMF.
-    </p>
 </div>
+<p class="nota">
+    La base excluye créditos, siniestros por cobrar y avances a tenedores de pólizas: no
+    llevan método de valorización en el archivo de la CMF.
+</p>
 
-<div class="chart-block" style="margin-top:1rem">
-    <h4>Detalle por tipo de inversión <span class="lead">(código oficial CMF · top {{ alloc.codigos|length }})</span></h4>
-    <table class="eeff-table">
+<h3 class="sub-head">Detalle por tipo de inversión <span class="chip">código oficial CMF · top {{ alloc.codigos|length }}</span></h3>
+<div class="tbl-wrap tbl-wrap--alto">
+    <table class="tbl" aria-label="Detalle por tipo de inversión">
         <thead>
             <tr>
                 <th>Código</th><th>Tipo de inversión</th><th>Clase</th><th>Geo</th>
@@ -84,17 +59,17 @@
             {% for c in alloc.codigos %}
             <tr>
                 <td><code title="{{ c.glosa }}">{{ c.code }}</code></td>
-                <td title="{{ c.glosa }}">{{ c.label }}</td>
-                <td class="lead">{{ c.clase }}</td>
-                <td class="lead">{{ "Extranjero" if c.geo == "extranjero" else "Nacional" }}</td>
+                <td class="ent" title="{{ c.glosa }}">{{ c.label }}</td>
+                <td class="muted">{{ c.clase }}</td>
+                <td class="muted">{{ "Extranjero" if c.geo == "extranjero" else "Nacional" }}</td>
                 <td class="num">{{ mmm(c.monto) }}</td>
-                <td class="num">{{ pct(c.pct) }}</td>
+                <td class="num">{{ pct(c.pct) }}{{ ui.barra(c.pct, 100) }}</td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
-    <p class="lead" style="margin-top:.5rem">Pasa el cursor sobre el código para ver la glosa oficial completa.</p>
 </div>
+<p class="nota">Pasa el cursor sobre el código para ver la glosa oficial completa.</p>
 
 <script>
 (function () {
@@ -106,19 +81,18 @@
             x: clases.map(function (c) { return c.pct; }).reverse(),
             customdata: clases.map(function (c) { return c.monto; }).reverse(),
             hovertemplate: "<b>%{y}</b><br>%{x:.1f}% · %{customdata:,.0f} MMM$<extra></extra>",
-            type: "bar", orientation: "h", marker: { color: "#3987e5" },
-            texttemplate: "%{x:.1f}%", textposition: "outside", cliponaxis: false,
-            textfont: { size: 11, color: "#e2e8f0" }
+            type: "bar", orientation: "h", marker: { color: INF.COLOR.foco },
+            text: clases.map(function (c) { return INF.fmt(c.pct, 1) + "%"; }).reverse(),
+            textposition: "outside", cliponaxis: false,
+            textfont: { size: 11, color: INF.COLOR.tinta }
         }], {
-            margin: { t: 10, r: 50, b: 30, l: 150 }, height: 340,
-            paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)",
-            font: { color: "#94a3b8" },
-            xaxis: { gridcolor: "#334155", ticksuffix: "%" }, yaxis: { gridcolor: "#334155" }
-        }, { displayModeBar: false, responsive: true });
+            margin: { t: 10, r: 50, b: 30, l: 150 },
+            xaxis: { ticksuffix: "%" }
+        });
     }
     draw();
 })();
 </script>
 {% else %}
-<p class="loading">Sin datos de cartera para ese período.</p>
+{{ ui.vacio("Sin datos de cartera para ese período.") }}
 {% endif %}

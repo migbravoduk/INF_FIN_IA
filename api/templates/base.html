@@ -107,7 +107,7 @@
         if (e.key === "Escape") { grupos.forEach(function (g) { g.open = false; }); }
     });
 
-    var links = [].slice.call(document.querySelectorAll(".toc a[href^='#'], .banca-minimap a[href^='#']"));
+    var links = [].slice.call(document.querySelectorAll(".toc a[href^='#'], .banca-minimap a[href^='#'], .toc-lateral a[href^='#']"));
     if (!links.length || !("IntersectionObserver" in window)) { return; }
     var mapa = {};
     links.forEach(function (a) {

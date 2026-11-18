@@ -815,3 +815,21 @@ a.chip:hover { color: var(--ink); border-color: var(--line-strong); }
 /* Indicadores de carga de HTMX: ocultos hasta que hay una solicitud en curso */
 .htmx-indicator { display: none; }
 .htmx-request .htmx-indicator, .htmx-request.htmx-indicator { display: flex; }
+
+.moneda-item { display: inline-block; margin-right: 1rem; white-space: nowrap; }
+
+/* Un emisor: bloque con cifras y gráfico por fuente */
+.bloque-emisor { min-width: 0; }
+
+/* Metodología: índice lateral + texto en columna de lectura */
+.doc { display: grid; gap: var(--sp-6); }
+@media (min-width: 1100px) { .doc { grid-template-columns: 220px minmax(0, 1fr); } }
+.doc-cuerpo { min-width: 0; }
+.toc-lateral { position: sticky; top: calc(var(--header-h) + 16px); align-self: start; display: grid; gap: 2px; font-size: var(--fs-sm); }
+.toc-lateral a { color: var(--muted); text-decoration: none; padding: 0.3rem 0.6rem; border-left: 2px solid var(--line); }
+.toc-lateral a:hover, .toc-lateral a.is-activo { color: var(--ink); border-left-color: var(--accent); }
+.prosa li + li { margin-top: var(--sp-2); }
+@media (max-width: 1099px) { .toc-lateral { position: static; display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+    .toc-lateral a { border: 1px solid var(--line); border-radius: 999px; } }
+.bloque-emisor .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); margin: var(--sp-3) 0; }
+.bloque-emisor .stat-valor { font-size: var(--fs-lg); }

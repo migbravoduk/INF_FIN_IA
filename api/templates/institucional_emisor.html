@@ -1,20 +1,18 @@
 {% extends "base.html" %}
+{% import "partials/_ui.html" as ui %}
 
 {% block title %}Inversión por emisor · INF_FIN_IA{% endblock %}
 
 {% block content %}
-<p class="crumb"><a href="/inversion-institucional">← Inversión institucional</a></p>
-<h1>Inversión institucional por emisor</h1>
-<p class="subtitle">
-    Cuánto tienen invertido las compañías de seguros, los fondos mutuos y las AFP en un emisor,
-    quién lo tiene y cómo cambió en los últimos meses.
-    <br><span class="lead">AFP: cartera desagregada de la Superintendencia de Pensiones, que llega
-    con ~4 meses de rezago y nombra al emisor sin RUT (se cruza por nombre).</span>
-</p>
+{{ ui.page_head("Inversión institucional por emisor",
+    "Cuánto tienen invertido las compañías de seguros, los fondos mutuos y las AFP en un emisor, quién lo tiene y cómo cambió en los últimos meses.",
+    migas=[("Inversión institucional", "/inversion-institucional")]) }}
+<p class="nota mt-0">AFP: cartera desagregada de la Superintendencia de Pensiones, que llega
+con ~4 meses de rezago y nombra al emisor sin RUT (se cruza por nombre).</p>
 
-<form class="eeff-form" hx-get="/inversion-institucional/emisor/panel" hx-target="#emisor-panel"
+<form class="filtros" hx-get="/inversion-institucional/emisor/panel" hx-target="#emisor-panel"
       hx-trigger="{{ 'load, ' if rut }}change" hx-push-url="false">
-    <label style="min-width:min(100%, 28rem)">Emisor (nombre o RUT)
+    <label class="ancho">Emisor (nombre o RUT)
         <input type="search" name="rut" list="emisores-lista" value="{{ rut }}"
                placeholder="Ej.: Bicecorp, Fisco, 97004000" autocomplete="off">
     </label>
@@ -23,18 +21,18 @@
         <option value="{{ o.nombre or 'Sin nombre' }} · RUT {{ o.rut }}"></option>
         {% endfor %}
     </datalist>
+    <p class="ayuda">
+        {{ opciones|length }} emisores con posiciones en el último mes, los con nombre primero. Atajos:
+        <a href="?rut=60805000">Fisco</a> ·
+        <a href="?rut=97029000">Banco Central</a> ·
+        <a href="?rut=85741000">Bicecorp</a> ·
+        <a href="?rut=79619200">Consorcio Financiero</a> ·
+        <a href="?rut=97004000">Banco de Chile</a>
+    </p>
 </form>
-<p class="lead">
-    {{ opciones|length }} emisores con posiciones en el último mes, los con nombre primero. Atajos:
-    <a href="?rut=60805000">Fisco</a> ·
-    <a href="?rut=97029000">Banco Central</a> ·
-    <a href="?rut=85741000">Bicecorp</a> ·
-    <a href="?rut=79619200">Consorcio Financiero</a> ·
-    <a href="?rut=97004000">Banco de Chile</a>
-</p>
 
 <div id="emisor-panel">
-    {% if not rut %}<p class="loading">Elige un emisor para ver sus tenedores institucionales.</p>
+    {% if not rut %}{{ ui.vacio("Elige un emisor para ver sus tenedores institucionales.") }}
     {% else %}<p class="loading">Cargando…</p>{% endif %}
 </div>
 {% endblock %}

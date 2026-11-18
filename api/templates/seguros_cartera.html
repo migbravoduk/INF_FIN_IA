@@ -1,17 +1,23 @@
 {% extends "base.html" %}
+{% import "partials/_ui.html" as ui %}
 
 {% block title %}Cartera de seguros · INF_FIN_IA{% endblock %}
 
 {% block content %}
-<h1>Cartera de compañías de seguros</h1>
-<p class="subtitle">
-    Asset allocation bajo la <strong>Circular 1.835</strong> (archivo B.8 de control, mensual).
-    Las glosas de cada tipo de inversión son las oficiales de la CMF; la agrupación por clase
-    de activo y geografía es propia y vive en <code>config/insurer_investment_codes.yaml</code>.
-    Montos en <strong>MMM$</strong> (miles de millones de pesos).
-</p>
+{{ ui.page_head("Cartera de las compañías de seguros",
+    "Asset allocation bajo la Circular 1.835 (archivo B.8 de control, mensual). Las glosas de cada tipo de inversión son las oficiales de la CMF; la agrupación por clase de activo y geografía es propia y vive en config/insurer_investment_codes.yaml. Montos en MMM$ (miles de millones de pesos).") }}
 
-<form class="eeff-form"
+<nav class="toc" aria-label="Secciones">
+    <span class="toc-label">Ir a</span>
+    <a href="#seg-allocation">Asset allocation</a>
+    <a href="#seg-deriva">Deriva</a>
+    <a href="#seg-companias">Comparación entre compañías</a>
+    <a href="#seg-emisores">Concentración por emisor</a>
+</nav>
+
+<section class="sec mt-0">
+{{ ui.sec_head("Asset allocation", id="seg-allocation", fuente="CMF") }}
+<form class="filtros"
       hx-get="/seguros/cartera/panel"
       hx-target="#cartera-panel"
       hx-trigger="load, change"
@@ -29,38 +35,38 @@
             {% for p in periods %}<option value="{{ p }}">{{ p }}</option>{% endfor %}
         </select>
     </label>
-    <label>Alcance
+    <label class="ancho">Alcance
         <select name="rut">
             <option value="">Mercado (todas las compañías)</option>
             {% for c in companies %}
-            <option value="{{ c.rut }}">{{ c.name }}</option>
+            <option value="{{ c.rut }}">{{ c.name|nombre }}</option>
             {% endfor %}
         </select>
     </label>
 </form>
 
-<section id="cartera-panel">
+<div id="cartera-panel">
     <p class="loading">Cargando cartera…</p>
+</div>
 </section>
 
-<hr style="margin:2.2rem 0; border:0; border-top:1px solid var(--border)">
-
-<h2 style="margin-bottom:.3rem">Deriva del asset allocation</h2>
-<p class="subtitle" style="margin-top:0">
+<section class="sec">
+{{ ui.sec_head("Deriva del asset allocation", id="seg-deriva", fuente="CMF") }}
+<p class="nota mt-0">
     Peso de cada clase de activo, mes a mes. Es la vista que muestra un cambio de política de
     inversión: el nivel importa menos que la pendiente.
 </p>
-<form class="eeff-form"
+<form class="filtros"
       hx-get="/seguros/cartera/evolucion"
       hx-target="#cartera-evolucion"
       hx-trigger="load, change"
       hx-swap="innerHTML"
       hx-include="this">
     <input type="hidden" name="ramo" value="{{ ramo }}">
-    <label>Compañía
+    <label class="ancho">Compañía
         <select name="rut">
             <option value="">Mercado (todas)</option>
-            {% for c in companies %}<option value="{{ c.rut }}">{{ c.name }}</option>{% endfor %}
+            {% for c in companies %}<option value="{{ c.rut }}">{{ c.name|nombre }}</option>{% endfor %}
         </select>
     </label>
     <label>Desde
@@ -71,45 +77,44 @@
         </select>
     </label>
 </form>
-<section id="cartera-evolucion">
+<div id="cartera-evolucion">
     <p class="loading">Cargando evolución…</p>
+</div>
 </section>
 
-<hr style="margin:2.2rem 0; border:0; border-top:1px solid var(--border)">
-
-<h2 style="margin-bottom:.3rem">Comparación entre compañías</h2>
-<p class="subtitle" style="margin-top:0">
-    Quién es grande y quién invierte distinto, en el período más reciente del ramo.
-</p>
-<section id="cartera-companias"
+<section class="sec">
+{{ ui.sec_head("Comparación entre compañías", id="seg-companias", fuente="CMF") }}
+<p class="nota mt-0">Quién es grande y quién invierte distinto, en el período más reciente del ramo.</p>
+<div id="cartera-companias"
          hx-get="/seguros/cartera/companias?ramo={{ ramo }}"
          hx-trigger="load"
          hx-swap="innerHTML">
     <p class="loading">Cargando comparación…</p>
+</div>
 </section>
 
-<hr style="margin:2.2rem 0; border:0; border-top:1px solid var(--border)">
-
-<h2 style="margin-bottom:.3rem">Concentración por emisor · renta fija</h2>
-<p class="subtitle" style="margin-top:0">
+<section class="sec">
+{{ ui.sec_head("Concentración por emisor: renta fija", id="seg-emisores", fuente="CMF, archivo B.1") }}
+<p class="nota mt-0">
     Del detalle instrumento a instrumento (archivo B.1). Se cuenta el número de posiciones y el
-    nominal <em>abierto por moneda</em>.
+    nominal abierto por moneda.
 </p>
-<form class="eeff-form"
+<form class="filtros"
       hx-get="/seguros/cartera/emisores"
       hx-target="#cartera-emisores"
       hx-trigger="load, change"
       hx-swap="innerHTML"
       hx-include="this">
     <input type="hidden" name="ramo" value="{{ ramo }}">
-    <label>Cartera de
+    <label class="ancho">Cartera de
         <select name="rut">
             <option value="">Mercado (todas las compañías)</option>
-            {% for c in companies %}<option value="{{ c.rut }}">{{ c.name }}</option>{% endfor %}
+            {% for c in companies %}<option value="{{ c.rut }}">{{ c.name|nombre }}</option>{% endfor %}
         </select>
     </label>
 </form>
-<section id="cartera-emisores">
+<div id="cartera-emisores">
     <p class="loading">Cargando emisores…</p>
+</div>
 </section>
 {% endblock %}

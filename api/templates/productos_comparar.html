@@ -1,23 +1,23 @@
 {% extends "base.html" %}
+{% import "partials/_ui.html" as ui %}
 
 {% block title %}Comparar productos · INF_FIN_IA{% endblock %}
 
 {% block content %}
-<p class="crumb"><a href="/productos">← Productos</a></p>
-<h1>Comparar productos</h1>
+{{ ui.page_head("Comparar productos", "Los productos elegidos, lado a lado, con las mismas métricas.", migas=[("Productos", "/productos")]) }}
 
 {% if not prods %}
-<p class="loading">Elige hasta 4 productos en el <a href="/productos">explorador</a>.</p>
+<p class="vacio">Elige hasta 4 productos en el <a href="/productos">explorador</a>.</p>
 {% else %}
 {% if mezcla_clases %}
-<div class="warn-box">Estás comparando productos de distintas clases de inversionista. Las series de
-Alto Patrimonio o APV tienen requisitos de entrada y costos distintos a las Retail.</div>
+{% call ui.aviso("warn") %}Estás comparando productos de distintas clases de inversionista. Las series de
+Alto Patrimonio o APV tienen requisitos de entrada y costos distintos a las Retail.{% endcall %}
 {% endif %}
 
-<div class="table-scroll">
-<table class="eeff-table">
-    <thead><tr><th></th>{% for p in prods %}<th><a href="/producto/{{ p.producto_id | urlencode }}">{{ p.nombre }}</a>
-        <br><span class="lead">{{ p.proveedor_corto or '' }}{% if p.serie and p.tipo == 'ffmm' %} · serie {{ p.serie }}{% endif %}</span></th>{% endfor %}</tr></thead>
+<div class="tbl-wrap">
+<table class="tbl" aria-label="Comparación de productos">
+    <thead><tr><th><span class="sr-only">Métrica</span></th>{% for p in prods %}<th class="num"><a href="/producto/{{ p.producto_id | urlencode }}">{{ p.nombre|nombre }}</a>
+        <span class="sub">{{ (p.proveedor_corto|agf_corto) if p.proveedor_corto else '' }}{% if p.serie and p.tipo == 'ffmm' %} · serie {{ p.serie }}{% endif %}</span></th>{% endfor %}</tr></thead>
     <tbody>
     {% set filas = [
         ('Categoría', 'categoria', 'txt'), ('Clase de inversionista', 'clase_inversionista', 'txt'),
@@ -29,18 +29,17 @@ Alto Patrimonio o APV tienen requisitos de entrada y costos distintos a las Reta
         ('Comisión de colocación', 'comision_colocacion', 'pct2'), ('Costo por $1 MM a 10 años', 'costo_10a_por_millon', 'num'),
         ('Patrimonio MM$', 'patrimonio_clp_mm', 'num'), ('Flujo neto 12m MM$', 'flujo_neto_12m_mm', 'num')] %}
     {% for label, key, fmt in filas %}
-    <tr><td>{{ label }}</td>
+    <tr><td class="ent">{{ label }}</td>
         {% for p in prods %}{% set v = p[key] if fmt == 'txt' else p.m.get(key) %}
-        <td class="num">{% if fmt == 'txt' %}{{ v or '—' }}{% elif fmt == 'pct' %}{{ v|pct }}{% elif fmt == 'pct2' %}{{ v|pct(2, False) }}{% else %}{{ v|num }}{% endif %}</td>
+        <td class="num{% if key.startswith('rent_') and v is not none %}{{ ' pos' if v > 0 else ' neg' if v < 0 }}{% endif %}">{% if fmt == 'txt' %}{{ v or '—' }}{% elif fmt == 'pct' %}{{ v|pct }}{% elif fmt == 'pct2' %}{{ v|pct(2, False) }}{% else %}{{ v|num }}{% endif %}</td>
         {% endfor %}</tr>
     {% endfor %}
     </tbody>
 </table>
 </div>
 
-<section class="chart-block">
-    <h2>Valor cuota en pesos, base 100</h2>
-    <div id="cmp-chart" class="chart" style="height:360px"></div>
+<section class="sec">
+    {{ ui.viz("cmp-chart", "Valor cuota en pesos de los productos elegidos", sub="base 100 en el primer mes común", alto="lg") }}
 </section>
 <script>
 (function () {
@@ -50,27 +49,34 @@ Alto Patrimonio o APV tienen requisitos de entrada y costos distintos a las Reta
   // Rebasar todas al primer mes común para que sean comparables en el mismo eje.
   const comunes = ids.map(i => new Set(series[i].map(r => r.mes)));
   const inicio = [...comunes[0]].filter(m => comunes.every(s => s.has(m))).sort()[0];
-  const css = getComputedStyle(document.documentElement);
+  const fin = [];
   const trazas = ids.map((id, k) => {
     const s = series[id].filter(r => !inicio || r.mes >= inicio);
     const b = s.length ? s[0].producto : 1;
-    return {x: s.map(r => r.mes), y: s.map(r => 100 * r.producto / b), name: nombres[k], mode: 'lines'};
+    const x = s.map(r => r.mes), y = s.map(r => 100 * r.producto / b);
+    const color = INF.PALETA[k % INF.PALETA.length];
+    const corto = nombres[k].length > 18 ? nombres[k].slice(0, 17) + "…" : nombres[k];
+    fin.push({x: x, y: y, texto: corto, color: color});
+    return {x: x, y: y, name: nombres[k], mode: 'lines', line: {color: color, width: 2}};
   });
-  Plotly.newPlot('cmp-chart', trazas, {paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
-    font: {color: css.getPropertyValue('--ink') || '#e2e8f0'}, margin: {l: 40, r: 10, t: 10, b: 40},
-    legend: {orientation: 'h'}, yaxis: {gridcolor: css.getPropertyValue('--border')}},
-    {displayModeBar: false, responsive: true});
+  Plotly.newPlot('cmp-chart', trazas, {margin: {l: 48, r: 130, t: 10, b: 40}, hovermode: 'x unified',
+    showlegend: false, annotations: INF.etiquetasFinales(fin), shapes: [INF.refH(100).shape]});
 })();
 </script>
 
 {% if traslape %}
-<section class="chart-block">
-    <h2>Traslape de cartera</h2>
-    <p class="lead">Porcentaje de la cartera que dos fondos tienen en los mismos instrumentos (suma de los
+<section class="sec">
+    {{ ui.sec_head("Traslape de cartera", arriba=none) }}
+    <p class="nota mt-0">Porcentaje de la cartera que dos fondos tienen en los mismos instrumentos (suma de los
     pesos mínimos por nemotécnico). Un traslape alto significa que tener ambos diversifica poco.</p>
-    <table class="eeff-table">
-    {% for a, b, t in traslape %}<tr><td>{{ a }} ↔ {{ b }}</td><td class="num"><b>{{ t|es(1) if t is not none else '—' }}%</b></td></tr>{% endfor %}
+    <div class="tbl-wrap">
+    <table class="tbl" aria-label="Traslape de cartera entre fondos">
+    <thead><tr><th>Par de fondos</th><th class="num">Traslape</th></tr></thead>
+    <tbody>
+    {% for a, b, t in traslape %}<tr><td class="ent">{{ a|nombre }} ↔ {{ b|nombre }}</td><td class="num fuerte">{{ t|es(1) if t is not none else '—' }}%{% if t is not none %}{{ ui.barra(t, 100) }}{% endif %}</td></tr>{% endfor %}
+    </tbody>
     </table>
+    </div>
 </section>
 {% endif %}
 {% endif %}

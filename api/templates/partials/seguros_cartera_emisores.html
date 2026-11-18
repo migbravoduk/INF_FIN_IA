@@ -4,22 +4,24 @@
   El nominal va ABIERTO POR MONEDA a propósito: viene en la unidad del instrumento y no es
   sumable entre monedas. Tampoco es valor de mercado.
 #}
+{% import "partials/_ui.html" as ui %}
 {% if rows %}
 
 {# El alcance va primero y explícito: los mismos emisores aparecen tanto en el agregado del
    mercado como en la cartera de una sola compañía, y sin decirlo la tabla es ambigua. #}
-<div class="eeff-meta" style="margin:0 0 1rem">
+<p class="nota mt-0">
     {% if sel_nombre %}
-        <strong>{{ sel_nombre }}</strong> — cartera de esta compañía
+        <strong>{{ sel_nombre|nombre }}</strong> — cartera de esta compañía
     {% else %}
         <strong>Total del mercado</strong> — suma de las {{ n_companias }} compañías de
         {{ ramo_label | lower }}
     {% endif %}
-    · período {{ period }} ·
+    · {{ period|mes_es }} ·
     top {{ rows|length }} de {{ total_emisores|es(0) }} emisores, por número de posiciones
-</div>
+</p>
 
-<table class="eeff-table">
+<div class="tbl-wrap tbl-wrap--alto">
+<table class="tbl" aria-label="Concentración por emisor de renta fija">
     <thead>
         <tr>
             <th>Emisor</th>
@@ -31,14 +33,14 @@
     <tbody>
         {% for r in rows %}
         <tr>
-            <td>
+            <td class="ent">
                 {% if r.name %}
-                    {{ r.name }}<br><span class="lead">RUT {{ r.rut }}</span>
+                    {{ r.name|nombre }}<span class="sub">RUT {{ r.rut }}</span>
                 {% else %}
                     {# Sin razón social no es un hueco de datos cuando el instrumento es un
                        mutuo o un leasing: el originador no es un emisor inscrito. #}
-                    <span class="lead">RUT {{ r.rut }}</span><br>
-                    <span class="lead">
+                    <span class="muted">RUT {{ r.rut }}</span>
+                    <span class="sub">
                         {%- if r.sin_emisor_inscrito %}originador no inscrito
                         {%- else %}sin razón social en el registro{% endif -%}
                     </span>
@@ -46,14 +48,14 @@
             </td>
             <td>
                 {{ r.tipo }}
-                {% if not r.solo_un_tipo %}<span class="lead">(y otros)</span>{% endif %}
+                {% if not r.solo_un_tipo %}<span class="muted">(y otros)</span>{% endif %}
             </td>
             <td class="num">{{ r.total|es(0) }}</td>
             <td>
                 {% for m in r.monedas %}
-                <span style="display:inline-block; margin-right:1rem">
+                <span class="moneda-item">
                     <b>{{ m.unidad }}</b> {{ m.nominal|es(0) }}
-                    <span class="lead">({{ m.n|es(0) }})</span>
+                    <span class="muted">({{ m.n|es(0) }})</span>
                 </span>
                 {% endfor %}
             </td>
@@ -61,8 +63,10 @@
         {% endfor %}
     </tbody>
 </table>
+</div>
 
-<p class="lead" style="margin-top:.5rem">
+{% call ui.metodo("Por qué muchas filas no traen nombre") %}
+<p>
     <strong>Por qué muchas filas no traen nombre.</strong> El archivo B.1 identifica al emisor
     solo por RUT, y el nombre se resuelve contra los RUT conocidos en las tablas de EEFF
     (corporativos, seguros, corredoras). Los que encabezan este ranking son agentes
@@ -72,13 +76,14 @@
     de nombre de las compañías», o sea que la identidad de estos instrumentos es un código y no
     una razón social. Por eso la columna de tipo es la que da contexto a esas filas.
 </p>
-<p class="lead">
+<p>
     Nominal en la unidad de cada instrumento (UF, $, EUR…), <strong>no sumable entre monedas</strong>
     y <strong>no es valor de mercado</strong>: los montos de valorización del archivo B.1 aún no
     están reconciliados. Sirve para leer concentración de emisores, no para ponderar la cartera.
     Las glosas de tipo de instrumento provienen de los Anexos Técnicos de la circular; los
     códigos que el anexo no define se muestran tal cual.
 </p>
+{% endcall %}
 {% else %}
-<p class="loading">Sin detalle de renta fija para ese período.</p>
+{{ ui.vacio("Sin detalle de renta fija para ese período.") }}
 {% endif %}

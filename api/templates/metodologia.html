@@ -1,13 +1,22 @@
 {% extends "base.html" %}
+{% import "partials/_ui.html" as ui %}
 
 {% block title %}Metodología · INF_FIN_IA{% endblock %}
 
 {% block content %}
-<h1>Metodología y fuentes</h1>
-<p class="subtitle">De dónde sale cada dato, en qué unidad viene y cómo se calcula cada cifra.</p>
+{{ ui.page_head("Metodología y fuentes", "De dónde sale cada dato, en qué unidad viene y cómo se calcula cada cifra.") }}
 
-<section class="section-head"><h2>Cómo se calculan las métricas de productos</h2></section>
-<div class="resena">
+<div class="doc">
+<nav class="toc-lateral" aria-label="Contenido de la página">
+    <a href="#met-productos">Métricas de productos</a>
+    <a href="#curvas">Curvas de tasas</a>
+    <a href="#met-fuentes">Fuentes y unidades</a>
+    <a href="#met-calidad">Controles de calidad</a>
+</nav>
+<div class="doc-cuerpo">
+
+<div class="sec mt-0">{{ ui.sec_head("Cómo se calculan las métricas de productos", id="met-productos", arriba=none) }}</div>
+<div class="prosa">
 <ul>
   <li><b>Serie base.</b> Un valor cuota por mes y por producto: el último día del mes con publicación.
       Cada serie de un fondo mutuo se mide por separado, porque tiene su propio valor cuota.</li>
@@ -48,8 +57,8 @@ fichas se muestra la cifra oficial de la CMF y un aviso.</p>
 depende solo de la métrica elegida; ningún proveedor paga por aparecer o por su posición.</p>
 </div>
 
-<section class="section-head" id="curvas"><h2>Curvas de tasas</h2></section>
-<div class="resena">
+<div class="sec">{{ ui.sec_head("Curvas de tasas", id="curvas", arriba=none) }}</div>
+<div class="prosa">
 <ul>
   <li><b>Insumos</b> (Banco Central, diarios desde 2005). Nominal swap: tasa interbancaria a 1 día,
       swap promedio cámara a 90, 180 y 360 días y a 2, 3, 4, 5 y 10 años. Real swap: swap cámara en UF
@@ -72,32 +81,34 @@ depende solo de la métrica elegida; ningún proveedor paga por aparecer o por s
 </ul>
 </div>
 
-<section class="section-head"><h2>Fuentes y unidades</h2></section>
-<div class="table-scroll">
-<table class="eeff-table">
+<div class="sec">{{ ui.sec_head("Fuentes y unidades", id="met-fuentes", arriba=none) }}</div>
+<div class="tbl-wrap">
+<table class="tbl" aria-label="Fuentes y unidades de cada dato">
     <thead><tr><th>Dato</th><th>Fuente</th><th>Frecuencia</th><th>Unidad</th><th>Notas</th></tr></thead>
     <tbody>
     {% for d in datasets %}
-    <tr><td>{{ d.titulo }}<br><span class="lead"><code>{{ d.tabla }}</code></span></td>
+    <tr><td class="ent">{{ d.titulo }}<span class="sub"><code>{{ d.tabla }}</code></span></td>
         <td>{% if d.url_fuente %}<a href="{{ d.url_fuente }}" target="_blank" rel="noopener">{{ d.fuente }}</a>{% else %}{{ d.fuente }}{% endif %}</td>
-        <td>{{ d.frecuencia }}</td><td>{{ d.unidad }}</td><td><span class="lead">{{ d.notas or '' }}</span></td></tr>
+        <td>{{ d.frecuencia }}</td><td>{{ d.unidad }}</td><td class="muted">{{ d.notas or '' }}</td></tr>
     {% endfor %}
     </tbody>
 </table>
 </div>
 
-<section class="section-head"><h2>Controles de calidad</h2></section>
+<div class="sec">{{ ui.sec_head("Controles de calidad", id="met-calidad", arriba=none) }}</div>
 {% if dq %}
-<p class="eeff-meta">Última corrida {{ dq.run_at }} · {{ dq.total }} controles ·
+<p class="nota mt-0">Última corrida {{ dq.run_at }} · {{ dq.total }} controles ·
    <span class="{{ 'neg' if dq.errores else 'pos' }}">{{ dq.errores }} errores</span> · {{ dq.avisos }} avisos</p>
 {% if dq.detalle %}
-<div class="table-scroll"><table class="eeff-table">
+<div class="tbl-wrap tbl-wrap--alto"><table class="tbl" aria-label="Controles de calidad">
     <thead><tr><th>Control</th><th>Período</th><th>Estado</th><th>Detalle</th></tr></thead>
-    {% for r in dq.detalle[:40] %}<tr><td>{{ r.check_id }}</td><td>{{ r.periodo or '—' }}</td>
-        <td class="{{ 'neg' if r.estado == 'error' else '' }}">{{ r.estado }}</td><td><span class="lead">{{ r.detalle }} ({{ r.n_fallas }})</span></td></tr>{% endfor %}
+    {% for r in dq.detalle[:40] %}<tr><td class="ent">{{ r.check_id }}</td><td>{{ r.periodo or '—' }}</td>
+        <td class="{{ 'neg' if r.estado == 'error' else '' }}">{{ r.estado }}</td><td class="muted">{{ r.detalle }} ({{ r.n_fallas }})</td></tr>{% endfor %}
 </table></div>
 {% endif %}
 {% else %}
-<p class="loading">Aún no se han corrido los controles (<code>main.py validate</code>).</p>
+<p class="vacio">Aún no se han corrido los controles (<code>main.py validate</code>).</p>
 {% endif %}
+</div>
+</div>
 {% endblock %}
