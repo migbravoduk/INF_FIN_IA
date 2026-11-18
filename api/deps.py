@@ -111,6 +111,116 @@ templates.env.filters["num"] = _num
 templates.env.filters["es"] = _es
 
 
+_SIGLAS = {"AFP", "AGF", "BCI", "BICE", "BTG", "CMF", "SP", "CLP", "USD", "UF", "ETF", "ESG", "EEUU",
+           "EE.UU.", "FM", "FI", "FIP", "APV", "LP", "CP", "USA", "II", "III", "IV", "VI", "BCH", "CCS",
+           "HSBC", "BBVA", "BNP", "JP", "IFRS", "ECC", "NDF", "OIS", "CGE", "ENAP", "LATAM", "SQM", "CMPC",
+           "CAP", "SMU", "CCU", "AES", "IPC", "TPM", "PIB", "ADR", "REIT", "RV", "RF", "MM", "MMM"}
+_ESPECIALES = {"PLANVITAL": "PlanVital", "ITAU": "Itaú", "ITAÚ": "Itaú", "LARRAINVIAL": "LarrainVial",
+               "BANCOESTADO": "BancoEstado", "METLIFE": "MetLife", "4LIFE": "4Life", "SCOTIABANK": "Scotiabank",
+               "S.A.": "S.A.", "S.A": "S.A.", "SA": "S.A.", "SPA": "SpA", "LTDA": "Ltda.", "LTDA.": "Ltda.",
+               "CIA": "Cía.", "CIA.": "Cía.", "CÍA": "Cía.", "CÍA.": "Cía."}
+_MENORES = {"de", "del", "la", "las", "los", "el", "y", "e", "en", "para", "por", "con", "a", "al", "o", "u"}
+
+
+def _nombre(s) -> str:
+    """Nombre propio legible: 'BANCO DE CRÉDITO E INVERSIONES' → 'Banco de Crédito e Inversiones'.
+    Solo actúa si el texto viene entero en mayúsculas; respeta siglas, números y casos especiales."""
+    t = " ".join(str(s or "").split())
+    if not t or t != t.upper() or not any(c.isalpha() for c in t):
+        return t
+    out = []
+    for i, w in enumerate(t.split(" ")):
+        uw, lw = w.upper(), w.lower()
+        if uw in _ESPECIALES:
+            out.append(_ESPECIALES[uw])
+        elif uw.strip(".,()") in _SIGLAS or any(c.isdigit() for c in w):
+            out.append(w)
+        elif i and lw in _MENORES:
+            out.append(lw)
+        else:
+            out.append("-".join(p[:1].upper() + p[1:].lower() for p in w.split("-")))
+    return " ".join(out)
+
+
+_MESES_LARGO = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto",
+                "septiembre", "octubre", "noviembre", "diciembre"]
+
+
+def _fecha_es(x) -> str:
+    """'2026-11-15' → '15 nov 2026'. Si no es una fecha, la devuelve tal cual."""
+    t = str(x or "")[:10]
+    if len(t) == 10 and t[4] == "-" and t[7] == "-" and t[:4].isdigit():
+        return f"{int(t[8:10])} {_MESES_ES[int(t[5:7]) - 1]} {t[:4]}"
+    return str(x or "—")
+
+
+templates.env.filters["nombre"] = _nombre
+templates.env.filters["fecha_es"] = _fecha_es
+
+
+# Menú principal (docs/PLAN_ESTETICA.md F2). "hijos": (texto, url, descripción, prefijos extra).
+NAV = [
+    {"t": "Panel", "url": "/"},
+    {"t": "Mercados", "hijos": [
+        {"t": "Curvas de tasas", "url": "/curvas", "d": "Nominal y real: swaps y bonos del Estado"},
+        {"t": "Banco Central", "url": "/banco-central", "d": "Series macro y expectativas"},
+        {"t": "Derivados", "url": "/derivados", "d": "Exposición y riesgo de toda la economía"},
+    ]},
+    {"t": "Empresas", "hijos": [
+        {"t": "Estados financieros", "url": "/eeff", "d": "Corporativos, seguros, intermediarios y AGF"},
+        {"t": "Bancos", "url": "/banca", "d": "Balance y resultados por moneda"},
+        {"t": "Comparar empresas", "url": "/comparar", "d": "Hasta tres empresas lado a lado"},
+        {"t": "Ranking", "url": "/ranking", "d": "Las 15 mejores por indicador", "extra": ["/evolucion"]},
+        {"t": "Salud financiera", "url": "/salud", "d": "Rentabilidad contra endeudamiento"},
+        {"t": "Proyecciones", "url": "/proyecciones", "d": "Ingresos y resultados proyectados"},
+    ]},
+    {"t": "Inversionistas", "hijos": [
+        {"t": "Inversión institucional", "url": "/inversion-institucional", "d": "AFP, seguros y fondos en un vistazo"},
+        {"t": "AFP", "url": "/afp", "d": "Rentabilidad, comisiones y cartera"},
+        {"t": "Fondos de pensiones", "url": "/fondos", "d": "Retornos y composición por fondo"},
+        {"t": "Cartera de seguros", "url": "/seguros/cartera", "d": "Asset allocation de las aseguradoras"},
+        {"t": "Derivados institucionales", "url": "/inversion-institucional/derivados", "d": "Monitor de swaps de las AFP"},
+        {"t": "Inversión por emisor", "url": "/inversion-institucional/emisor", "d": "Quién invierte en cada emisor"},
+        {"t": "Emisores en común", "url": "/inversion-institucional/emisores", "d": "Aseguradoras y fondos mutuos"},
+    ]},
+    {"t": "Fondos y productos", "hijos": [
+        {"t": "Productos de inversión", "url": "/productos", "d": "Rentabilidad, riesgo y costo comparables", "extra": ["/producto"]},
+        {"t": "Fondos mutuos", "url": "/fondos-mutuos", "d": "Rendimiento y cartera por fondo"},
+    ]},
+    {"t": "Metodología", "url": "/metodologia"},
+]
+
+
+def _nav_urls():
+    for g in NAV:
+        if "url" in g:
+            yield g["url"], [g["url"]]
+        for h in g.get("hijos", []):
+            yield h["url"], [h["url"], *h.get("extra", [])]
+
+
+def _nav_activo(path: str, url: str) -> bool:
+    """Activo = el ítem de prefijo más largo que calza con la ruta (así
+    /inversion-institucional/derivados no marca también /inversion-institucional)."""
+    def calza(p):
+        return path == p or (p != "/" and path.startswith(p.rstrip("/") + "/"))
+    mejor, largo = None, -1
+    for u, prefijos in _nav_urls():
+        for p in prefijos:
+            if calza(p) and len(p) > largo:
+                mejor, largo = u, len(p)
+    return mejor == url
+
+
+def _nav_grupo_activo(path: str, grupo: dict) -> bool:
+    return any(_nav_activo(path, h["url"]) for h in grupo.get("hijos", []))
+
+
+templates.env.globals.update(NAV=NAV, nav_activo=_nav_activo, nav_grupo_activo=_nav_grupo_activo)
+
+
+
+
 def records(df) -> list[dict]:
     """
     Convierte un DataFrame a lista de dicts JSON-safe (fechas en ISO, NaN→null).
