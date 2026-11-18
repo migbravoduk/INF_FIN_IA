@@ -833,3 +833,21 @@ a.chip:hover { color: var(--ink); border-color: var(--line-strong); }
     .toc-lateral a { border: 1px solid var(--line); border-radius: 999px; } }
 .bloque-emisor .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); margin: var(--sp-3) 0; }
 .bloque-emisor .stat-valor { font-size: var(--fs-lg); }
+
+/* =========================================================================================
+   7 · CELULAR
+   ========================================================================================= */
+@media (max-width: 640px) {
+    :root { --viz-sm: 200px; --viz-md: 260px; --viz-lg: 320px; --fs-2xl: 1.5rem; }
+    .container { padding-top: var(--sp-4); }
+    .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .stat-valor { font-size: 1.4rem; }
+    .filtros label, .eeff-form label { flex: 1 1 100%; }
+    .viz { padding: var(--sp-3); }
+    .sec { margin-top: var(--sp-6); }
+    .sec-arriba { display: none; }
+    .bajada, .subtitle { font-size: var(--fs-base); }
+    .hub-card { padding: var(--sp-4); }
+}
+
+@media (max-width: 640px) { .corte, .chip { white-space: normal; max-width: 100%; } }

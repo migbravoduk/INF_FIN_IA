@@ -15,8 +15,8 @@ títulos y bajadas). No cambia datos, cálculos ni rutas.
 | F4 | Estándar de gráficos (`charts.js`) | hecha | 4da81dd |
 | F5a | Páginas grupo A | hecha | 9ef836d |
 | F5b | Páginas grupo B | hecha | bb7733d |
-| F5c | Páginas grupo C | hecha | HASH_F5C |
-| F6 | Celular y accesibilidad | pendiente | |
+| F5c | Páginas grupo C | hecha | 08a77c1 |
+| F6 | Celular y accesibilidad | hecha | HASH_F6 |
 | F7 | Limpieza y registros | pendiente | |
 
 Si se acaba el tiempo, el orden ya prioriza lo más visible: F1–F4 mejoran todas las páginas a

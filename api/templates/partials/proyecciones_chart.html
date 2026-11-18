@@ -31,7 +31,7 @@
 
 <h3 class="sub-head">Supuestos macro (anclados en las encuestas EEE + EOF del BCCh)</h3>
 <div class="tbl-wrap">
-    <table class="tbl tbl--densa">
+    <table class="tbl tbl--densa" aria-label="Supuestos macro (anclados en las encuestas EEE + EOF del BCCh)">
         <thead>
             <tr>
                 <th>Trimestre</th>
@@ -56,7 +56,7 @@
 {% if structural %}
 <h3 class="sub-head">Trayectoria estructural (activos operacionales → rotación → margen)</h3>
 <div class="tbl-wrap">
-    <table class="tbl tbl--densa">
+    <table class="tbl tbl--densa" aria-label="Trayectoria estructural (activos operacionales → rotación → margen)">
         <thead>
             <tr>
                 <th>Trimestre</th>
@@ -84,7 +84,7 @@
 {% if nonop %}
 <h3 class="sub-head">Resultado no operacional ligado a la macro (después de impuestos, en la moneda de reporte)</h3>
 <div class="tbl-wrap">
-    <table class="tbl tbl--densa">
+    <table class="tbl tbl--densa" aria-label="Resultado no operacional ligado a la macro (después de impuestos, en la moneda de reporte)">
         <thead><tr><th>Partida</th><th class="num">Exposición estimada</th>
             {% for t in nonop[0].trimestres %}<th class="num">{{ t.period }}</th>{% endfor %}</tr></thead>
         <tbody>

@@ -93,7 +93,7 @@
     {{ ui.viz("der-ind-serie", "Neto dólar-peso en el tiempo", sub="MMUSD; negativo = vende dólares · " ~ ind.serie.meses[0]|mes_es ~ " – " ~ ind.ultimo|mes_es, fuente="Banco Central", fecha=ind.ultimo, alto="md") }}
 </div>
 <div class="tbl-wrap">
-<table class="tbl">
+<table class="tbl" aria-label="Posición de cada sector frente a los bancos">
     <thead><tr>
         <th>Sector</th>
         <th class="num">Compra USD</th><th class="num">Vende USD</th>
@@ -191,7 +191,7 @@
     {{ ui.viz("der-afp-sw", "Valorización de los swaps por AFP y fondo", sub="% del fondo; negativo = pérdida no realizada · " ~ afp.ultimo|mes_es, fuente="Superintendencia de Pensiones", fecha=afp.ultimo, alto="md") }}
 </div>
 <div class="tbl-wrap">
-<table class="tbl">
+<table class="tbl" aria-label="Cobertura cambiaria y swaps por fondo de pensiones">
     <thead><tr><th>Fondo (7 AFP)</th><th class="num">Activos</th><th class="num">Inversión extranjera</th>
         <th class="num">Vende USD a plazo (neto)</th><th class="num">Cobertura</th>
         <th class="num">Compra UF a plazo (neto)</th><th class="num">Swaps (valorización)</th>
@@ -227,7 +227,7 @@
     "1512", que la CMF no documenta en el manual; "CBE" es cobertura explícita.
 </p>
 <div class="tbl-wrap">
-<table class="tbl">
+<table class="tbl" aria-label="Compañías de seguros: derivados y cobertura">
     <thead><tr><th>Compañía</th><th class="num">Nocional (MMUSD)</th><th class="num">% del mercado</th>
         <th class="num">Neto moneda ext.</th><th class="num">Inversión extranjera</th>
         <th class="num">Cobertura</th><th class="num">Valor razonable</th>
@@ -263,7 +263,7 @@
     <section class="panel">
         <h3>Fondos con inversión extranjera: cuánto cubren (%), {{ ffm.ultimo|mes_es }}</h3>
         <div class="tbl-wrap">
-        <table class="tbl">
+        <table class="tbl" aria-label="Fondos mutuos con inversión extranjera">
             <thead><tr><th>Fondo</th><th class="num">Extranjero (MMUSD)</th>
                 <th class="num">Neto USD</th><th class="num">Cobertura</th></tr></thead>
             <tbody>{% for f in ffm.cubiertos %}
@@ -276,7 +276,7 @@
     <section class="panel">
         <h3>Nocional sobre patrimonio: los más apalancados (veces), {{ ffm.ultimo|mes_es }}</h3>
         <div class="tbl-wrap">
-        <table class="tbl">
+        <table class="tbl" aria-label="Fondos mutuos más apalancados">
             <thead><tr><th>Fondo</th><th class="num">Nocional (MM$)</th>
                 <th class="num">Veces patrimonio</th><th>Instrumentos</th></tr></thead>
             <tbody>{% for f in ffm.apalancados %}

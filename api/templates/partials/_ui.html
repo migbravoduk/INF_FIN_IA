@@ -45,7 +45,7 @@
         <span class="viz-titulo">{{ titulo }}</span>
         {% if sub %}<span class="viz-sub">{{ sub }}</span>{% endif %}
     </figcaption>
-    <div id="{{ id }}" class="chart viz-cuerpo viz-{{ alto }}"></div>
+    <div id="{{ id }}" class="chart viz-cuerpo viz-{{ alto }}" role="img" aria-label="{{ titulo|striptags }}"></div>
     {% if fuente or fecha or nota %}
     <div class="viz-pie">{% if nota %}<span>{{ nota }}</span>{% endif %}{% if fuente %}<span>Fuente: {{ fuente }}</span>{% endif %}{{ corte(fecha) if fecha }}</div>
     {% endif %}

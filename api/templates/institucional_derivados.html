@@ -71,7 +71,7 @@ juntos: el Banco Central no los separa). Último dato: <strong>{{ m.ultimo }}</s
 </div>
 <p class="nota">Dispersión baja con caídas grandes = una posición tomada por todas las AFP, no por una.
 {% if ret.E.parcial %}El último mes es parcial (hasta el último día en que informaron todas las AFP).{% endif %}</p>
-<div class="tbl-wrap"><table class="tbl">
+<div class="tbl-wrap"><table class="tbl" aria-label="Retorno mensual del Fondo E por AFP">
     <thead><tr><th>Fondo E · retorno mensual (%)</th>
         {% for mm in ret.E.meses[-8:] %}<th class="num">{{ mm }}</th>{% endfor %}</tr></thead>
     <tbody>{% for a, vals in ret.E.afp.items() %}<tr><td>{{ a }}</td>
@@ -86,7 +86,7 @@ robustos de su propia historia previa (mínimo {{ umbral.hist }} meses, cada mes
 cambio de signo con |neto| &gt; {{ (umbral.signo * 100)|es(0) }}% de los activos; nocional bruto en
 máximo histórico (+10% sobre el máximo previo y &gt; 1× los activos). Se muestran todas: las de
 2023–2025 son movimientos chicos que luego se revirtieron (falsas alarmas de la regla).</p>
-<div class="tbl-wrap"><table class="tbl">
+<div class="tbl-wrap"><table class="tbl" aria-label="Alertas del monitor de swaps">
     <thead><tr><th>Mes</th><th>Tipo</th><th>Alerta</th></tr></thead>
     <tbody>{% for a in m.alertas|reverse %}<tr>
         <td class="nowrap">{{ a.mes }}</td>
@@ -103,7 +103,7 @@ máximo histórico (+10% sobre el máximo previo y &gt; 1× los activos). Se mue
 <p class="nota">Las cifras de pérdida son de prensa (informes citados); el Banco Central no publica valor de mercado.</p>
 
 {% call ui.metodo("Cuadraturas de las series (validación automática)") %}
-<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Identidad</th><th class="num">Meses</th><th class="num">Desvío máximo</th></tr></thead>
+<div class="tbl-wrap"><table class="tbl" aria-label="Cuadraturas de las series"><thead><tr><th>Identidad</th><th class="num">Meses</th><th class="num">Desvío máximo</th></tr></thead>
 <tbody>{% for i in ident %}<tr><td>{{ i.regla }}</td><td class="num">{{ i.meses }}</td>
 <td class="num">{{ ((i.desvio_max or 0) * 100)|es(3) }}%</td></tr>{% endfor %}</tbody></table></div>
 {% endcall %}
@@ -132,7 +132,7 @@ dólares a plazo; positivo = los compra. Los bancos son la contraparte de casi t
     {{ ui.viz("d-plazo", "Neto USD-CLP por plazo residual", sub="MMUSD · " ~ det.ultimo, fuente="Banco Central", fecha=det.ultimo, alto="md") }}
     {{ ui.viz("d-cob", "Cobertura cambiaria: venta neta de USD ÷ inversión extranjera", sub="%", fuente="Banco Central", fecha=det.ultimo, alto="md") }}
 </div>
-<div class="tbl-wrap"><table class="tbl">
+<div class="tbl-wrap"><table class="tbl" aria-label="Otras posiciones de las AFP">
     <thead><tr><th>Otras posiciones ({{ det.ultimo }})</th><th class="num">Monto</th></tr></thead>
     <tbody>
     <tr><td>Swap cámara, neto hasta 2 años (miles de millones de $)</td><td class="num">{{ det.spc.net_c|es(0) }}</td></tr>
@@ -156,7 +156,7 @@ dólares a plazo; positivo = los compra. Los bancos son la contraparte de casi t
 <div class="grid-viz">
     {{ ui.viz("d-swafp", "Valorización de los swaps por AFP", sub="MMUSD; datos desde " ~ sw.desde ~ ", se muestra desde 2019", fuente="Superintendencia de Pensiones", fecha=sw.ultimo, alto="lg") }}
 </div>
-<div class="tbl-wrap"><table class="tbl">
+<div class="tbl-wrap"><table class="tbl" aria-label="Valorización de los swaps por AFP y fondo">
     <thead><tr><th>AFP ({{ sw.ultimo }}, MMUSD)</th>
         {% for f in sw.fondos %}<th class="num">Fondo {{ f }}</th>{% endfor %}<th class="num">Total</th>
         {% if sw.var12 %}<th class="num">Cambio 12 meses</th>{% endif %}</tr></thead>
@@ -168,13 +168,13 @@ dólares a plazo; positivo = los compra. Los bancos son la contraparte de casi t
         <td class="num">{{ sw.total|es(0) }}</td>{% if sw.var12 %}<td></td>{% endif %}</tr></tbody>
 </table></div>
 <div class="grid-viz grid-viz--2">
-<div class="tbl-wrap"><table class="tbl">
+<div class="tbl-wrap"><table class="tbl" aria-label="Contrapartes de los swaps de las AFP">
     <thead><tr><th>Contraparte (mayores por valor absoluto)</th><th>Origen</th>
         <th class="num">Valorización (MMUSD)</th><th class="num">AFP con contratos</th></tr></thead>
     <tbody>{% for c in sw.contrapartes %}<tr><td class="ent">{{ c.contraparte|nombre }}</td><td>{{ c.origen }}</td>
         <td class="{{ 'neg' if c.valor < 0 else 'pos' }} num">{{ c.valor|es(0) }}</td><td class="num">{{ c.afps }}</td></tr>{% endfor %}</tbody>
 </table></div>
-<div class="tbl-wrap"><table class="tbl">
+<div class="tbl-wrap"><table class="tbl" aria-label="Valorización por tipo de swap">
     <thead><tr><th>Tipo de swap</th><th class="num">Valorización (MMUSD)</th></tr></thead>
     <tbody>{% for t in sw.tipos %}<tr><td>{{ t.origen }} · {{ t.tipo }}</td>
         <td class="{{ 'neg' if t.valor < 0 else 'pos' }} num">{{ t.valor|es(0) }}</td></tr>{% endfor %}</tbody>
@@ -184,7 +184,7 @@ dólares a plazo; positivo = los compra. Los bancos son la contraparte de casi t
 <p class="nota">Forwards dólar contra pesos ({{ fw.ultimo }}), unidades del contrato en MMUSD.
 Compra/venta según la última letra del código de la SP (C/V), validado contra el Banco Central: el neto
 del sistema ({{ fw.total.neto|es(0) }}) está en línea con el de la sección 3 para ese mes.</p>
-<div class="tbl-wrap"><table class="tbl">
+<div class="tbl-wrap"><table class="tbl" aria-label="Forwards dólar contra pesos por AFP">
     <thead><tr><th>AFP</th><th class="num">Compra USD</th><th class="num">Venta USD</th>
         <th class="num">Neto</th><th class="num">con contraparte local</th><th class="num">con contraparte exterior</th></tr></thead>
     <tbody>{% for r in fw.filas %}<tr><td class="ent">{{ r.afp|nombre }}</td>
@@ -214,7 +214,7 @@ precio implícito no calza con la UF o el dólar del cierre y queda fuera de las
     {{ ui.viz("d-seg", "Neto en moneda extranjera: B.7 sumado vs. sector seguros del Banco Central", sub="MMUSD", fuente="CMF B.7 y Banco Central", fecha=seg.ultimo, alto="md") }}
     {{ ui.viz("d-segvr", "Valor razonable neto de los derivados", sub="MMM$; = B.8, código M10", fuente="CMF", fecha=seg.ultimo, alto="md") }}
 </div>
-<div class="tbl-wrap"><table class="tbl">
+<div class="tbl-wrap"><table class="tbl" aria-label="Compañías de seguros con derivados">
     <thead><tr><th>Compañía</th><th class="num">Contratos</th><th class="num">Swaps / fwd / otros</th>
         <th class="num">Nocional (MMM$)</th><th class="num">Neto ME (MMUSD)</th>
         <th class="num">Valor razonable (MMM$)</th><th class="num">% cobertura</th><th class="num">% contraparte exterior</th></tr></thead>
@@ -240,7 +240,7 @@ El sector AGF del Banco Central incluye además a los fondos de inversión: debe
 <div class="grid-viz">
     {{ ui.viz("d-ffmm", "Neto USD: fondos mutuos vs. sector AGF del Banco Central", sub="MMUSD", fuente="CMF y Banco Central", fecha=ffmm.ultimo, alto="md") }}
 </div>
-<div class="tbl-wrap"><table class="tbl">
+<div class="tbl-wrap"><table class="tbl" aria-label="Derivados de fondos mutuos por subyacente">
     <thead><tr><th>Subyacente</th><th>Tipo</th><th class="num">Contratos</th><th class="num">Fondos</th>
         <th class="num">Compra (MMM$)</th><th class="num">Venta (MMM$)</th></tr></thead>
     <tbody>{% for t in ffmm.tabla %}<tr><td>{{ t.subyacente }}</td><td>{{ t.tipo }}</td>
@@ -249,7 +249,7 @@ El sector AGF del Banco Central incluye además a los fondos de inversión: debe
 </table></div>
 <p class="nota">Derivados con fines de inversión (futuros de índices, opciones sobre acciones/ETF, bonos):
 {{ ffmm.inversion.contratos }} contratos en {{ ffmm.inversion.fondos }} fondos, {{ (ffmm.inversion.monto / 1000)|es(1) }} MMM$.</p>
-<div class="tbl-wrap"><table class="tbl">
+<div class="tbl-wrap"><table class="tbl" aria-label="Fondos mutuos con mayor nocional">
     <thead><tr><th>Fondo (mayores por nocional)</th><th class="num">Nocional (MMM$)</th>
         <th class="num">Veces su patrimonio</th><th class="num">Neto USD (MMUSD)</th><th>Subyacentes</th></tr></thead>
     <tbody>{% for f in ffmm.fondos %}<tr>
