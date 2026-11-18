@@ -17,8 +17,8 @@
     "use strict";
     if (!window.Plotly) { return; }
 
-    var FONT = '"Segoe UI", system-ui, -apple-system, sans-serif';
-    var INK = "#e2e8f0", MUTED = "#94a3b8", GRID = "#273449", LINE = "#475569";
+    var FONT = '"Inter", "Segoe UI", system-ui, -apple-system, sans-serif';
+    var INK = "#e8eef7", MUTED = "#94a3b8", GRID = "#24324d", LINE = "#3b4d6b";
     // Orden fijo (no se cicla por rango): azul, naranjo, aqua, amarillo, magenta, verde,
     // violeta, rojo. Validado sobre #1e293b: CVD ΔE ≥ 8,4 entre vecinos, contraste ≥ 3:1.
     var COLORWAY = ["#3987e5", "#d95926", "#199e70", "#c98500", "#d55181", "#0ca30c",
@@ -67,7 +67,7 @@
         def(layout, "separators", ",.");
         def(layout, "colorway", COLORWAY);
         layout.font = Object.assign({ family: FONT, color: MUTED, size: 12 }, layout.font || {});
-        layout.hoverlabel = Object.assign({ bgcolor: "#0b1222", bordercolor: LINE,
+        layout.hoverlabel = Object.assign({ bgcolor: "#0b1220", bordercolor: LINE,
                                             font: { family: FONT, color: INK, size: 12 } },
                                           layout.hoverlabel || {});
 
@@ -102,6 +102,13 @@
                 layout.margin.t = 28;
             }
         }
+
+        if (INF.esMovil && INF.esMovil()) {
+            layout.margin = layout.margin || {};
+            if (layout.margin.l === undefined || layout.margin.l > 48) { layout.margin.l = 48; }
+            if (layout.margin.r !== undefined && layout.margin.r > 40) { layout.margin.r = 40; }
+            if (layout.legend) { layout.legend.font = Object.assign({}, layout.legend.font, { size: 10 }); }
+        }
         return layout;
     }
 
@@ -110,7 +117,8 @@
     // da el alto interno real.
     function altoInterno(gd) {
         var el = typeof gd === "string" ? document.getElementById(gd) : gd;
-        if (!el || !el.style || !el.style.height) { return undefined; }
+        var conAlto = el && el.style && (el.style.height || /viz-(sm|md|lg)/.test(el.className));
+        if (!conAlto) { return undefined; }
         var cs = window.getComputedStyle(el);
         var h = el.clientHeight - parseFloat(cs.paddingTop || 0) - parseFloat(cs.paddingBottom || 0);
         return h > 80 ? h : undefined;
@@ -119,6 +127,77 @@
     function config(c) {
         return Object.assign({ displayModeBar: false, responsive: true, locale: "es" }, c || {});
     }
+
+    // ---------------------------------------------------------------------------------------
+    // INF: colores por entidad y ayudas de storytelling, compartidas por todas las plantillas.
+    // ---------------------------------------------------------------------------------------
+    var INF = window.INF = window.INF || {};
+    INF.PALETA = COLORWAY.slice();
+    INF.COLOR = { foco: "#5cb3ff", contexto: "#56657d", pos: "#4ade80", neg: "#f87171",
+                  ref: MUTED, tinta: INK, grilla: GRID,
+                  // Netos con signo neutro (comprador/vendedor): par divergente azul/naranjo.
+                  compra: "#3987e5", vende: "#d95926" };
+    // El color sigue a la entidad en todo el sitio.
+    INF.AFP = { CAPITAL: "#3987e5", CUPRUM: "#d95926", HABITAT: "#199e70", MODELO: "#c98500",
+                PLANVITAL: "#d55181", PROVIDA: "#9085e9", UNO: "#e66767" };
+    INF.FONDO = { A: "#ef4444", B: "#f97316", C: "#eab308", D: "#38bdf8", E: "#6366f1" };  // riesgo: cálido → frío
+    INF.SECTOR = { "AFP": "#3987e5", "Seguros": "#9085e9", "AGF (fondos)": "#199e70", "Corredoras": "#c98500",
+                   "Otros sectores": "#7d8ca3", "Empresas": "#d95926", "No residentes": "#d55181", "Bancos": "#e8eef7" };
+    INF.colorAFP = function (n) {
+        return INF.AFP[String(n || "").toUpperCase().replace(/^AFP\s+/, "").trim()] || INF.COLOR.contexto;
+    };
+    INF.esMovil = function () { return window.matchMedia("(max-width: 640px)").matches; };
+    INF.fmt = function (v, d, signo) {
+        if (v === null || v === undefined || isNaN(v)) { return "—"; }
+        d = d || 0;
+        var s = Number(v).toLocaleString("es-CL", { minimumFractionDigits: d, maximumFractionDigits: d });
+        return (signo && v > 0 ? "+" : "") + s;
+    };
+    // Rango con holgura para barras con etiqueta afuera (incluye el cero).
+    INF.rango = function (vals, pad) {
+        var xs = vals.filter(function (v) { return v !== null && v !== undefined && !isNaN(v); }).concat([0]);
+        var lo = Math.min.apply(null, xs), hi = Math.max.apply(null, xs), p = (hi - lo) * (pad || 0.22) || 1;
+        return [lo < 0 ? lo - p : 0, hi > 0 ? hi + p : p * 0.2];
+    };
+    // Línea de referencia horizontal (0, 100, meta 3%…): {shape, annotation}.
+    INF.refH = function (y, texto) {
+        return { shape: { type: "line", xref: "paper", x0: 0, x1: 1, yref: "y", y0: y, y1: y,
+                          line: { color: MUTED, width: 1, dash: "dot" } },
+                 annotation: texto ? { xref: "paper", x: 0, xanchor: "left", y: y, yanchor: "bottom", showarrow: false,
+                                       text: texto, font: { size: 11, color: MUTED } } : null };
+    };
+    // Línea vertical "hoy" que separa lo observado de lo proyectado.
+    INF.hoy = function (x, texto) {
+        return { shape: { type: "line", xref: "x", yref: "paper", x0: x, x1: x, y0: 0, y1: 1,
+                          line: { color: "#64748b", width: 1, dash: "dot" } },
+                 annotation: { x: x, xref: "x", y: 1, yref: "paper", yanchor: "top", xanchor: "left", xshift: 4,
+                               showarrow: false, text: texto || "proyección →", font: { size: 11, color: MUTED } } };
+    };
+    // Etiquetas directas al final de cada serie, apiladas si chocan (12 px por nivel).
+    // series = [{x: [...], y: [...], texto: "Cuprum 10,9%", color: "#…"}]. Requiere margin.r ≥ 80.
+    INF.etiquetasFinales = function (series, umbral) {
+        var anns = [];
+        series.forEach(function (s) {
+            for (var i = s.y.length - 1; i >= 0; i--) {
+                if (s.y[i] !== null && s.y[i] !== undefined) {
+                    anns.push({ x: s.x[i], y: s.y[i], xanchor: "left", xshift: 6, showarrow: false,
+                                text: s.texto, font: { size: 11, color: s.color || INK } });
+                    break;
+                }
+            }
+        });
+        if (anns.length < 2) { return anns; }
+        var ys = anns.map(function (a) { return a.y; });
+        var rango = (Math.max.apply(null, ys) - Math.min.apply(null, ys)) || 1;
+        anns.sort(function (a, b) { return b.y - a.y; });
+        var ancla = null, nivel = 0;
+        anns.forEach(function (a) {
+            if (ancla !== null && (ancla - a.y) < rango * (umbral || 0.04)) { nivel += 1; a.yshift = -12 * nivel; }
+            else { nivel = 0; ancla = a.y; }
+        });
+        return anns;
+    };
+    window.INF_PALETA = INF.PALETA;   // compatibilidad con plantillas existentes
 
     ["newPlot", "react"].forEach(function (fn) {
         var orig = window.Plotly[fn];
