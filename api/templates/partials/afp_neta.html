@@ -3,41 +3,37 @@
   sim = {rows:[{afp, comision_pct, aportes, comisiones, desembolso, saldo,
   rent_fondo_pct, rent_neta_pct, ganancia_neta}], window, vigencia_comisiones}
 #}
+{% import "partials/_ui.html" as ui %}
 {% if sim.rows %}
-<div class="chart-block" style="margin-top:1rem">
-    <h4>Rentabilidad neta de comisiones — Fondo {{ fund }}
-        <span class="lead">(sueldo bruto ${{ salary|es(0) }} ·
-        aportes {{ sim.window.desde }} → {{ sim.window.hasta }} ·
-        valorizado al {{ sim.window.valuacion }})</span></h4>
-    <div id="afp-neta-chart" class="chart"></div>
-</div>
+{{ ui.viz("afp-neta-chart", "Rentabilidad neta de comisiones: Fondo " ~ fund,
+          sub=("sueldo bruto $" ~ salary|es(0) ~ " · aportes " ~ sim.window.desde ~ " → " ~ sim.window.hasta ~ " · valorizado al " ~ sim.window.valuacion), alto="md") }}
 
-<div class="eeff-group table-scroll" style="margin-top:1rem">
-    <table class="bank-table">
+<div class="tbl-wrap">
+    <table class="tbl" aria-label="Rentabilidad neta de comisiones por AFP">
         <thead>
             <tr>
-                <th class="acct">AFP</th>
-                <th>Comisión (% remun.)</th>
-                <th>Aportes al fondo</th>
-                <th>Comisiones pagadas</th>
-                <th>Desembolso total</th>
-                <th>Saldo final</th>
-                <th>Rent. del fondo</th>
-                <th class="strong">Rent. NETA</th>
-                <th>Fondo Mín. para Rent. (+)</th>
+                <th>AFP</th>
+                <th class="num">Comisión (% remun.)</th>
+                <th class="num">Aportes al fondo ($)</th>
+                <th class="num">Comisiones pagadas ($)</th>
+                <th class="num">Desembolso total ($)</th>
+                <th class="num">Saldo final ($)</th>
+                <th class="num">Rent. del fondo (%)</th>
+                <th class="num">Rent. NETA (%)</th>
+                <th class="num">Fondo mín. para rent. (+) ($)</th>
             </tr>
         </thead>
         <tbody>
         {% for r in sim.rows %}
-            <tr class="{{ 'total-row' if loop.first else '' }}">
-                <td class="acct">{{ r.afp }}{{ " 🏆" if loop.first else "" }}</td>
+            <tr class="{{ 'total' if loop.first else '' }}">
+                <td class="ent">{{ r.afp|nombre }}{% if loop.first %} <span class="chip chip--acento">mejor neta</span>{% endif %}</td>
                 <td class="num">{{ r.comision_pct|es(2) }}%</td>
                 <td class="num">{{ r.aportes|es(0) }}</td>
                 <td class="num">{{ r.comisiones|es(0) }}</td>
                 <td class="num">{{ r.desembolso|es(0) }}</td>
                 <td class="num">{{ r.saldo|es(0) }}</td>
                 <td class="num">{{ r.rent_fondo_pct|es(2) }}%</td>
-                <td class="num strong {{ 'neg-val' if r.rent_neta_pct < 0 }}">{{ r.rent_neta_pct|es(2, True) }}%</td>
+                <td class="num fuerte {{ 'neg' if r.rent_neta_pct < 0 }}">{{ r.rent_neta_pct|es(2, True) }}%</td>
                 <td class="num">
                     {% if r.umbral_inicial != None %}
                         {% if r.umbral_inicial == 0 %}
@@ -55,14 +51,14 @@
     </table>
 </div>
 
-<p style="color:#64748b; font-size:.82rem; line-height:1.45; margin-top:.6rem">
-    Metodología: cada mes se cotiza el 10% del sueldo bruto (compra de cuotas al valor del
+{% call ui.metodo("Cómo se calcula la rentabilidad neta") %}
+    Cada mes se cotiza el 10% del sueldo bruto (compra de cuotas al valor del
     primer día hábil del mes) y se paga además la comisión de la AFP sobre la remuneración
     (vigencia {{ sim.vigencia_comisiones }}, aplicada retroactivamente a los 12 meses).
     <b>Rent. NETA</b> = (saldo final − desembolso total) / desembolso total, donde el
-    desembolso incluye las comisiones. <b>Fondo Mín. para Rent. (+)</b> es el saldo inicial mínimo necesario
+    desembolso incluye las comisiones. <b>Fondo mín. para rent. (+)</b> es el saldo inicial mínimo necesario
     al inicio del período para que la rentabilidad cubra las comisiones y el retorno neto resulte positivo (si es $0, significa que la rentabilidad de las cotizaciones mensuales del periodo fue suficiente para cubrir las comisiones por sí sola). No constituye recomendación.
-</p>
+{% endcall %}
 
 <script>
 (function () {
@@ -73,42 +69,41 @@
         // Gráfico de pesas: el punto gris es lo que rentó el fondo y el de color lo que le
         // quedó al afiliado; el tramo entre ambos es lo que se llevó la comisión. Así la
         // diferencia entre AFP se lee como distancia, no como dos barras paralelas.
-        var y = r.map(function (d) { return d.afp; });
+        var y = r.map(function (d) { return d.afp.charAt(0) + d.afp.slice(1).toLowerCase(); });
         var seg = { x: [], y: [], mode: "lines", type: "scatter", hoverinfo: "skip",
-                    line: { color: "#475569", width: 3 }, showlegend: false };
-        r.forEach(function (d) {
+                    line: { color: INF.COLOR.contexto, width: 3 }, showlegend: false };
+        r.forEach(function (d, i) {
             seg.x.push(d.rent_fondo_pct, d.rent_neta_pct, null);
-            seg.y.push(d.afp, d.afp, null);
+            seg.y.push(y[i], y[i], null);
         });
-        function fmt(v) { return v.toLocaleString("es-CL", {minimumFractionDigits: 2, maximumFractionDigits: 2}) + "%"; }
+        function fmt(v) { return INF.fmt(v, 2) + "%"; }
         var fondo = { x: r.map(function (d) { return d.rent_fondo_pct; }), y: y,
             name: "Rentabilidad del fondo", type: "scatter", mode: "markers",
-            marker: { color: "#94a3b8", size: 11, line: { color: "#1e293b", width: 2 } },
+            marker: { color: INF.COLOR.ref, size: 11, line: { color: "#111a2c", width: 2 } },
             customdata: r.map(function (d) { return [fmt(d.rent_fondo_pct)]; }),
             hovertemplate: "%{y}<br>Fondo: <b>%{customdata[0]}</b><extra></extra>" };
         var neta = { x: r.map(function (d) { return d.rent_neta_pct; }), y: y,
             name: "Rentabilidad neta de comisiones", type: "scatter", mode: "markers+text",
-            marker: { size: 13, line: { color: "#1e293b", width: 2 },
-                      color: r.map(function (d) { return d.rent_neta_pct >= 0 ? "#4ade80" : "#f87171"; }) },
+            marker: { size: 13, line: { color: "#111a2c", width: 2 },
+                      color: r.map(function (d) { return d.rent_neta_pct >= 0 ? INF.COLOR.pos : INF.COLOR.neg; }) },
             text: r.map(function (d) { return fmt(d.rent_neta_pct); }),
             textposition: r.map(function (d) { return d.rent_neta_pct < d.rent_fondo_pct ? "middle left" : "middle right"; }),
-            textfont: { color: "#e2e8f0", size: 11 },
-            customdata: r.map(function (d) { return [fmt(d.rent_neta_pct), fmt(d.rent_fondo_pct - d.rent_neta_pct), d.comision_pct.toLocaleString("es-CL", {minimumFractionDigits: 2})]; }),
+            textfont: { color: INF.COLOR.tinta, size: 11 },
+            customdata: r.map(function (d) { return [fmt(d.rent_neta_pct), fmt(d.rent_fondo_pct - d.rent_neta_pct), INF.fmt(d.comision_pct, 2)]; }),
             hovertemplate: "%{y}<br>Neta: <b>%{customdata[0]}</b><br>Costo de la comisión (%{customdata[2]}% de la remuneración): %{customdata[1]}<extra></extra>" };
         var xs = r.map(function (d) { return d.rent_fondo_pct; }).concat(r.map(function (d) { return d.rent_neta_pct; }));
         var lo = Math.min.apply(null, xs.concat([0])), hi = Math.max.apply(null, xs.concat([0]));
         var pad = (hi - lo) * 0.12 || 1;
         Plotly.newPlot("afp-neta-chart", [seg, fondo, neta], {
-            margin: { t: 30, r: 20, b: 40, l: 90 }, height: 340,
-            xaxis: { ticksuffix: "%", zeroline: true, zerolinecolor: "#94a3b8", showgrid: true,
+            margin: { t: 30, r: 20, b: 40, l: 90 },
+            xaxis: { ticksuffix: "%", zeroline: true, showgrid: true,
                      range: [lo - pad, hi + pad], title: { text: "Rentabilidad en la ventana" } },
-            yaxis: { showgrid: false },
-            legend: { orientation: "h", y: 1, yanchor: "bottom", x: 0 }
+            yaxis: { showgrid: false }
         });
     }
     draw();
 })();
 </script>
 {% else %}
-<p class="loading">Sin datos suficientes para simular ese fondo (se requieren 12 meses de cuotas).</p>
+{{ ui.vacio("Sin datos suficientes para simular ese fondo (se requieren 12 meses de cuotas).") }}
 {% endif %}

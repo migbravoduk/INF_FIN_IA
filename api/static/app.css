@@ -67,7 +67,7 @@ p { margin: 0 0 var(--sp-3); }
 a { color: var(--accent); text-underline-offset: 2px; text-decoration-thickness: 1px; }
 a:hover { text-decoration-thickness: 2px; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
-code { font-family: var(--font-mono); font-size: 0.9em; background: var(--s2); padding: 0.05em 0.35em; border-radius: 4px; }
+code { font-family: var(--font-mono); font-size: max(0.9em, var(--fs-xs)); background: var(--s2); padding: 0.05em 0.35em; border-radius: 4px; }
 strong, b { font-weight: 650; }
 td, .num, .stat-valor, .kpi-big, .afp-stats b, .kpi-row b { font-variant-numeric: tabular-nums; }
 .num, td.num, th.num { text-align: right; white-space: nowrap; }
@@ -762,3 +762,28 @@ form.htmx-request { background-image: linear-gradient(90deg, transparent, var(--
 .muted { color: var(--muted); }  .ink { color: var(--ink); }  .nowrap { white-space: nowrap; }
 .mt-0 { margin-top: 0 !important; }  .mt-3 { margin-top: var(--sp-3) !important; }  .mt-5 { margin-top: var(--sp-5) !important; }
 .mt-6 { margin-top: var(--sp-6) !important; }  .mb-0 { margin-bottom: 0 !important; }  .mb-3 { margin-bottom: var(--sp-3) !important; }
+
+/* Chips largos (p. ej. calidad de datos) se parten en vez de desbordar en celular */
+.page-acciones .chip { white-space: normal; border-radius: var(--r-sm); }
+.panel .tbl-wrap { border: 0; background: transparent; margin: 0; }
+.panel .tbl-wrap + .nota, .panel .tbl-wrap + p { margin-top: var(--sp-3); }
+a.chip { text-decoration: none; }
+a.chip:hover { color: var(--ink); border-color: var(--line-strong); }
+.panel .tbl td.ent { white-space: nowrap; }
+:is(.tbl, .eeff-table, .bank-table, .evol-table, .rank-table, .cmp-ratios) th.num { text-align: right; }
+.toc-fin { margin-left: auto; }
+.lectura--sm { font-size: var(--fs-base); }
+
+/* Barra de resultados sobre una tabla (conteo a la izquierda, acción a la derecha) */
+.res-barra { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--sp-3); margin: var(--sp-3) 0; }
+.res-barra form { margin: 0; }
+/* Enlaces de nombre dentro de tablas: tinta normal, subrayado al pasar */
+.tbl td.ent a { color: var(--ink); text-decoration: none; }
+.tbl td.ent a:hover { color: var(--accent); text-decoration: underline; }
+.tbl td .chip { margin-left: 0.35rem; }
+
+/* Cifras de texto (nombre de fondo, tipo): más chicas que una cifra numérica */
+.stat-valor.stat-txt { font-size: var(--fs-md); font-weight: 600; letter-spacing: 0; line-height: 1.3; }
+/* Leyenda HTML del gráfico comparativo: chips */
+.cmp-legend { gap: var(--sp-2); margin: var(--sp-3) 0 var(--sp-2); font-size: var(--fs-sm); }
+.cmp-leg-item { padding: 0.15rem 0.6rem; border: 1px solid var(--line); border-radius: 999px; background: var(--s1); color: var(--ink-2); }

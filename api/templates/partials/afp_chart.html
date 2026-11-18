@@ -3,46 +3,48 @@
   multi = [{name, points:[{date,value}]}]; title; normalized (bool); metric_label;
   latest (solo modo simple); note (mensaje si falta elegir).
 #}
+{% import "partials/_ui.html" as ui %}
 {% if note %}
 <p class="loading">{{ note }}</p>
 {% elif multi %}
 {% if latest %}
-<div class="afp-stats">
-    <div><span>Valor cuota ($)</span><b>{{ latest.quota_value|es(2) }}</b></div>
-    <div><span>Patrimonio (MMM$)</span><b>{{ (latest.equity_value / 1e9)|es(0) }}</b></div>
-    <div><span>Al</span><b>{{ latest.date[:10] }}</b></div>
+<div class="stats stats--compactas">
+    {{ ui.stat("Valor cuota", latest.quota_value|es(2), unidad="$", fecha=latest.date[:10], fuente="Superintendencia de Pensiones") }}
+    {{ ui.stat("Patrimonio", (latest.equity_value / 1e9)|es(0), unidad="MMM$") }}
 </div>
 {% endif %}
 
-<div class="chart-block">
-    <h4>{{ title }}{% if normalized %} <span class="lead">(base 100 = inicio)</span>{% endif %}</h4>
-    <div id="afp-chart" class="chart"></div>
-</div>
+{{ ui.viz("afp-chart", title, sub=("base 100 = inicio" if normalized else metric_label), alto="lg") }}
 <script>
 (function () {
     var multi = {{ multi | tojson }};
-    // A→E va de más a menos riesgo: escala ordenada de cálido (riesgoso) a frío (conservador).
-    var fundColors = {"Fondo A":"#ef4444","Fondo B":"#f97316","Fondo C":"#eab308","Fondo D":"#38bdf8","Fondo E":"#6366f1"};
-    var palette = ["#38bdf8","#fbbf24","#4ade80","#f87171","#a78bfa","#fb923c","#22d3ee"];
+    function color(name, i) {
+        // Fondos: A→E de cálido (riesgoso) a frío (conservador); AFP: un color fijo por administradora.
+        var f = /^Fondo ([A-E])$/.exec(name);
+        // Modo simple: "CAPITAL · Fondo A" -> el color es el de la AFP
+        return f ? INF.FONDO[f[1]] : INF.colorAFP(name.split(" · ")[0]);
+    }
     function draw() {
         if (!window.Plotly) { return setTimeout(draw, 100); }
+        var directas = multi.length <= 5;
         var traces = multi.map(function (s, i) {
             return { x: s.points.map(function (p) { return p.date; }),
                      y: s.points.map(function (p) { return p.value; }),
                      type: "scatter", mode: "lines", name: s.name,
-                     line: { color: fundColors[s.name] || palette[i % palette.length], width: 2 } };
+                     line: { color: color(s.name, i), width: 2 } };
         });
-        Plotly.newPlot("afp-chart", traces, {
-            margin: { t: 10, r: 10, b: 30, l: 60 }, height: 360,
-            paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)",
-            font: { color: "#94a3b8" },
-            legend: { orientation: "h" },
-            xaxis: { gridcolor: "#334155" }, yaxis: { gridcolor: "#334155" }
-        }, { displayModeBar: false, responsive: true });
+        var layout = { margin: { t: 10, r: directas ? 90 : 10, b: 30, l: 60 }, hovermode: "x unified",
+                       showlegend: !directas };
+        if (directas) {
+            layout.annotations = INF.etiquetasFinales(traces.map(function (t) {
+                return { x: t.x, y: t.y, texto: t.name, color: t.line.color };
+            }));
+        }
+        Plotly.newPlot("afp-chart", traces, layout);
     }
     draw();
 })();
 </script>
 {% else %}
-<p class="loading">Sin datos para esa combinación.</p>
+{{ ui.vacio("Sin datos para esa combinación.") }}
 {% endif %}

@@ -1,25 +1,25 @@
 {% extends "base.html" %}
+{% import "partials/_ui.html" as ui %}
 
 {% block title %}Productos de inversión · INF_FIN_IA{% endblock %}
 
 {% block content %}
-<h1>Productos de inversión</h1>
-
 {% if not corte %}
-<div class="warn-box">
+{{ ui.page_head("Productos de inversión") }}
+{% call ui.aviso("warn") %}
     Aún no hay métricas calculadas. Se generan con <code>main.py build-productos</code>
     (lo corre también el catch-up después de cada descarga).
-</div>
+{% endcall %}
 {% else %}
-<p class="subtitle">
-    Fondos mutuos (cada serie por separado) y fondos de pensiones, con rentabilidad, riesgo y
-    costo medidos con el mismo método para todos. Corte de las métricas: <strong>{{ corte }}</strong>.
-    <br><span class="lead">El orden depende solo de la métrica elegida. Las cifras no son una
-    recomendación: compara productos de la misma categoría y revisa la
-    <a href="/metodologia">metodología</a>.</span>
-</p>
+{{ ui.page_head("Productos de inversión",
+    "Fondos mutuos (cada serie por separado) y fondos de pensiones, con rentabilidad, riesgo y costo medidos con el mismo método para todos. Corte de las métricas: " ~ corte ~ ".") }}
 
-<form class="eeff-form" id="prod-filtros" hx-get="/productos/tabla" hx-target="#prod-tabla"
+{% call ui.aviso("info") %}
+    El orden depende solo de la métrica elegida. Las cifras no son una recomendación: compara
+    productos de la misma categoría y revisa la <a href="/metodologia">metodología</a>.
+{% endcall %}
+
+<form class="filtros" id="prod-filtros" hx-get="/productos/tabla" hx-target="#prod-tabla"
       hx-trigger="load, change, keyup changed delay:400ms from:input[name=q]" hx-include="this">
     <label>Tipo
         <select name="tipo">
@@ -54,7 +54,7 @@
         <select name="proveedor">
             <option value="">Todas</option>
             {% for rut, nombre, n in filtros.proveedores %}
-            <option value="{{ rut }}">{{ nombre }} ({{ n }})</option>
+            <option value="{{ rut }}">{{ nombre|nombre }} ({{ n }})</option>
             {% endfor %}
         </select>
     </label>
@@ -63,7 +63,7 @@
             {% for k, v in ordenes.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}
         </select>
     </label>
-    <label>Buscar <input type="search" name="q" placeholder="nombre del fondo"></label>
+    <label class="ancho">Buscar <input type="search" name="q" placeholder="nombre del fondo"></label>
 </form>
 
 <div id="prod-tabla"><p class="loading">Cargando…</p></div>

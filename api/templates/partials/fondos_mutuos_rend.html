@@ -5,28 +5,29 @@
   Una fila por FONDO Y SERIE: el valor cuota es propio de cada serie (comisiones distintas),
   así que promediarlas escondería justamente la diferencia que el partícipe paga.
 #}
+{% import "partials/_ui.html" as ui %}
 {% if sin_datos %}
-<p class="loading">Sin estadística de fondos mutuos cargada.</p>
+{{ ui.vacio("Sin estadística de fondos mutuos cargada.") }}
 {% elif rows %}
-<div class="eeff-meta" style="margin:.4rem 0 1rem">
-    {{ desde }} → {{ hasta }}
-    {%- if agf %} · <strong>{{ agf }}</strong>{% endif %}
+<div class="nota mt-0">
+    {{ desde|fecha_es }} → {{ hasta|fecha_es }}
+    {%- if agf %} · <strong>{{ agf|agf_corto }}</strong>{% endif %}
     {%- if tipo_label %} · {{ tipo_label }}{% endif %}
     · mostrando {{ rows|length }} de {{ n_total|es(0) }} pares fondo-serie
-    · <span class="lead">clic en una fila para ver su composición y desempeño</span>
+    · clic en una fila para ver su composición y desempeño
 </div>
 
-<div class="table-scroll">
-    <table class="eeff-table">
+<div class="tbl-wrap tbl-wrap--alto">
+    <table class="tbl tbl--fija-1" aria-label="Variación del valor cuota por fondo y serie">
         <thead>
             <tr>
                 <th>Fondo</th>
                 <th>Serie</th>
                 <th>Administradora</th>
                 <th>Tipo</th>
-                <th class="num">Valor cuota inicio</th>
-                <th class="num">Valor cuota fin</th>
-                <th class="num">Variación</th>
+                <th class="num">Valor cuota inicio ($)</th>
+                <th class="num">Valor cuota fin ($)</th>
+                <th class="num">Variación (%)</th>
                 <th class="num">Patrimonio (millones)</th>
                 <th class="num">Partícipes</th>
             </tr>
@@ -39,16 +40,14 @@
                 hx-get="/fondos-mutuos/panel?fund_run={{ r.fund_run }}&series={{ r.series | urlencode }}"
                 hx-target="#fm-panel"
                 hx-swap="innerHTML show:#fm-panel:top"
-                title="Ver composición y desempeño de {{ r.fund_name }} · serie {{ r.series }}">
-                <td>{{ r.fund_name }} <span class="go">→</span><br><span class="lead">RUN {{ r.fund_run }}</span></td>
+                title="Ver composición y desempeño de {{ r.fund_name|nombre }} · serie {{ r.series }}">
+                <td class="ent">{{ r.fund_name|nombre }} <span class="go">→</span><span class="sub">RUN {{ r.fund_run }}</span></td>
                 <td>{{ r.series }}</td>
-                <td><span class="lead" title="{{ r.agf_name }}">{{ r.agf_name|agf_corto }}</span></td>
-                <td><span class="lead">{{ tipos.get(r.fund_type, r.fund_type) }}</span></td>
+                <td class="muted" title="{{ r.agf_name }}">{{ r.agf_name|agf_corto }}</td>
+                <td class="muted">{{ tipos.get(r.fund_type, r.fund_type) }}</td>
                 <td class="num">{{ r.vc_ini|es(2) }}</td>
                 <td class="num">{{ r.vc_fin|es(2) }}</td>
-                <td class="{{ 'pos' if r.var_pct >= 0 else 'neg' }}">
-                    <b>{{ r.var_pct|es(2, True) }}%</b>
-                </td>
+                <td class="num fuerte {{ 'pos' if r.var_pct > 0 else 'neg' if r.var_pct < 0 }}">{{ r.var_pct|es(2, True) }}%</td>
                 <td class="num">
                     {% if r.patrimonio is not none %}{{ r.patrimonio|es(0) }}{% else %}—{% endif %}
                 </td>
@@ -61,13 +60,14 @@
     </table>
 </div>
 
-<p class="lead" style="margin-top:.5rem">
+{% call ui.metodo("Qué mide esta cifra y cómo se validó") %}
+<p>
     <strong>Qué es esta cifra.</strong> Rentabilidad <em>nominal acumulada</em> entre los dos
     cortes elegidos, calculada según el Documento Metodológico de Rentabilidades de la CMF
     (fórmulas 1 y 3): los fondos en moneda extranjera se convierten a pesos, y se exige que la
     serie exista en <em>ambos</em> cortes. No está anualizada ni descontada por inflación.
 </p>
-<p class="lead">
+<p>
     <strong>Validado contra las cifras oficiales de la CMF</strong> (base del Comparador de
     rentabilidad, corte 2026-03-31): de 1.968 pares fondo-serie comparables, el
     <strong>93,4% calza dentro de 0,5 pp</strong> y la mediana de la diferencia es 0,000 pp.
@@ -75,11 +75,12 @@
     la CMF incluye un <em>factor de reparto</em> que aquí no se tiene, así que en esos fondos
     la cifra queda <strong>subestimada</strong> (mediana −5 pp). Nunca sobrestimada.
 </p>
-<p class="lead">
+<p>
     El patrimonio va en <strong>millones</strong> de la moneda en que contabiliza el fondo — lo
     declara el propio archivo de la CMF al pie («Cifras en millones de pesos o de la moneda que
     corresponda»), así que <strong>no es sumable entre fondos de distinta moneda</strong>.
 </p>
+{% endcall %}
 {% else %}
-<p class="loading">Ningún fondo tiene valor cuota en los dos cortes elegidos con ese filtro.</p>
+{{ ui.vacio("Ningún fondo tiene valor cuota en los dos cortes elegidos con ese filtro.") }}
 {% endif %}

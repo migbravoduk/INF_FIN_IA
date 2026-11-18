@@ -4,32 +4,25 @@
   Todo va en BASE 100 al corte inicial: los valores cuota parten de niveles arbitrarios
   (uno en 1.200 y otro en 45.000), así que sin rebasar no son comparables en un mismo eje.
 #}
+{% import "partials/_ui.html" as ui %}
 {% if not paths %}
-<p class="loading">Sin fondos con valor cuota en los dos extremos de la ventana.</p>
+{{ ui.vacio("Sin fondos con valor cuota en los dos extremos de la ventana.") }}
 {% else %}
-<div class="chart-block" style="margin-top:1rem">
-    <h4>
-        Desempeño comparado · base 100 en {{ desde }}
-        <span class="eeff-meta">
-            3 mejores y 3 peores de {{ n_universo|es(0) }} fondos
-            {%- if agf %} de {{ agf }}{% endif %}
-            {%- if tipo_label %} · {{ tipo_label }}{% endif %}
-        </span>
-    </h4>
-    <div id="fm-cmp-legend" class="cmp-legend"></div>
-    <div id="fm-cmp-container" class="chart"></div>
-    <p class="afp-hint">
-        <strong>Clic en una línea</strong> para ver la composición y el desempeño de ese fondo.
-        La línea blanca punteada es la <strong>mediana del grupo filtrado</strong>, calculada
-        sobre los {{ n_universo|es(0) }} fondos que pasan el filtro y no solo sobre
-        los seis dibujados. Es la referencia que importa: una línea que sube solo dice que el
-        fondo subió; contra la mediana dice si le fue mejor o peor que a su categoría.
-        {% if excluidas %}<br><strong>Fuera del ranking por dato inconsistente</strong>
-        (el valor cuota cae más de 90% o se multiplica por 10 en un mes, típicamente un corte en
-        cero o un cambio de base): {{ excluidas[:6]|join(', ') }}{% if excluidas|length > 6 %} y
-        {{ excluidas|length - 6 }} más{% endif %}.{% endif %}
-    </p>
-</div>
+<div id="fm-cmp-legend" class="cmp-legend"></div>
+{{ ui.viz("fm-cmp-container", "Desempeño comparado",
+          sub=("base 100 en " ~ (desde|fecha_es) ~ " · 3 mejores y 3 peores de " ~ (n_universo|es(0)) ~ " fondos" ~ ((" de " ~ (agf|agf_corto)) if agf else "") ~ ((" · " ~ tipo_label) if tipo_label else "")),
+          fuente="CMF", alto="lg") }}
+<p class="nota">
+    <strong>Clic en una línea</strong> para ver la composición y el desempeño de ese fondo.
+    La línea punteada es la <strong>mediana del grupo filtrado</strong>, calculada
+    sobre los {{ n_universo|es(0) }} fondos que pasan el filtro y no solo sobre
+    los seis dibujados. Es la referencia que importa: una línea que sube solo dice que el
+    fondo subió; contra la mediana dice si le fue mejor o peor que a su categoría.
+    {% if excluidas %}<br><strong>Fuera del ranking por dato inconsistente</strong>
+    (el valor cuota cae más de 90% o se multiplica por 10 en un mes, típicamente un corte en
+    cero o un cambio de base): {{ excluidas[:6]|join(', ') }}{% if excluidas|length > 6 %} y
+    {{ excluidas|length - 6 }} más{% endif %}.{% endif %}
+</p>
 
 <script>
 (function () {
@@ -44,7 +37,7 @@
             return "<span class='cmp-leg-item'><span class='sw' style='background:" + col +
                    "'></span>" + s.name + "</span>";
         }).join("") +
-        "<span class='cmp-leg-item'><span class='sw' style='background:#e2e8f0'></span>" +
+        "<span class='cmp-leg-item'><span class='sw' style='background:" + INF.COLOR.tinta + "'></span>" +
         "Mediana del grupo</span>";
 
     function draw() {
@@ -62,50 +55,29 @@
             x: mediana.map(function (p) { return p.x; }),
             y: mediana.map(function (p) { return p.value; }),
             type: "scatter", mode: "lines", name: "Mediana del grupo",
-            line: { color: "#e2e8f0", width: 2, dash: "dot" },
+            line: { color: INF.COLOR.tinta, width: 2, dash: "dot" },
             hovertemplate: "%{x}<br><b>%{y:.1f}</b> (mediana)<extra></extra>"
         });
         // Etiqueta directa al final de cada línea: el valor de llegada, que es el dato que se lee.
         var finales = paths.map(function (s, i) {
-            var u = s.points[s.points.length - 1];
-            return { x: u.x, y: u.value, xanchor: "left", xshift: 4, showarrow: false,
-                     text: u.value.toLocaleString("es-CL", {maximumFractionDigits: 0}),
-                     font: { size: 10, color: palette[i % palette.length] } };
+            return { x: s.points.map(function (p) { return p.x; }), y: s.points.map(function (p) { return p.value; }),
+                     texto: INF.fmt(s.points[s.points.length - 1].value, 0), color: palette[i % palette.length] };
         });
         if (mediana.length) {
-            var um = mediana[mediana.length - 1];
-            finales.push({ x: um.x, y: um.value, xanchor: "left", xshift: 4, showarrow: false,
-                           text: "mediana " + um.value.toLocaleString("es-CL", {maximumFractionDigits: 0}),
-                           font: { size: 10, color: "#e2e8f0" } });
+            finales.push({ x: mediana.map(function (p) { return p.x; }), y: mediana.map(function (p) { return p.value; }),
+                           texto: "mediana " + INF.fmt(mediana[mediana.length - 1].value, 0), color: INF.COLOR.tinta });
         }
-        // Etiquetas que caerían encima de otra se apilan hacia abajo (12 px por nivel).
-        var ys = finales.map(function (a) { return a.y; });
-        var rango = (Math.max.apply(null, ys) - Math.min.apply(null, ys)) || 1;
-        finales.sort(function (a, b) { return b.y - a.y; });
-        var prevY = null, nivel = 0;
-        finales.forEach(function (a) {
-            if (prevY !== null && (prevY - a.y) < rango * 0.04) { nivel += 1; a.yshift = -12 * nivel; }
-            else { nivel = 0; prevY = a.y; }
-        });
+        var ref = INF.refH(100);
 
         Plotly.newPlot("fm-cmp-container", traces, {
-            margin: { t: 10, r: 70, b: 40, l: 60 }, height: 420, annotations: finales,
-            paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)",
-            font: { color: "#94a3b8" },
+            margin: { t: 10, r: 80, b: 40, l: 60 }, annotations: INF.etiquetasFinales(finales),
             showlegend: false,
             hovermode: "x unified",
-            xaxis: { gridcolor: "#334155" },
             // Base 100 no arranca en cero a propósito: el eje se ajusta al recorrido real,
             // y la línea de referencia en 100 marca "sin cambio".
-            yaxis: {
-                gridcolor: "#334155", title: { text: "Base 100" },
-                zeroline: false
-            },
-            shapes: [{
-                type: "line", xref: "paper", x0: 0, x1: 1, yref: "y", y0: 100, y1: 100,
-                line: { color: "#64748b", width: 1, dash: "dash" }
-            }]
-        }, { displayModeBar: false, responsive: true }).then(function (gd) {
+            yaxis: { title: { text: "Base 100" }, zeroline: false },
+            shapes: [ref.shape]
+        }).then(function (gd) {
             // Clic en una línea = mismo zoom que clic en una fila. Se dispara vía htmx.ajax
             // para no duplicar en JS la lógica que ya vive en el endpoint.
             gd.on("plotly_click", function (ev) {

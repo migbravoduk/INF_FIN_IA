@@ -30,6 +30,10 @@ PAT = {
     "name": re.compile(r'\bname="([^"]+)"'),
     "hx": re.compile(r'\b(hx-[a-z-]+)="([^"]*)"'),
     "js_id": re.compile(r'getElementById\(\s*["\']([^"\']+)["\']'),
+    # ids que se entregan a un macro de partials/_ui.html (F3): ui.viz("id", …), id_titulo="id",
+    # ui.sec_head("Título", id="id")
+    "id_macro": re.compile(r"""ui\.viz\(\s*["']([^"']+)["']|\bid_titulo\s*=\s*["']([^"']+)["']"""
+                           r"""|sec_head\([^)]*?\bid\s*=\s*["']([^"']+)["']""", re.S),
     "plot": re.compile(r'Plotly\.(?:newPlot|react)\(\s*["\']([^"\']+)["\']'),
 }
 
@@ -40,7 +44,7 @@ def extraer() -> dict:
         s = f.read_text(encoding="utf-8")
         rel = f.relative_to(TPL).as_posix()
         out[rel] = {
-            "id": sorted(set(PAT["id"].findall(s))),
+            "id": sorted(set(PAT["id"].findall(s)) | {x for t in PAT["id_macro"].findall(s) for x in t if x}),
             "name": sorted(set(PAT["name"].findall(s))),
             "hx": sorted({f"{k}={v}" for k, v in PAT["hx"].findall(s)}),
             "js_id": sorted(set(PAT["js_id"].findall(s))),
@@ -77,12 +81,13 @@ def main() -> int:
     base = json.loads(BASE.read_text(encoding="utf-8"))
     falta = []
     # Un id/name/hx puede mudarse de archivo (p. ej. a un partial nuevo): se exige globalmente.
-    global_actual = {k: set() for k in PAT}
+    CLAVES = [k for k in PAT if k != "id_macro"]
+    global_actual = {k: set() for k in CLAVES}
     for d in actual.values():
-        for k in PAT:
+        for k in CLAVES:
             global_actual[k] |= set(d[k])
     for archivo, d in base["plantillas"].items():
-        for k in PAT:
+        for k in CLAVES:
             for v in d[k]:
                 if v not in global_actual[k]:
                     falta.append(f"{archivo}: {k} «{v}» ya no existe en ninguna plantilla")

@@ -1,12 +1,24 @@
 {% extends "base.html" %}
+{% import "partials/_ui.html" as ui %}
 
 {% block title %}AFP · INF_FIN_IA{% endblock %}
 
 {% block content %}
-<h1>Fondos de pensiones — evolución y comparativos</h1>
-<p class="subtitle">Superintendencia de Pensiones — valor cuota y patrimonio por AFP y multifondo</p>
+{{ ui.page_head("AFP: rentabilidad, comisiones y cartera",
+    "Valor cuota y patrimonio de cada AFP y fondo, qué AFP conviene una vez descontadas las comisiones y en qué invierte cada fondo.") }}
 
-<form class="eeff-form"
+<nav class="toc" aria-label="Secciones">
+    <span class="toc-label">Ir a</span>
+    <a href="#afp-s-evolucion">Evolución</a>
+    <a href="#afp-s-comparativa">Comparativa</a>
+    <a href="#afp-s-rentabilidad">Rentabilidad 12 meses</a>
+    <a href="#afp-s-neta">Neta de comisiones</a>
+    <a href="#afp-s-cartera">Cartera</a>
+</nav>
+
+<section class="sec mt-0">
+{{ ui.sec_head("Evolución", id="afp-s-evolucion", fuente="Superintendencia de Pensiones") }}
+<form class="filtros"
       hx-get="/afp/chart"
       hx-target="#afp-results"
       hx-trigger="load, change"
@@ -15,7 +27,7 @@
     <label>AFP
         <select name="afp">
             {% for a in afps %}
-            <option value="{{ a }}">{{ a }}</option>
+            <option value="{{ a }}">{{ a|nombre }}</option>
             {% endfor %}
             <option value="TODAS">Todas (comparar AFP)</option>
         </select>
@@ -37,31 +49,38 @@
             <option value="share">Participación de mercado (%)</option>
         </select>
     </label>
+
+    <p class="ayuda">
+        Modos: <b>una AFP + un fondo</b> = evolución simple · <b>una AFP + Todos</b> = comparar fondos ·
+        <b>Todas + un fondo</b> = comparar AFP en ese fondo.
+    </p>
 </form>
 
-<p class="afp-hint">
-    Modos: <b>una AFP + un fondo</b> = evolución simple · <b>una AFP + Todos</b> = comparar fondos ·
-    <b>Todas + un fondo</b> = comparar AFP en ese fondo.
-</p>
-
-<section id="afp-results">
+<div id="afp-results">
     <p class="loading">Cargando…</p>
+</div>
 </section>
 
-<section id="afp-comparativa"
+<section class="sec">
+{{ ui.sec_head("Comparativa entre AFP", id="afp-s-comparativa", fuente="Superintendencia de Pensiones") }}
+<div id="afp-comparativa"
          hx-get="/afp/comparativa"
          hx-trigger="load, change from:#main-fund-select"
          hx-include="#main-fund-select">
     <p class="loading">Cargando comparativa detallada…</p>
+</div>
 </section>
 
-
-<section hx-get="/afp/rentabilidad" hx-trigger="load" hx-swap="innerHTML">
+<section class="sec">
+{{ ui.sec_head("Rentabilidad a 12 meses: nominal y real", id="afp-s-rentabilidad", fuente="Superintendencia de Pensiones") }}
+<div hx-get="/afp/rentabilidad" hx-trigger="load" hx-swap="innerHTML">
     <p class="loading">Cargando rentabilidad nominal vs real…</p>
+</div>
 </section>
 
-<h2 style="font-size:1rem;color:var(--muted);margin-top:2rem">¿Qué AFP conviene? — neto de comisiones</h2>
-<form class="eeff-form" hx-get="/afp/neta" hx-target="#afp-neta" hx-trigger="load, change, keyup delay:600ms from:input" hx-swap="innerHTML">
+<section class="sec">
+{{ ui.sec_head("¿Qué AFP conviene? Neto de comisiones", id="afp-s-neta") }}
+<form class="filtros" hx-get="/afp/neta" hx-target="#afp-neta" hx-trigger="load, change, keyup delay:600ms from:input" hx-swap="innerHTML">
     <label>Fondo
         <select name="fund">
             {% for f in funds %}<option value="{{ f }}" {{ "selected" if f == "C" }}>{{ f }}</option>{% endfor %}
@@ -72,9 +91,11 @@
     </label>
 </form>
 <div id="afp-neta"></div>
+</section>
 
-<h2 style="font-size:1rem;color:var(--muted);margin-top:2rem">Cartera de inversión</h2>
-<form class="eeff-form" hx-get="/afp/cartera" hx-target="#afp-cartera" hx-trigger="load, change" hx-swap="innerHTML">
+<section class="sec">
+{{ ui.sec_head("Cartera de inversión", id="afp-s-cartera", fuente="Superintendencia de Pensiones") }}
+<form class="filtros" hx-get="/afp/cartera" hx-target="#afp-cartera" hx-trigger="load, change" hx-swap="innerHTML">
     <label>Fondo (cartera)
         <select name="fund">
             {% for f in funds %}<option value="{{ f }}">{{ f }}</option>{% endfor %}
@@ -82,4 +103,5 @@
     </label>
 </form>
 <div id="afp-cartera"></div>
+</section>
 {% endblock %}

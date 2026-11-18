@@ -12,8 +12,8 @@ títulos y bajadas). No cambia datos, cálculos ni rutas.
 | F1 | Tokens, tipografía y base | hecha | bdb5693 |
 | F2 | Encabezado y navegación | hecha | 02de8ad |
 | F3 | Componentes (CSS + macros) | hecha | 8eb93dc |
-| F4 | Estándar de gráficos (`charts.js`) | hecha | HASH_F4 |
-| F5a | Páginas grupo A | pendiente | |
+| F4 | Estándar de gráficos (`charts.js`) | hecha | 4da81dd |
+| F5a | Páginas grupo A | hecha | HASH_F5A |
 | F5b | Páginas grupo B | pendiente | |
 | F5c | Páginas grupo C | pendiente | |
 | F6 | Celular y accesibilidad | pendiente | |

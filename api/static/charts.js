@@ -117,7 +117,7 @@
     // da el alto interno real.
     function altoInterno(gd) {
         var el = typeof gd === "string" ? document.getElementById(gd) : gd;
-        var conAlto = el && el.style && (el.style.height || /viz-(sm|md|lg)/.test(el.className));
+        var conAlto = el && el.style && (el.style.height || /\bviz-(sm|md|lg)\b/.test(el.className));
         if (!conAlto) { return undefined; }
         var cs = window.getComputedStyle(el);
         var h = el.clientHeight - parseFloat(cs.paddingTop || 0) - parseFloat(cs.paddingBottom || 0);

@@ -2,38 +2,31 @@
   partials/afp_rentabilidad.html — Rentabilidad 12m por fondo: nominal vs real.
   rows = [{fund, nominal, real}]; ipc = inflación 12m usada.
 #}
-<div class="chart-block" style="margin-top:1.5rem">
-    <h4>Rentabilidad 12m por fondo — nominal vs real
-        {% if ipc is not none %}<span class="lead">(IPC 12m: {{ ipc|es(2) }}%)</span>{% endif %}
-    </h4>
-    <div id="afp-rent-chart" class="chart"></div>
-</div>
+{% import "partials/_ui.html" as ui %}
+{{ ui.viz("afp-rent-chart", "Rentabilidad a 12 meses por fondo: nominal y real",
+          sub=("% · IPC a 12 meses: " ~ (ipc|es(2)) ~ "%" if ipc is not none else "%"), alto="md") }}
 <script>
 (function () {
     var rows = {{ rows | tojson }};
     function draw() {
         if (!window.Plotly) { return setTimeout(draw, 100); }
         var x = rows.map(function (r) { return "Fondo " + r.fund; });
-        // Holgura de 18% para que las etiquetas sobre/bajo las barras extremas no se corten.
         var vals = rows.map(function (r) { return r.nominal; }).concat(rows.map(function (r) { return r.real; }))
                        .filter(function (v) { return v !== null; });
-        var ymax = Math.max.apply(null, vals.concat([0])), ymin = Math.min.apply(null, vals.concat([0]));
-        var pad = (ymax - ymin) * 0.18 || 1;
         Plotly.newPlot("afp-rent-chart", [
             { x: x, y: rows.map(function (r) { return r.nominal; }), type: "bar",
-              name: "Nominal", marker: { color: "#64748b" },
-              texttemplate: "%{y:.1f}%", textposition: "outside", textfont: { size: 10, color: "#94a3b8" } },
+              name: "Nominal", marker: { color: INF.COLOR.contexto },
+              text: rows.map(function (r) { return INF.fmt(r.nominal, 1) + "%"; }),
+              textposition: "outside", cliponaxis: true, textfont: { size: 11, color: INF.COLOR.ref } },
             { x: x, y: rows.map(function (r) { return r.real; }), type: "bar",
-              name: "Real (descontado el IPC)", marker: { color: "#3987e5" },
-              texttemplate: "%{y:.1f}%", textposition: "outside", textfont: { size: 10, color: "#e2e8f0" } }
+              name: "Real (descontado el IPC)", marker: { color: INF.COLOR.foco },
+              text: rows.map(function (r) { return INF.fmt(r.real, 1) + "%"; }),
+              textposition: "outside", cliponaxis: true, textfont: { size: 11, color: INF.COLOR.tinta } }
         ], {
             // Lo que importa al afiliado es la real: va en color y la nominal en gris de fondo.
-            margin: { t: 10, r: 10, b: 30, l: 45 }, height: 320, barmode: "group", bargap: 0.3,
-            paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)",
-            font: { color: "#94a3b8" }, legend: { orientation: "h" },
-            xaxis: { gridcolor: "#334155" }, yaxis: { gridcolor: "#334155", ticksuffix: "%", zerolinecolor: "#94a3b8",
-                                                   range: [ymin - (ymin < 0 ? pad : 0), ymax + pad] }
-        }, { displayModeBar: false, responsive: true });
+            margin: { t: 10, r: 10, b: 30, l: 45 }, barmode: "group", bargap: 0.3,
+            yaxis: { ticksuffix: "%", range: INF.rango(vals, 0.18) }
+        });
     }
     draw();
 })();

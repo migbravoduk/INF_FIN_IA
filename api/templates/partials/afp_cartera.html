@@ -2,38 +2,32 @@
   partials/afp_cartera.html — Composición de cartera de un fondo (top por %).
   rows = [{glosa, pct}]; period; fund.
 #}
+{% import "partials/_ui.html" as ui %}
 {% if rows %}
-<div class="chart-block" style="margin-top:1rem">
-    <h4>Cartera Fondo {{ fund }} · período {{ period }} <span class="lead">(% del fondo · sistema total · por categoría)</span></h4>
-    <div id="afp-cartera-chart" class="chart"></div>
-</div>
+{{ ui.viz("afp-cartera-chart", "Cartera del Fondo " ~ fund, sub=("% del fondo · sistema total · por categoría · período " ~ period), alto="lg") }}
 
 {% if foreign_rows %}
-<div class="chart-block" style="margin-top:1rem; padding-top: 1rem; border-top: 1px solid var(--border)">
-    <h4 style="color: var(--muted)">Desglose de la cartera extranjera <span class="lead">(% del fondo total; la suma de las barras es el peso extranjero)</span></h4>
-    <div id="afp-foreign-chart" class="chart"></div>
-</div>
+{{ ui.viz("afp-foreign-chart", "Desglose de la cartera extranjera", sub="% del fondo total; la suma de las barras es el peso extranjero", alto="lg") }}
 {% endif %}
 
 <script>
 (function () {
     var rows = {{ rows | tojson }};
     var foreign_rows = {{ foreign_rows | tojson if foreign_rows else '[]' }};
-    
+
     function draw() {
         if (!window.Plotly) { return setTimeout(draw, 100); }
         Plotly.newPlot("afp-cartera-chart", [{
             y: rows.map(function (r) { return r.glosa; }).reverse(),
             x: rows.map(function (r) { return r.pct; }).reverse(),
-            type: "bar", orientation: "h", marker: { color: "#3987e5" },
-            texttemplate: "%{x:.1f}%", textposition: "outside", cliponaxis: false,
-            textfont: { size: 11, color: "#e2e8f0" }, hovertemplate: "%{y}: %{x:.2f}%<extra></extra>"
+            type: "bar", orientation: "h", marker: { color: INF.COLOR.foco },
+            text: rows.map(function (r) { return INF.fmt(r.pct, 1) + "%"; }).reverse(),
+            textposition: "outside", cliponaxis: false,
+            textfont: { size: 11, color: INF.COLOR.tinta }, hovertemplate: "%{y}: %{x:.2f}%<extra></extra>"
         }], {
-            margin: { t: 10, r: 50, b: 30, l: 150 }, height: 340,
-            paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)",
-            font: { color: "#94a3b8" },
-            xaxis: { gridcolor: "#334155", ticksuffix: "%" }, yaxis: { gridcolor: "#334155" }
-        }, { displayModeBar: false, responsive: true });
+            margin: { t: 10, r: 50, b: 30, l: 150 },
+            xaxis: { ticksuffix: "%" }
+        });
 
         if (foreign_rows.length > 0) {
             Plotly.newPlot("afp-foreign-chart", [{
@@ -41,21 +35,20 @@
                 x: foreign_rows.map(function (r) { return r.pct; }).reverse(),
                 customdata: foreign_rows.map(function (r) { return [r.code, r.desc]; }).reverse(),
                 hovertemplate: "<b>%{y}</b> (%{customdata[0]})<br>%{customdata[1]}<br>%{x:.2f}%<extra></extra>",
-                type: "bar", orientation: "h", marker: { color: "#3987e5" },
-                texttemplate: "%{x:.1f}%", textposition: "outside", cliponaxis: false,
-                textfont: { size: 10, color: "#e2e8f0" }
+                type: "bar", orientation: "h", marker: { color: INF.COLOR.foco },
+                text: foreign_rows.map(function (r) { return INF.fmt(r.pct, 1) + "%"; }).reverse(),
+                textposition: "outside", cliponaxis: false,
+                textfont: { size: 11, color: INF.COLOR.tinta }
             }], {
-                margin: { t: 10, r: 50, b: 30, l: 230 }, height: 380,
-                paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)",
-                font: { color: "#94a3b8" },
-                xaxis: { gridcolor: "#334155", ticksuffix: "%" },
-                yaxis: { gridcolor: "#334155", tickfont: { size: 10 } }
-            }, { displayModeBar: false, responsive: true });
+                margin: { t: 10, r: 50, b: 30, l: 230 },
+                xaxis: { ticksuffix: "%" },
+                yaxis: { tickfont: { size: 11 } }
+            });
         }
     }
     draw();
 })();
 </script>
 {% else %}
-<p class="loading">Sin datos de cartera para ese fondo.</p>
+{{ ui.vacio("Sin datos de cartera para ese fondo.") }}
 {% endif %}
