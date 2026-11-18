@@ -9,7 +9,7 @@ títulos y bajadas). No cambia datos, cálculos ni rutas.
 | Fase | Contenido | Estado | Commit |
 |---|---|---|---|
 | F0 | Preparación y línea base | hecha (sin cambios de código) | — |
-| F1 | Tokens, tipografía y base | hecha | HASH_F1 |
+| F1 | Tokens, tipografía y base | hecha | bdb5693 |
 | F2 | Encabezado y navegación | pendiente | |
 | F3 | Componentes (CSS + macros) | pendiente | |
 | F4 | Estándar de gráficos (`charts.js`) | pendiente | |
