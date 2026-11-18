@@ -49,6 +49,12 @@ Pendientes: duración residual del swap cámara (hoy plazo original), valorizaci
 18-nov (2): fechas de corte explícitas en las vistas de derivados; **plan estético completo**
 en [`docs/PLAN_ESTETICA.md`](../PLAN_ESTETICA.md) (fases F0–F7, para ejecutar hoy con Sonnet).
 
+18-nov (3): **rediseño estético ejecutado** (F0–F7): las 26 vistas usan encabezado, cifras, gráficos y
+tablas comunes. Pendientes de datos que se vieron al rediseñar (no son de presentación):
+- [ ] Nombres de cuenta FECU sin espacios ("Totalinversionesfinancieras") en seguros/intermediarios.
+- [ ] Unidades mixtas del evolutivo de bancos (plan de cuentas previo y posterior a 2022).
+- [ ] `tests/test_web.py`: leer el menú desde `api.deps.NAV` para recuperar la cobertura de las URLs del menú.
+
 ### Pendientes consolidados (17-nov-2026)
 
 Modelos y análisis:

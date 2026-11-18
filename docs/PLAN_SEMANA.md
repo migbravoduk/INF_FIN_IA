@@ -404,6 +404,17 @@ pares pero empeora h3).
   < 12 px) y `scripts/ui_guard.py` (ids, names, hx-* y destinos de gráficos). Plan estético para
   ejecutar con Sonnet: `docs/PLAN_ESTETICA.md`.
 
+- 2026-11-18 · **rediseño estético completo (F0–F7, `docs/PLAN_ESTETICA.md`)**: tokens y Inter local,
+  menú agrupado con página activa y menú de celular, componentes y macros (`partials/_ui.html`),
+  estándar de gráficos `INF` en `charts.js` (color por entidad, etiquetas directas, referencias),
+  26 vistas migradas, íconos Lucide locales, fuente y gráficos sin red. Deuda de estilo antes → después:
+  estilos en línea 455 → 2; `text-align` en línea 262 → 0; colores fijos en plantillas 272 → 37;
+  `font-size` CSS < 12 px 8 → 0. Capturas completas: `desborde=false` y `letra_chica=0` en 1.440 y
+  390 px. Commits F1–F7 en `feature/web-api-skeleton`. Incidencias: `tests/test_web.py` lee los
+  enlaces de `base.html`; con el menú generado desde `NAV` bajó de 76 a 64 casos recolectados (todos
+  pasan; la cobertura de las 12 URLs del menú quedó sin test propio); `ui_guard.py` ahora reconoce ids
+  pasados a macros.
+
 ---
 
 ## 8. Texto para iniciar cada sesión (copiar y pegar)

@@ -16,8 +16,8 @@ títulos y bajadas). No cambia datos, cálculos ni rutas.
 | F5a | Páginas grupo A | hecha | 9ef836d |
 | F5b | Páginas grupo B | hecha | bb7733d |
 | F5c | Páginas grupo C | hecha | 08a77c1 |
-| F6 | Celular y accesibilidad | hecha | HASH_F6 |
-| F7 | Limpieza y registros | pendiente | |
+| F6 | Celular y accesibilidad | hecha | 484f8c6 |
+| F7 | Limpieza y registros | hecha | ver git log |
 
 Si se acaba el tiempo, el orden ya prioriza lo más visible: F1–F4 mejoran todas las páginas a
 la vez (los estilos viejos quedan mapeados a los nuevos); F5 migra página por página.

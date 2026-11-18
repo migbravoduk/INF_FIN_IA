@@ -145,105 +145,12 @@ input[type="checkbox"] { accent-color: var(--accent); width: 16px; height: 16px;
 .container { max-width: var(--w-page); margin: 0 auto; padding: var(--sp-5) var(--gutter) var(--sp-8); }
 
 .subtitle { font-size: var(--fs-md); color: var(--ink-2); max-width: 68ch; line-height: 1.55; margin: 0 0 var(--sp-4); }
-/* Títulos de sección de las vistas largas: una regla fina separa los capítulos */
-.container > h2, section > h2:first-child {
-    font-size: 1.15rem; font-weight: 600; margin: 2.2rem 0 0.6rem;
-    padding-bottom: 0.35rem; border-bottom: 1px solid var(--border);
-}
-
-.kpi-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 1rem;
-    margin: 1rem 0;
-}
-.kpi-card {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 1rem 1.2rem;
-}
-.kpi-card h3 {
-    margin: 0 0 0.7rem;
-    font-size: 0.85rem;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--accent);
-}
-.kpi-row {
-    display: flex;
-    justify-content: space-between;
-    padding: 0.25rem 0;
-    border-bottom: 1px dashed var(--border);
-}
-.kpi-row span { color: var(--muted); }
-.kpi-big { font-size: 1.6rem; font-weight: 700; color: var(--ink); }
-.kpi-sub { color: var(--muted); font-size: 0.8rem; margin-top: 0.3rem; }
-/* Tarjeta de indicador: rótulo, cifra y nota en líneas propias (en línea se partían) */
-.kpi-card > span.kpi-sub, .kpi-card > span.kpi-big { display: block; }
-.kpi-card > span.kpi-sub:first-child { margin: 0 0 0.25rem; text-transform: uppercase;
-    letter-spacing: 0.04em; font-size: var(--fs-xs); }
-
-.toolbar { margin: 0.5rem 0 1rem; }
-.btn {
-    background: var(--panel);
-    color: var(--accent);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 0.45rem 0.9rem;
-    cursor: pointer;
-    font-size: 0.85rem;
-}
-.btn:hover { border-color: var(--accent); }
-
-.chart-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-    gap: 1rem;
-    margin-top: 2rem;
-}
-.chart-block { margin-top: 2rem; }
-.chart-grid .chart-block { margin-top: 0; display: flex; flex-direction: column; }
-.chart-grid .chart-block > .chart { margin-top: auto; }   /* alinea los ejes de gráficos vecinos */
-.chart-block h2, .chart-block h4 { font-size: 0.95rem; color: var(--muted); font-weight: 500; margin: 0 0 0.4rem; }
 .chart { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 0.5rem; }
 
 /* Signo en variaciones / rentabilidades */
 .pos { color: var(--ok); }
 .neg { color: var(--neg); }
 .lead { font-size: var(--fs-sm); color: var(--muted); font-style: normal; line-height: 1.55; }
-
-/* Selector para graficar partidas en /eeff */
-.graf-row { display: flex; flex-wrap: wrap; gap: 1.5rem; }
-.eeff-graf { margin: 0.8rem 0; }
-.eeff-graf label { display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.8rem; color: var(--muted); }
-.eeff-graf select {
-    background: var(--panel); color: var(--ink); border: 1px solid var(--border);
-    border-radius: 8px; padding: 0.5rem 0.7rem; font-size: 0.9rem; max-width: 420px;
-}
-
-/* Bloque banca (top 5 activos / resultado) */
-.banca-block {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 0.8rem 1.2rem 1rem;
-    margin: 1rem 0;
-}
-.banca-block > h3 {
-    margin: 0.2rem 0 0.8rem;
-    font-size: 0.85rem;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--accent);
-}
-.banca-cols {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-    gap: 1.5rem;
-}
-.banca-col h4 { margin: 0 0 0.5rem; font-size: 0.8rem; color: var(--ink); font-weight: 500; }
-.banca-col h4 .cnt { color: var(--muted); font-weight: 400; font-size: var(--fs-xs); }
 
 /* Estados financieros (EEFF) */
 .eeff-form {
@@ -268,23 +175,6 @@ input[type="checkbox"] { accent-color: var(--accent); width: 16px; height: 16px;
     font-size: 0.9rem;
     min-width: 240px;
 }
-/* Mini-mapa de navegación pegajoso (banca, seguros, intermediarios): saltos a cada
-   sección para que las matrices largas no sepulten el resto de la página. */
-.banca-minimap {
-    position: sticky; top: 0; z-index: 5;
-    display: flex; align-items: center; gap: 0.9rem; flex-wrap: wrap;
-    margin: 0.4rem 0 1rem; padding: 0.5rem 0.8rem;
-    background: var(--bg, var(--bg)); border: 1px solid var(--border);
-    border-radius: 8px;
-}
-.banca-minimap .minimap-label { color: var(--muted); font-size: 0.8rem; }
-.banca-minimap a {
-    color: var(--accent); text-decoration: none; font-size: 0.85rem;
-    padding: 0.15rem 0.5rem; border: 1px solid var(--border); border-radius: 6px;
-}
-.banca-minimap a:hover { border-color: var(--accent); }
-.minimap-top { float: right; font-size: var(--fs-xs); color: var(--muted); text-decoration: none; font-weight: 400; }
-.minimap-top:hover { color: var(--accent); }
 .fecu-grp { scroll-margin-top: 3.5rem; }
 
 /* Hubs de clasificación (EEFF y Proyecciones) */
@@ -298,29 +188,9 @@ input[type="checkbox"] { accent-color: var(--accent); width: 16px; height: 16px;
     padding: 1.1rem 1.2rem; transition: border-color .15s, transform .15s;
 }
 .hub-card:hover { border-color: var(--accent); transform: translateY(-2px); }
-.hub-icon { font-size: 1.6rem; display: block; margin-bottom: .4rem; }
 .hub-card h3 { margin: 0 0 .3rem; font-size: 1rem; color: var(--accent); }
 .hub-card p { margin: 0 0 .6rem; font-size: .85rem; color: var(--ink); line-height: 1.45; }
 .hub-meta { font-size: var(--fs-xs); color: var(--muted); }
-
-/* Aviso metodológico (ej. bandas de confianza no calibradas) */
-.warn-box {
-    background: rgba(234, 179, 8, .08);
-    border: 1px solid rgba(234, 179, 8, .35);
-    border-left: 3px solid #eab308;
-    border-radius: 8px;
-    padding: .7rem .9rem;
-    margin: 1rem 0;
-    font-size: .84rem;
-    line-height: 1.5;
-    color: var(--ink);
-    max-width: 900px;
-}
-
-/* Migas de navegación hacia el hub de EEFF */
-.crumb { margin: 0 0 .2rem; font-size: .8rem; }
-.crumb a { color: var(--muted); text-decoration: none; }
-.crumb a:hover { color: var(--accent); }
 
 /* Autocompletar de empresa (combo con búsqueda en servidor vía HTMX) */
 .combo { position: relative; }
@@ -348,10 +218,6 @@ input[type="checkbox"] { accent-color: var(--accent); width: 16px; height: 16px;
 .combo-name { color: var(--ink); font-size: 0.9rem; }
 .combo-meta { color: var(--muted); font-size: var(--fs-xs); }
 .combo-empty { padding: 0.6rem 0.7rem; color: var(--muted); font-size: 0.82rem; }
-
-.eeff-head { margin-bottom: 1rem; }
-.eeff-head h3 { margin: 0; }
-.eeff-meta { color: var(--muted); font-size: 0.8rem; }
 .resena {
     margin: 0.3rem 0 0.4rem;
     color: var(--ink);
@@ -361,145 +227,13 @@ input[type="checkbox"] { accent-color: var(--accent); width: 16px; height: 16px;
     border-left: 2px solid var(--accent);
     padding-left: 0.7rem;
 }
-.eeff-group {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 0.6rem 1rem 0.9rem;
-    margin-bottom: 1rem;
-}
-.eeff-group h4 {
-    margin: 0.3rem 0 0.6rem;
-    font-size: 0.82rem;
-    color: var(--accent);
-}
-.eeff-group h4 .code-tag {
-    color: var(--muted);
-    font-size: var(--fs-xs);
-    font-weight: 400;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 0.05rem 0.4rem;
-    margin-left: 0.4rem;
-}
-.eeff-table { width: 100%; border-collapse: collapse; }
-.eeff-table th {
-    color: var(--muted); font-weight: 600; font-size: var(--fs-xs); text-transform: uppercase;
-    letter-spacing: 0.04em; padding: 0.45rem 0.6rem; border-bottom: 1px solid var(--border);
-    vertical-align: bottom; text-align: left; line-height: 1.25;
-}
-.eeff-table td { padding: 0.35rem 0.6rem; border-bottom: 1px dashed var(--border); font-size: 0.88rem; vertical-align: middle; }
-.eeff-table th:first-child, .eeff-table td:first-child { padding-left: 0; }
-.eeff-table td.acct { color: var(--ink); }
-.eeff-table td.num { text-align: right; color: var(--ink-2); white-space: nowrap; padding-left: 1rem; }
-.eeff-table tbody tr:hover td { background: rgba(148, 163, 184, 0.05); }
 
 /* Leyenda HTML del gráfico comparativo */
 .cmp-legend { display: flex; flex-wrap: wrap; gap: 0.4rem 1.2rem; margin: 0.2rem 0 0.5rem; font-size: 0.82rem; color: var(--ink); }
 .cmp-leg-item { display: inline-flex; align-items: center; gap: 0.4rem; }
 .cmp-leg-item .sw { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
 
-/* Matriz evolutiva de estados financieros (cuentas × períodos) */
-.evol-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
-.evol-table th { text-align: right; color: var(--muted); font-weight: 500; padding: 0.3rem 0.7rem; border-bottom: 1px solid var(--border); white-space: nowrap; }
-.evol-table th.acct, .evol-table td.acct { text-align: left; position: sticky; left: 0; background: var(--bg); }
-.evol-table td { padding: 0.3rem 0.7rem; border-bottom: 1px dashed var(--border); white-space: nowrap; }
-.evol-table td.acct { color: var(--ink); white-space: normal; min-width: 240px; }
-.evol-table td.num { text-align: right; color: var(--ink-2); }
-.evol-table .total-row td.num { color: var(--ink); }
-
-/* Tabla de ranking de empresas */
-.rank-table { width: 100%; border-collapse: collapse; }
-.rank-table td { padding: 0.4rem 0.6rem; border-bottom: 1px dashed var(--border); font-size: 0.92rem; }
-.rank-table td.pos-n { color: var(--muted); width: 2rem; text-align: right; font-variant-numeric: tabular-nums; }
-.rank-table td.acct { color: var(--ink); }
-.rank-table td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; font-weight: 500; }
-
-/* Tabla comparativa de ratios entre empresas */
-.cmp-ratios { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-.cmp-ratios th { text-align: right; color: var(--muted); font-weight: 500; padding: 0.4rem 0.8rem; border-bottom: 1px solid var(--border); }
-.cmp-ratios th.acct { text-align: left; }
-.cmp-ratios td { text-align: right; padding: 0.35rem 0.8rem; border-bottom: 1px dashed var(--border); font-variant-numeric: tabular-nums; }
-.cmp-ratios td.acct { text-align: left; color: var(--muted); }
-
-/* Tarjeta de indicadores financieros (ratios) */
-.ratios {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 0.7rem 1rem 0.9rem;
-    margin: 1rem 0;
-}
-.ratios h4 { margin: 0.2rem 0 0.7rem; font-size: 0.82rem; color: var(--accent); font-weight: 500; }
-.ratio-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 0.5rem 1.5rem;
-}
-.ratio { display: flex; justify-content: space-between; padding: 0.25rem 0; border-bottom: 1px dashed var(--border); font-size: 0.9rem; }
-.ratio span { color: var(--muted); }
-
-/* Encabezado de sección del balance (Activos / Pasivos / Patrimonio) */
-.section-head td {
-    padding: 0.7rem 0 0.3rem;
-    color: var(--accent);
-    font-size: 0.78rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    border-bottom: 1px solid var(--accent);
-}
-
-/* Filas de totales (resaltadas en negrita, incluido el monto) */
-.total-row td { font-weight: 700; border-bottom: 1px solid var(--border); }
-.total-row td.acct { color: var(--ink); }
-.total-row td.num, .total-row td.num.strong { color: var(--ink); font-weight: 700; }
-.total-row td { background: rgba(148, 163, 184, 0.06); }
-
-/* Tabla bancaria (desglose por moneda) */
-.table-scroll { overflow-x: auto; }
-.bank-table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
-.bank-table th {
-    text-align: right;
-    color: var(--muted);
-    font-weight: 500;
-    padding: 0.3rem 0.6rem;
-    border-bottom: 1px solid var(--border);
-    white-space: nowrap;
-}
-.bank-table th.acct { text-align: left; }
-.bank-table td { padding: 0.3rem 0.6rem; border-bottom: 1px dashed var(--border); white-space: nowrap; }
-.bank-table td.acct { text-align: left; color: var(--ink); white-space: normal; min-width: 220px; }
-.bank-table td.num { text-align: right; color: var(--ink-2); }
-/* La columna Total se destaca por peso y un filete, no por color: el verde se reserva
-   para variaciones positivas. */
-.bank-table td.num.strong { color: var(--ink); font-weight: 600; border-left: 1px solid var(--border); }
-.bank-table th.strong { color: var(--ink); border-left: 1px solid var(--border); }
-.bank-table td.num.neg-val { color: var(--neg); }
-.bank-table tbody tr:hover td { background: rgba(148, 163, 184, 0.05); }
-
-/* Stats AFP */
-.afp-hint { color: var(--muted); font-size: 0.78rem; margin: 0 0 1rem; }
-.afp-hint b { color: var(--ink); font-weight: 500; }
-.afp-stats { display: flex; flex-wrap: wrap; gap: 1.5rem; margin: 0.5rem 0 1rem; }
-.afp-stats div { display: flex; flex-direction: column; }
-.afp-stats span { color: var(--muted); font-size: 0.75rem; }
-.afp-stats b { font-size: 1.3rem; font-weight: 600; color: var(--ink); }
-.afp-stats b.pos { color: var(--ok); }
-.afp-stats b.neg { color: var(--neg); }
-/* En grillas de bloques (vista por emisor) los indicadores van en una grilla fija: cifra
-   principal arriba y cuatro indicadores en una fila, igual en todos los bloques. */
-.chart-grid .afp-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.5rem 0.8rem; }
-.chart-grid .afp-stats > div:first-child { grid-column: 1 / -1; }
-.chart-grid .afp-stats span { font-size: var(--fs-xs); line-height: 1.2; }
-/* La variación va dentro de <b> como <span class="pos|neg">: hereda tamaño y toma el color. */
-.afp-stats b span { font-size: inherit; line-height: inherit; color: inherit; }
-.afp-stats b span.pos { color: var(--ok); }
-.afp-stats b span.neg { color: var(--neg); }
-
 .loading { color: var(--muted); }
-.mock-note { color: var(--warn); font-size: 0.8rem; }
-.mock-note code { color: var(--ink); }
 
 
 /* Filas de tabla que abren un detalle (patrón "clic en la fila" del dashboard). */
@@ -508,8 +242,6 @@ input[type="checkbox"] { accent-color: var(--accent); width: 16px; height: 16px;
 .row-click:hover td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 .row-click .go { color: var(--accent); opacity: 0; transition: opacity 0.12s ease; }
 .row-click:hover .go { opacity: 1; }
-
-
 
 /* Vista /derivados: frase de lectura al inicio de cada sección y alertas con nivel */
 .lectura {
@@ -532,7 +264,6 @@ input[type="checkbox"] { accent-color: var(--accent); width: 16px; height: 16px;
     color: var(--muted); border: 1px solid var(--border); border-radius: 999px;
     padding: 0.05rem 0.55rem; white-space: nowrap; text-transform: none;
 }
-.kpi-card > .corte { margin: 0.5rem 0 0; }
 .cortes {
     display: flex; flex-wrap: wrap; gap: 0.3rem 1.2rem; align-items: baseline;
     font-size: 0.8rem; color: var(--muted); margin: -0.4rem 0 1.2rem;
