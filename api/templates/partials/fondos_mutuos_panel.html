@@ -56,23 +56,23 @@
                 <tbody>
                     <tr>
                         <td>Remuneración anual de la administradora</td>
-                        <td style="text-align:right">
+                        <td class="num">
                             {% if costos.remuneracion is not none %}{{ costos.remuneracion|es(2) }}%{% else %}—{% endif %}
                         </td>
                     </tr>
                     <tr>
                         <td>Gasto operacional anual</td>
-                        <td style="text-align:right">
+                        <td class="num">
                             {% if costos.gasto_operacional is not none %}{{ costos.gasto_operacional|es(2) }}%{% else %}—{% endif %}
                         </td>
                     </tr>
                     <tr class="total-row">
                         <td><b>Carga interna anual</b><br><span class="lead">ya descontada del valor cuota</span></td>
-                        <td style="text-align:right"><b>{{ costos.carga_interna|es(2) }}%</b></td>
+                        <td class="num"><b>{{ costos.carga_interna|es(2) }}%</b></td>
                     </tr>
                     <tr>
                         <td>Comisión de colocación<br><span class="lead">se le cobra al partícipe, aparte</span></td>
-                        <td style="text-align:right">
+                        <td class="num">
                             {% if costos.com_colocacion %}<b>{{ costos.com_colocacion|es(2) }}%</b>
                             {% elif costos.com_colocacion == 0 %}sin comisión
                             {% else %}—{% endif %}
@@ -135,8 +135,8 @@
         <thead>
             <tr>
                 <th>Horizonte</th>
-                <th style="text-align:right">Nominal</th>
-                <th style="text-align:right">Real</th>
+                <th class="num">Nominal</th>
+                <th class="num">Real</th>
             </tr>
         </thead>
         <tbody>
@@ -148,10 +148,10 @@
                 ("10 años (anualizada)", oficial.nominal_10a, oficial.real_10a)] %}
             <tr>
                 <td>{{ etiqueta }}</td>
-                <td style="text-align:right" class="{{ 'pos' if (nom or 0) >= 0 else 'neg' }}">
+                <td class="{{ 'pos' if (nom or 0) >= 0 else 'neg' }}">
                     {% if nom is not none %}{{ nom|es(2, True) }}%{% else %}—{% endif %}
                 </td>
-                <td style="text-align:right" class="{{ 'pos' if (real or 0) >= 0 else 'neg' }}">
+                <td class="{{ 'pos' if (real or 0) >= 0 else 'neg' }}">
                     {% if real is not none %}{{ real|es(2, True) }}%{% else %}—{% endif %}
                 </td>
             </tr>
@@ -221,13 +221,13 @@
     <div style="flex:1; min-width:260px">
         <h4>Por tipo de cartera</h4>
         <table class="eeff-table">
-            <thead><tr><th>Cartera</th><th style="text-align:right">Posiciones</th><th style="text-align:right">%</th></tr></thead>
+            <thead><tr><th>Cartera</th><th class="num">Posiciones</th><th class="num">%</th></tr></thead>
             <tbody>
                 {% for c in comp.por_cartera %}
                 <tr>
                     <td>{{ carteras_label.get(c.clave, c.clave) }}</td>
-                    <td style="text-align:right">{{ c.n|es(0) }}</td>
-                    <td style="text-align:right">{{ c.pct|es(1) }}%</td>
+                    <td class="num">{{ c.n|es(0) }}</td>
+                    <td class="num">{{ c.pct|es(1) }}%</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -236,13 +236,13 @@
     <div style="flex:1; min-width:260px">
         <h4>Por país</h4>
         <table class="eeff-table">
-            <thead><tr><th>País</th><th style="text-align:right">Posiciones</th><th style="text-align:right">%</th></tr></thead>
+            <thead><tr><th>País</th><th class="num">Posiciones</th><th class="num">%</th></tr></thead>
             <tbody>
                 {% for c in comp.por_pais[:8] %}
                 <tr>
                     <td>{{ c.clave }}</td>
-                    <td style="text-align:right">{{ c.n|es(0) }}</td>
-                    <td style="text-align:right">{{ c.pct|es(1) }}%</td>
+                    <td class="num">{{ c.n|es(0) }}</td>
+                    <td class="num">{{ c.pct|es(1) }}%</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -251,13 +251,13 @@
     <div style="flex:1; min-width:260px">
         <h4>Por moneda</h4>
         <table class="eeff-table">
-            <thead><tr><th>Moneda</th><th style="text-align:right">Posiciones</th><th style="text-align:right">%</th></tr></thead>
+            <thead><tr><th>Moneda</th><th class="num">Posiciones</th><th class="num">%</th></tr></thead>
             <tbody>
                 {% for c in comp.por_moneda[:8] %}
                 <tr>
                     <td>{{ c.clave }}</td>
-                    <td style="text-align:right">{{ c.n|es(0) }}</td>
-                    <td style="text-align:right">{{ c.pct|es(1) }}%</td>
+                    <td class="num">{{ c.n|es(0) }}</td>
+                    <td class="num">{{ c.pct|es(1) }}%</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -272,7 +272,7 @@
             <tr>
                 <th>Nemotécnico</th><th>Tipo</th><th>Cartera</th>
                 <th>País</th><th>Moneda</th>
-                <th style="text-align:right">Monto <span class="lead">(campo FFM de nominal)</span></th>
+                <th class="num">Monto <span class="lead">(campo FFM de nominal)</span></th>
             </tr>
         </thead>
         <tbody>
@@ -283,7 +283,7 @@
                 <td>{{ carteras_label.get(p.cartera, p.cartera) }}</td>
                 <td>{{ p.pais or "—" }}</td>
                 <td>{{ p.moneda or "—" }}</td>
-                <td style="text-align:right">
+                <td class="num">
                     {% if p.monto is not none %}{{ p.monto|es(0) }}{% else %}—{% endif %}
                 </td>
             </tr>

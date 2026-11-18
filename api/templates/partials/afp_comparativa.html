@@ -8,12 +8,12 @@
     <table class="eeff-table">
         <thead>
             <tr>
-                <th style="text-align:left">AFP</th>
+                <th>AFP</th>
                 {% if fund == 'TODOS' %}<th>Fondo</th>{% endif %}
-                <th style="text-align:right" title="Cuota al corte / cuota de un año antes">Rent. 12m</th>
-                <th style="text-align:right">Valor cuota ($)</th>
-                <th style="text-align:right">Patrimonio (MMM$)</th>
-                <th style="text-align:right" title="% del patrimonio del fondo entre todas las AFP">Participación</th>
+                <th title="Cuota al corte / cuota de un año antes" class="num">Rent. 12m</th>
+                <th class="num">Valor cuota ($)</th>
+                <th class="num">Patrimonio (MMM$)</th>
+                <th title="% del patrimonio del fondo entre todas las AFP" class="num">Participación</th>
             </tr>
         </thead>
         <tbody>
@@ -21,12 +21,12 @@
             <tr>
                 <td style="text-align:left; font-weight:600">{{ r.afp }}</td>
                 {% if fund == 'TODOS' %}<td>{{ r.fund }}</td>{% endif %}
-                <td style="text-align:right" class="{{ 'pos' if (r.rentabilidad or 0) > 0 else 'neg' if (r.rentabilidad or 0) < 0 }}">
+                <td class="{{ 'pos' if (r.rentabilidad or 0) > 0 else 'neg' if (r.rentabilidad or 0) < 0 }}">
                     {% if r.rentabilidad is not none %}{{ r.rentabilidad|es(2)|replace('.', ',') }}%{% else %}—{% endif %}
                 </td>
-                <td style="text-align:right">{{ r.cuota|es(2) }}</td>
-                <td style="text-align:right">{{ r.patrimonio|es(0) }}</td>
-                <td style="text-align:right">{% if r.share is not none %}{{ r.share|es(1)|replace('.', ',') }}%{% else %}—{% endif %}</td>
+                <td class="num">{{ r.cuota|es(2) }}</td>
+                <td class="num">{{ r.patrimonio|es(0) }}</td>
+                <td class="num">{% if r.share is not none %}{{ r.share|es(1)|replace('.', ',') }}%{% else %}—{% endif %}</td>
             </tr>
             {% endfor %}
         </tbody>

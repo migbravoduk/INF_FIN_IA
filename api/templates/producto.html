@@ -118,7 +118,7 @@
         <div style="flex:1;min-width:16rem">
             <h4>{{ titulo }}</h4>
             <table class="eeff-table">
-                {% for k, v in filas %}<tr><td>{{ k }}</td><td style="text-align:right">{{ v|es(1) }}%</td></tr>{% endfor %}
+                {% for k, v in filas %}<tr><td>{{ k }}</td><td class="num">{{ v|es(1) }}%</td></tr>{% endfor %}
             </table>
         </div>
         {% endfor %}

@@ -24,11 +24,11 @@
                 <th>Serie</th>
                 <th>Administradora</th>
                 <th>Tipo</th>
-                <th style="text-align:right">Valor cuota inicio</th>
-                <th style="text-align:right">Valor cuota fin</th>
-                <th style="text-align:right">Variación</th>
-                <th style="text-align:right">Patrimonio (millones)</th>
-                <th style="text-align:right">Partícipes</th>
+                <th class="num">Valor cuota inicio</th>
+                <th class="num">Valor cuota fin</th>
+                <th class="num">Variación</th>
+                <th class="num">Patrimonio (millones)</th>
+                <th class="num">Partícipes</th>
             </tr>
         </thead>
         <tbody>
@@ -44,15 +44,15 @@
                 <td>{{ r.series }}</td>
                 <td><span class="lead" title="{{ r.agf_name }}">{{ r.agf_name|agf_corto }}</span></td>
                 <td><span class="lead">{{ tipos.get(r.fund_type, r.fund_type) }}</span></td>
-                <td style="text-align:right">{{ r.vc_ini|es(2) }}</td>
-                <td style="text-align:right">{{ r.vc_fin|es(2) }}</td>
-                <td style="text-align:right" class="{{ 'pos' if r.var_pct >= 0 else 'neg' }}">
+                <td class="num">{{ r.vc_ini|es(2) }}</td>
+                <td class="num">{{ r.vc_fin|es(2) }}</td>
+                <td class="{{ 'pos' if r.var_pct >= 0 else 'neg' }}">
                     <b>{{ r.var_pct|es(2, True) }}%</b>
                 </td>
-                <td style="text-align:right">
+                <td class="num">
                     {% if r.patrimonio is not none %}{{ r.patrimonio|es(0) }}{% else %}—{% endif %}
                 </td>
-                <td style="text-align:right">
+                <td class="num">
                     {% if r.participes is not none %}{{ r.participes|es(0) }}{% else %}—{% endif %}
                 </td>
             </tr>

@@ -22,21 +22,21 @@
 <div class="table-scroll">
 <table class="eeff-table">
     <thead><tr>
-        <th>Emisor</th><th style="text-align:right">Instrumentos en común</th>
-        <th style="text-align:right">Compañías de seguros</th><th style="text-align:right">Fondos mutuos</th>
-        <th style="text-align:right">Seguros (MM$)</th><th style="text-align:right">Fondos mutuos (MM$)</th>
-        <th style="text-align:right">Total (MM$)</th>
+        <th>Emisor</th><th class="num">Instrumentos en común</th>
+        <th class="num">Compañías de seguros</th><th class="num">Fondos mutuos</th>
+        <th class="num">Seguros (MM$)</th><th class="num">Fondos mutuos (MM$)</th>
+        <th class="num">Total (MM$)</th>
     </tr></thead>
     <tbody>
     {% for r in rows %}
     <tr>
         <td><a href="/inversion-institucional/emisor?rut={{ r.rut }}">{{ r.emisor or 'Sin nombre en las fuentes' }}</a><br><span class="lead">RUT {{ r.rut }}{% if r.tipo %} · {{ r.tipo|replace('_', ' ') }}{% endif %}</span></td>
-        <td style="text-align:right">{{ r.instrumentos|num }}</td>
-        <td style="text-align:right">{{ r.cias_seg|num }}</td>
-        <td style="text-align:right">{{ r.fondos_ffm|num }}</td>
-        <td style="text-align:right">{{ r.mm_seg|num }}</td>
-        <td style="text-align:right">{{ r.mm_ffm|num }}</td>
-        <td style="text-align:right"><strong>{{ r.mm_total|num }}</strong></td>
+        <td class="num">{{ r.instrumentos|num }}</td>
+        <td class="num">{{ r.cias_seg|num }}</td>
+        <td class="num">{{ r.fondos_ffm|num }}</td>
+        <td class="num">{{ r.mm_seg|num }}</td>
+        <td class="num">{{ r.mm_ffm|num }}</td>
+        <td class="num"><strong>{{ r.mm_total|num }}</strong></td>
     </tr>
     {% endfor %}
     </tbody>

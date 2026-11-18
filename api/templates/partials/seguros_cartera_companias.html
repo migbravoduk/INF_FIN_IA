@@ -16,24 +16,24 @@
     <thead>
         <tr>
             <th>Compañía</th>
-            <th style="text-align:right">Cartera (MMM$)</th>
-            <th style="text-align:right">Cuota</th>
-            <th style="text-align:right">Extranjero</th>
-            <th style="text-align:right">Renta fija</th>
-            <th style="text-align:right">CUI/APV</th>
-            <th style="text-align:right">Respalda reservas</th>
+            <th class="num">Cartera (MMM$)</th>
+            <th class="num">Cuota</th>
+            <th class="num">Extranjero</th>
+            <th class="num">Renta fija</th>
+            <th class="num">CUI/APV</th>
+            <th class="num">Respalda reservas</th>
         </tr>
     </thead>
     <tbody>
         {% for r in rows %}
         <tr>
             <td>{{ r.name }} <span class="lead">{{ r.rut }}</span></td>
-            <td style="text-align:right">{{ r.total|es(0) }}</td>
-            <td style="text-align:right">{{ pct(r.share) }}</td>
-            <td style="text-align:right">{{ pct(r.pct_extranjero) }}</td>
-            <td style="text-align:right">{{ pct(r.pct_rf) }}</td>
-            <td style="text-align:right">{{ pct(r.pct_cui) }}</td>
-            <td style="text-align:right">{{ pct(r.pct_repr) }}</td>
+            <td class="num">{{ r.total|es(0) }}</td>
+            <td class="num">{{ pct(r.share) }}</td>
+            <td class="num">{{ pct(r.pct_extranjero) }}</td>
+            <td class="num">{{ pct(r.pct_rf) }}</td>
+            <td class="num">{{ pct(r.pct_cui) }}</td>
+            <td class="num">{{ pct(r.pct_repr) }}</td>
         </tr>
         {% endfor %}
     </tbody>

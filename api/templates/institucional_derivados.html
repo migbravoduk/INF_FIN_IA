@@ -64,10 +64,10 @@ juntos: el Banco Central no los separa). Último dato: <strong>{{ m.ultimo }}</s
 <p class="lead">Dispersión baja con caídas grandes = una posición tomada por todas las AFP, no por una.
 {% if ret.E.parcial %}El último mes es parcial (hasta el último día en que informaron todas las AFP).{% endif %}</p>
 <div class="table-scroll"><table class="eeff-table">
-    <thead><tr><th style="text-align:left">Fondo E · retorno mensual (%)</th>
-        {% for mm in ret.E.meses[-8:] %}<th style="text-align:right">{{ mm }}</th>{% endfor %}</tr></thead>
-    <tbody>{% for a, vals in ret.E.afp.items() %}<tr><td style="text-align:left">{{ a }}</td>
-        {% for v in vals[-8:] %}<td style="text-align:right" class="{{ 'neg' if (v or 0) < 0 else 'pos' }}">{{ v|es(2) }}</td>{% endfor %}</tr>{% endfor %}</tbody>
+    <thead><tr><th>Fondo E · retorno mensual (%)</th>
+        {% for mm in ret.E.meses[-8:] %}<th class="num">{{ mm }}</th>{% endfor %}</tr></thead>
+    <tbody>{% for a, vals in ret.E.afp.items() %}<tr><td>{{ a }}</td>
+        {% for v in vals[-8:] %}<td class="{{ 'neg' if (v or 0) < 0 else 'pos' }} num">{{ v|es(2) }}</td>{% endfor %}</tr>{% endfor %}</tbody>
 </table></div>
 {% endif %}
 
@@ -79,11 +79,11 @@ cambio de signo con |neto| &gt; {{ (umbral.signo * 100)|es(0) }}% de los activos
 máximo histórico (+10% sobre el máximo previo y &gt; 1× los activos). Se muestran todas: las de
 2023–2025 son movimientos chicos que luego se revirtieron (falsas alarmas de la regla).</p>
 <div class="table-scroll"><table class="eeff-table">
-    <thead><tr><th style="text-align:left">Mes</th><th style="text-align:left">Tipo</th><th style="text-align:left">Alerta</th></tr></thead>
+    <thead><tr><th>Mes</th><th>Tipo</th><th>Alerta</th></tr></thead>
     <tbody>{% for a in m.alertas|reverse %}<tr>
         <td style="text-align:left;white-space:nowrap">{{ a.mes }}</td>
-        <td style="text-align:left">{{ {'salto': 'Salto', 'signo': 'Cambio de signo', 'bruto': 'Tamaño'}[a.tipo] }}</td>
-        <td style="text-align:left">{{ a.texto|replace('.', ',') }}</td></tr>{% else %}
+        <td>{{ {'salto': 'Salto', 'signo': 'Cambio de signo', 'bruto': 'Tamaño'}[a.tipo] }}</td>
+        <td>{{ a.texto|replace('.', ',') }}</td></tr>{% else %}
         <tr><td colspan="3">Sin alertas.</td></tr>{% endfor %}</tbody>
 </table></div>
 
@@ -95,9 +95,9 @@ máximo histórico (+10% sobre el máximo previo y &gt; 1× los activos). Se mue
 <p class="lead">Las cifras de pérdida son de prensa (informes citados); el Banco Central no publica valor de mercado.</p>
 
 <details style="margin-top:.8rem"><summary class="lead">Cuadraturas de las series (validación automática)</summary>
-<table class="eeff-table"><thead><tr><th style="text-align:left">Identidad</th><th style="text-align:right">Meses</th><th style="text-align:right">Desvío máximo</th></tr></thead>
-<tbody>{% for i in ident %}<tr><td style="text-align:left">{{ i.regla }}</td><td style="text-align:right">{{ i.meses }}</td>
-<td style="text-align:right">{{ ((i.desvio_max or 0) * 100)|es(3) }}%</td></tr>{% endfor %}</tbody></table>
+<table class="eeff-table"><thead><tr><th>Identidad</th><th class="num">Meses</th><th class="num">Desvío máximo</th></tr></thead>
+<tbody>{% for i in ident %}<tr><td>{{ i.regla }}</td><td class="num">{{ i.meses }}</td>
+<td class="num">{{ ((i.desvio_max or 0) * 100)|es(3) }}%</td></tr>{% endfor %}</tbody></table>
 </details>
 
 {# ============================ 2 · SECTORES ============================ #}
@@ -121,11 +121,11 @@ dólares a plazo; positivo = los compra. Los bancos son la contraparte de casi t
     <div class="chart-block"><h4>Cobertura cambiaria: venta neta de USD ÷ inversión extranjera (%)</h4><div id="d-cob" class="chart"></div></div>
 </div>
 <table class="eeff-table" style="margin-top:1rem">
-    <thead><tr><th style="text-align:left">Otras posiciones ({{ det.ultimo }})</th><th style="text-align:right">Monto</th></tr></thead>
+    <thead><tr><th>Otras posiciones ({{ det.ultimo }})</th><th class="num">Monto</th></tr></thead>
     <tbody>
-    <tr><td style="text-align:left">Swap cámara, neto hasta 2 años (miles de millones de $)</td><td style="text-align:right">{{ det.spc.net_c|es(0) }}</td></tr>
-    <tr><td style="text-align:left">Swap cámara, neto más de 2 años (miles de millones de $)</td><td style="text-align:right">{{ det.spc.net_l|es(0) }}</td></tr>
-    {% for p in det.pares %}<tr><td style="text-align:left">{{ p.par }}, nocional total (MMUSD)</td><td style="text-align:right">{{ p.tot|es(0) }}</td></tr>{% endfor %}
+    <tr><td>Swap cámara, neto hasta 2 años (miles de millones de $)</td><td class="num">{{ det.spc.net_c|es(0) }}</td></tr>
+    <tr><td>Swap cámara, neto más de 2 años (miles de millones de $)</td><td class="num">{{ det.spc.net_l|es(0) }}</td></tr>
+    {% for p in det.pares %}<tr><td>{{ p.par }}, nocional total (MMUSD)</td><td class="num">{{ p.tot|es(0) }}</td></tr>{% endfor %}
     </tbody>
 </table>
 {% endif %}
@@ -143,27 +143,27 @@ dólares a plazo; positivo = los compra. Los bancos son la contraparte de casi t
     <div class="chart-block"><h4>Valorización de los swaps por AFP (MMUSD; datos desde {{ sw.desde }}, se muestra desde 2019)</h4><div id="d-swafp" class="chart"></div></div>
 </div>
 <div class="table-scroll"><table class="eeff-table">
-    <thead><tr><th style="text-align:left">AFP ({{ sw.ultimo }}, MMUSD)</th>
-        {% for f in sw.fondos %}<th style="text-align:right">Fondo {{ f }}</th>{% endfor %}<th style="text-align:right">Total</th>
-        {% if sw.var12 %}<th style="text-align:right">Cambio 12 meses</th>{% endif %}</tr></thead>
-    <tbody>{% for r in sw.por_afp %}<tr><td style="text-align:left">{{ r.afp|title }}</td>
-        {% for f in sw.fondos %}<td style="text-align:right" class="{{ 'neg' if r.fondos[f] < 0 else 'pos' }}">{{ r.fondos[f]|es(0) }}</td>{% endfor %}
-        <td style="text-align:right"><b>{{ r.total|es(0) }}</b></td>
-        {% if sw.var12 %}<td style="text-align:right">{{ sw.var12.get(r.afp, 0)|es(0) }}</td>{% endif %}</tr>{% endfor %}
-    <tr><td style="text-align:left"><b>Sistema</b></td>{% for f in sw.fondos %}<td style="text-align:right"><b>{{ sw.tot_fondo[f]|es(0) }}</b></td>{% endfor %}
-        <td style="text-align:right"><b>{{ sw.total|es(0) }}</b></td>{% if sw.var12 %}<td></td>{% endif %}</tr></tbody>
+    <thead><tr><th>AFP ({{ sw.ultimo }}, MMUSD)</th>
+        {% for f in sw.fondos %}<th class="num">Fondo {{ f }}</th>{% endfor %}<th class="num">Total</th>
+        {% if sw.var12 %}<th class="num">Cambio 12 meses</th>{% endif %}</tr></thead>
+    <tbody>{% for r in sw.por_afp %}<tr><td>{{ r.afp|title }}</td>
+        {% for f in sw.fondos %}<td class="{{ 'neg' if r.fondos[f] < 0 else 'pos' }} num">{{ r.fondos[f]|es(0) }}</td>{% endfor %}
+        <td class="num"><b>{{ r.total|es(0) }}</b></td>
+        {% if sw.var12 %}<td class="num">{{ sw.var12.get(r.afp, 0)|es(0) }}</td>{% endif %}</tr>{% endfor %}
+    <tr><td><b>Sistema</b></td>{% for f in sw.fondos %}<td class="num"><b>{{ sw.tot_fondo[f]|es(0) }}</b></td>{% endfor %}
+        <td class="num"><b>{{ sw.total|es(0) }}</b></td>{% if sw.var12 %}<td></td>{% endif %}</tr></tbody>
 </table></div>
 <div class="chart-grid" style="margin-top:1rem">
 <div class="table-scroll"><table class="eeff-table">
-    <thead><tr><th style="text-align:left">Contraparte (mayores por valor absoluto)</th><th style="text-align:left">Origen</th>
-        <th style="text-align:right">Valorización (MMUSD)</th><th style="text-align:right">AFP con contratos</th></tr></thead>
-    <tbody>{% for c in sw.contrapartes %}<tr><td style="text-align:left">{{ c.contraparte }}</td><td style="text-align:left">{{ c.origen }}</td>
-        <td style="text-align:right" class="{{ 'neg' if c.valor < 0 else 'pos' }}">{{ c.valor|es(0) }}</td><td style="text-align:right">{{ c.afps }}</td></tr>{% endfor %}</tbody>
+    <thead><tr><th>Contraparte (mayores por valor absoluto)</th><th>Origen</th>
+        <th class="num">Valorización (MMUSD)</th><th class="num">AFP con contratos</th></tr></thead>
+    <tbody>{% for c in sw.contrapartes %}<tr><td>{{ c.contraparte }}</td><td>{{ c.origen }}</td>
+        <td class="{{ 'neg' if c.valor < 0 else 'pos' }} num">{{ c.valor|es(0) }}</td><td class="num">{{ c.afps }}</td></tr>{% endfor %}</tbody>
 </table></div>
 <div class="table-scroll"><table class="eeff-table">
-    <thead><tr><th style="text-align:left">Tipo de swap</th><th style="text-align:right">Valorización (MMUSD)</th></tr></thead>
-    <tbody>{% for t in sw.tipos %}<tr><td style="text-align:left">{{ t.origen }} · {{ t.tipo }}</td>
-        <td style="text-align:right" class="{{ 'neg' if t.valor < 0 else 'pos' }}">{{ t.valor|es(0) }}</td></tr>{% endfor %}</tbody>
+    <thead><tr><th>Tipo de swap</th><th class="num">Valorización (MMUSD)</th></tr></thead>
+    <tbody>{% for t in sw.tipos %}<tr><td>{{ t.origen }} · {{ t.tipo }}</td>
+        <td class="{{ 'neg' if t.valor < 0 else 'pos' }} num">{{ t.valor|es(0) }}</td></tr>{% endfor %}</tbody>
 </table></div>
 </div>
 {% if fw %}
@@ -171,14 +171,14 @@ dólares a plazo; positivo = los compra. Los bancos son la contraparte de casi t
 Compra/venta según la última letra del código de la SP (C/V), validado contra el Banco Central: el neto
 del sistema ({{ fw.total.neto|es(0) }}) está en línea con el de la sección 3 para ese mes.</p>
 <div class="table-scroll"><table class="eeff-table">
-    <thead><tr><th style="text-align:left">AFP</th><th style="text-align:right">Compra USD</th><th style="text-align:right">Venta USD</th>
-        <th style="text-align:right">Neto</th><th style="text-align:right">con contraparte local</th><th style="text-align:right">con contraparte exterior</th></tr></thead>
-    <tbody>{% for r in fw.filas %}<tr><td style="text-align:left">{{ r.afp|title }}</td>
-        <td style="text-align:right">{{ r.compra|es(0) }}</td><td style="text-align:right">{{ r.venta|es(0) }}</td>
-        <td style="text-align:right"><b>{{ r.neto|es(0) }}</b></td><td style="text-align:right">{{ r.neto_local|es(0) }}</td>
-        <td style="text-align:right">{{ r.neto_exterior|es(0) }}</td></tr>{% endfor %}
-    <tr><td style="text-align:left"><b>Sistema</b></td><td style="text-align:right">{{ fw.total.compra|es(0) }}</td><td style="text-align:right">{{ fw.total.venta|es(0) }}</td>
-        <td style="text-align:right"><b>{{ fw.total.neto|es(0) }}</b></td><td style="text-align:right">{{ fw.total.neto_local|es(0) }}</td><td style="text-align:right">{{ fw.total.neto_exterior|es(0) }}</td></tr></tbody>
+    <thead><tr><th>AFP</th><th class="num">Compra USD</th><th class="num">Venta USD</th>
+        <th class="num">Neto</th><th class="num">con contraparte local</th><th class="num">con contraparte exterior</th></tr></thead>
+    <tbody>{% for r in fw.filas %}<tr><td>{{ r.afp|title }}</td>
+        <td class="num">{{ r.compra|es(0) }}</td><td class="num">{{ r.venta|es(0) }}</td>
+        <td class="num"><b>{{ r.neto|es(0) }}</b></td><td class="num">{{ r.neto_local|es(0) }}</td>
+        <td class="num">{{ r.neto_exterior|es(0) }}</td></tr>{% endfor %}
+    <tr><td><b>Sistema</b></td><td class="num">{{ fw.total.compra|es(0) }}</td><td class="num">{{ fw.total.venta|es(0) }}</td>
+        <td class="num"><b>{{ fw.total.neto|es(0) }}</b></td><td class="num">{{ fw.total.neto_local|es(0) }}</td><td class="num">{{ fw.total.neto_exterior|es(0) }}</td></tr></tbody>
 </table></div>
 {% endif %}
 {% else %}<p class="loading">Sin cartera desagregada de la SP cargada (<code>main.py backfill-sp-detalle</code>).</p>{% endif %}
@@ -199,16 +199,16 @@ precio implícito no calza con la UF o el dólar del cierre y queda fuera de las
     <div class="chart-block"><h4>Valor razonable neto de los derivados (MMM$; = B.8, código M10)</h4><div id="d-segvr" class="chart"></div></div>
 </div>
 <div class="table-scroll"><table class="eeff-table">
-    <thead><tr><th style="text-align:left">Compañía</th><th style="text-align:right">Contratos</th><th style="text-align:right">Swaps / fwd / otros</th>
-        <th style="text-align:right">Nocional (MMM$)</th><th style="text-align:right">Neto ME (MMUSD)</th>
-        <th style="text-align:right">Valor razonable (MMM$)</th><th style="text-align:right">% cobertura</th><th style="text-align:right">% contraparte exterior</th></tr></thead>
+    <thead><tr><th>Compañía</th><th class="num">Contratos</th><th class="num">Swaps / fwd / otros</th>
+        <th class="num">Nocional (MMM$)</th><th class="num">Neto ME (MMUSD)</th>
+        <th class="num">Valor razonable (MMM$)</th><th class="num">% cobertura</th><th class="num">% contraparte exterior</th></tr></thead>
     <tbody>{% for c in seg.companias %}<tr>
-        <td style="text-align:left">{{ c.nombre }}<br><span class="lead">{{ c.ramo }}</span></td>
-        <td style="text-align:right">{{ c.contratos|es(0) }}</td><td style="text-align:right">{{ c.swaps }} / {{ c.forwards }} / {{ c.otros }}</td>
-        <td style="text-align:right">{{ (c.bruto_mm / 1000)|es(1) }}</td>
-        <td style="text-align:right" class="{{ 'neg' if c.me_usd < 0 else 'pos' }}">{{ c.me_usd|es(0) }}</td>
-        <td style="text-align:right" class="{{ 'neg' if c.vr_mm < 0 else 'pos' }}">{{ (c.vr_mm / 1000)|es(1) }}</td>
-        <td style="text-align:right">{{ c.pct_cobertura|es(0) }}%</td><td style="text-align:right">{{ c.pct_exterior|es(0) }}%</td></tr>{% endfor %}</tbody>
+        <td>{{ c.nombre }}<br><span class="lead">{{ c.ramo }}</span></td>
+        <td class="num">{{ c.contratos|es(0) }}</td><td class="num">{{ c.swaps }} / {{ c.forwards }} / {{ c.otros }}</td>
+        <td class="num">{{ (c.bruto_mm / 1000)|es(1) }}</td>
+        <td class="{{ 'neg' if c.me_usd < 0 else 'pos' }} num">{{ c.me_usd|es(0) }}</td>
+        <td class="{{ 'neg' if c.vr_mm < 0 else 'pos' }} num">{{ (c.vr_mm / 1000)|es(1) }}</td>
+        <td class="num">{{ c.pct_cobertura|es(0) }}%</td><td class="num">{{ c.pct_exterior|es(0) }}%</td></tr>{% endfor %}</tbody>
 </table></div>
 <p class="lead">Contrapartes por nocional: {% for c in seg.contrapartes %}{{ c.tipo }} {{ c.pct|es(0) }}%{{ ' · ' if not loop.last }}{% endfor %}.</p>
 {% else %}<p class="loading">Aún sin datos del archivo B.7 (<code>main.py backfill-derivados-seguros</code>).</p>{% endif %}
@@ -223,21 +223,21 @@ El sector AGF del Banco Central incluye además a los fondos de inversión: debe
     <div class="chart-block"><h4>Neto USD (MMUSD): fondos mutuos vs. sector AGF del Banco Central</h4><div id="d-ffmm" class="chart"></div></div>
 </div>
 <div class="table-scroll"><table class="eeff-table">
-    <thead><tr><th style="text-align:left">Subyacente</th><th style="text-align:left">Tipo</th><th style="text-align:right">Contratos</th><th style="text-align:right">Fondos</th>
-        <th style="text-align:right">Compra (MMM$)</th><th style="text-align:right">Venta (MMM$)</th></tr></thead>
-    <tbody>{% for t in ffmm.tabla %}<tr><td style="text-align:left">{{ t.subyacente }}</td><td style="text-align:left">{{ t.tipo }}</td>
-        <td style="text-align:right">{{ t.contratos }}</td><td style="text-align:right">{{ t.fondos }}</td>
-        <td style="text-align:right">{{ (t.compra / 1000)|es(1) }}</td><td style="text-align:right">{{ (t.venta / 1000)|es(1) }}</td></tr>{% endfor %}</tbody>
+    <thead><tr><th>Subyacente</th><th>Tipo</th><th class="num">Contratos</th><th class="num">Fondos</th>
+        <th class="num">Compra (MMM$)</th><th class="num">Venta (MMM$)</th></tr></thead>
+    <tbody>{% for t in ffmm.tabla %}<tr><td>{{ t.subyacente }}</td><td>{{ t.tipo }}</td>
+        <td class="num">{{ t.contratos }}</td><td class="num">{{ t.fondos }}</td>
+        <td class="num">{{ (t.compra / 1000)|es(1) }}</td><td class="num">{{ (t.venta / 1000)|es(1) }}</td></tr>{% endfor %}</tbody>
 </table></div>
 <p class="lead">Derivados con fines de inversión (futuros de índices, opciones sobre acciones/ETF, bonos):
 {{ ffmm.inversion.contratos }} contratos en {{ ffmm.inversion.fondos }} fondos, {{ (ffmm.inversion.monto / 1000)|es(1) }} MMM$.</p>
 <div class="table-scroll"><table class="eeff-table">
-    <thead><tr><th style="text-align:left">Fondo (mayores por nocional)</th><th style="text-align:right">Nocional (MMM$)</th>
-        <th style="text-align:right">Veces su patrimonio</th><th style="text-align:right">Neto USD (MMUSD)</th><th style="text-align:left">Subyacentes</th></tr></thead>
+    <thead><tr><th>Fondo (mayores por nocional)</th><th class="num">Nocional (MMM$)</th>
+        <th class="num">Veces su patrimonio</th><th class="num">Neto USD (MMUSD)</th><th>Subyacentes</th></tr></thead>
     <tbody>{% for f in ffmm.fondos %}<tr>
-        <td style="text-align:left"><a href="/producto/ffmm:{{ f.run }}:">{{ f.fondo }}</a><br><span class="lead">{{ f.agf }}</span></td>
-        <td style="text-align:right">{{ (f.bruto / 1000)|es(1) }}</td><td style="text-align:right">{{ f.veces_patrimonio|es(1) }}</td>
-        <td style="text-align:right">{{ f.neto_usd|es(1) }}</td><td style="text-align:left">{{ f.tipos }}</td></tr>{% endfor %}</tbody>
+        <td><a href="/producto/ffmm:{{ f.run }}:">{{ f.fondo }}</a><br><span class="lead">{{ f.agf }}</span></td>
+        <td class="num">{{ (f.bruto / 1000)|es(1) }}</td><td class="num">{{ f.veces_patrimonio|es(1) }}</td>
+        <td class="num">{{ f.neto_usd|es(1) }}</td><td>{{ f.tipos }}</td></tr>{% endfor %}</tbody>
 </table></div>
 <p class="lead">Un nocional de varias veces el patrimonio no implica apalancamiento: suele ser una
 posición y su contraria (forwards a ambos lados que se compensan).</p>

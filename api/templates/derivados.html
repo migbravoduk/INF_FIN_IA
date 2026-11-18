@@ -126,11 +126,11 @@
 <table class="eeff-table">
     <thead><tr>
         <th>Sector</th>
-        <th style="text-align:right">Compra USD</th><th style="text-align:right">Vende USD</th>
-        <th style="text-align:right">Neto USD-CLP {{ ind.ultimo|mes_es }}</th><th style="text-align:right">Δ 12 meses</th>
-        <th style="text-align:right">Otras monedas (neto)</th>
-        <th style="text-align:right">UF neto (mill. UF)</th>
-        <th style="text-align:right">Bruto USD-CLP</th>
+        <th class="num">Compra USD</th><th class="num">Vende USD</th>
+        <th class="num">Neto USD-CLP {{ ind.ultimo|mes_es }}</th><th class="num">Δ 12 meses</th>
+        <th class="num">Otras monedas (neto)</th>
+        <th class="num">UF neto (mill. UF)</th>
+        <th class="num">Bruto USD-CLP</th>
     </tr></thead>
     <tbody>
     {% for f in ind.filas %}
@@ -237,10 +237,10 @@
 </div>
 <div class="table-scroll" style="margin-top:1rem">
 <table class="eeff-table">
-    <thead><tr><th>Fondo (7 AFP)</th><th style="text-align:right">Activos</th><th style="text-align:right">Inversión extranjera</th>
-        <th style="text-align:right">Vende USD a plazo (neto)</th><th style="text-align:right">Cobertura</th>
-        <th style="text-align:right">Compra UF a plazo (neto)</th><th style="text-align:right">Swaps (valorización)</th>
-        <th style="text-align:right">Swaps / fondo</th></tr></thead>
+    <thead><tr><th>Fondo (7 AFP)</th><th class="num">Activos</th><th class="num">Inversión extranjera</th>
+        <th class="num">Vende USD a plazo (neto)</th><th class="num">Cobertura</th>
+        <th class="num">Compra UF a plazo (neto)</th><th class="num">Swaps (valorización)</th>
+        <th class="num">Swaps / fondo</th></tr></thead>
     <tbody>
     {% for f in afp.por_fondo %}
     <tr><td>Fondo {{ f.fondo }}</td><td class="num">{{ mm(f.activos) }}</td><td class="num">{{ mm(f.ext) }}</td>
@@ -273,10 +273,10 @@
 </p>
 <div class="table-scroll">
 <table class="eeff-table">
-    <thead><tr><th>Compañía</th><th style="text-align:right">Nocional (MMUSD)</th><th style="text-align:right">% del mercado</th>
-        <th style="text-align:right">Neto moneda ext.</th><th style="text-align:right">Inversión extranjera</th>
-        <th style="text-align:right">Cobertura</th><th style="text-align:right">Valor razonable</th>
-        <th style="text-align:right">Objetivo CBE / INV / 1512</th><th style="text-align:right">Contraparte exterior</th></tr></thead>
+    <thead><tr><th>Compañía</th><th class="num">Nocional (MMUSD)</th><th class="num">% del mercado</th>
+        <th class="num">Neto moneda ext.</th><th class="num">Inversión extranjera</th>
+        <th class="num">Cobertura</th><th class="num">Valor razonable</th>
+        <th class="num">Objetivo CBE / INV / 1512</th><th class="num">Contraparte exterior</th></tr></thead>
     <tbody>
     {% for f in seg.filas %}
     <tr><td>{{ f.nombre }}<br><span class="lead">{{ f.ramo }} · {{ f.contratos }} contratos · {{ f.contrapartes }} contrapartes</span></td>
@@ -309,8 +309,8 @@
         <h4>Fondos con inversión extranjera: cuánto cubren (%), {{ ffm.ultimo|mes_es }}</h4>
         <div class="table-scroll">
         <table class="eeff-table">
-            <thead><tr><th>Fondo</th><th style="text-align:right">Extranjero (MMUSD)</th>
-                <th style="text-align:right">Neto USD</th><th style="text-align:right">Cobertura</th></tr></thead>
+            <thead><tr><th>Fondo</th><th class="num">Extranjero (MMUSD)</th>
+                <th class="num">Neto USD</th><th class="num">Cobertura</th></tr></thead>
             <tbody>{% for f in ffm.cubiertos %}
             <tr><td>{{ f.fondo }}<br><span class="lead">{{ f.agf|agf_corto }} · RUN {{ f.run }}</span></td>
                 <td class="num">{{ mm(f.ext_usd, 1) }}</td><td class="num">{{ signo(f.neto_usd, 1) }}</td>
@@ -322,8 +322,8 @@
         <h4>Nocional sobre patrimonio: los más apalancados (veces), {{ ffm.ultimo|mes_es }}</h4>
         <div class="table-scroll">
         <table class="eeff-table">
-            <thead><tr><th>Fondo</th><th style="text-align:right">Nocional (MM$)</th>
-                <th style="text-align:right">Veces patrimonio</th><th>Instrumentos</th></tr></thead>
+            <thead><tr><th>Fondo</th><th class="num">Nocional (MM$)</th>
+                <th class="num">Veces patrimonio</th><th>Instrumentos</th></tr></thead>
             <tbody>{% for f in ffm.apalancados %}
             <tr><td>{{ f.fondo }}<br><span class="lead">{{ f.agf|agf_corto }} · RUN {{ f.run }}</span></td>
                 <td class="num">{{ mm(f.bruto_mm) }}</td><td class="num"><b>{{ f.veces|es(1) }}×</b></td>

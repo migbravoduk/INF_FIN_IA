@@ -54,13 +54,13 @@
         <span class="lead">(% de lo clasificado — {{ pct(alloc.pct_clasificado) }} de la cartera)</span>
     </h4>
     <table class="eeff-table">
-        <thead><tr><th>Clasificación</th><th style="text-align:right">MMM$</th><th style="text-align:right">%</th></tr></thead>
+        <thead><tr><th>Clasificación</th><th class="num">MMM$</th><th class="num">%</th></tr></thead>
         <tbody>
             {% for v in alloc.valorizacion %}
             <tr>
                 <td>{{ v.label }}</td>
-                <td style="text-align:right">{{ mmm(v.monto) }}</td>
-                <td style="text-align:right">{{ pct(v.pct) }}</td>
+                <td class="num">{{ mmm(v.monto) }}</td>
+                <td class="num">{{ pct(v.pct) }}</td>
             </tr>
             {% endfor %}
         </tbody>
@@ -77,7 +77,7 @@
         <thead>
             <tr>
                 <th>Código</th><th>Tipo de inversión</th><th>Clase</th><th>Geo</th>
-                <th style="text-align:right">MMM$</th><th style="text-align:right">%</th>
+                <th class="num">MMM$</th><th class="num">%</th>
             </tr>
         </thead>
         <tbody>
@@ -87,8 +87,8 @@
                 <td title="{{ c.glosa }}">{{ c.label }}</td>
                 <td class="lead">{{ c.clase }}</td>
                 <td class="lead">{{ "Extranjero" if c.geo == "extranjero" else "Nacional" }}</td>
-                <td style="text-align:right">{{ mmm(c.monto) }}</td>
-                <td style="text-align:right">{{ pct(c.pct) }}</td>
+                <td class="num">{{ mmm(c.monto) }}</td>
+                <td class="num">{{ pct(c.pct) }}</td>
             </tr>
             {% endfor %}
         </tbody>

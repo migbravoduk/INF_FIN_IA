@@ -1,0 +1,69 @@
+{#
+  partials/_ui.html — Componentes de interfaz (docs/PLAN_ESTETICA.md F3).
+  Uso: {% import "partials/_ui.html" as ui %} al inicio de cada plantilla que los use; también en
+  los partials que llegan por HTMX (los macros no se heredan). `corte` es global (api/deps.py).
+#}
+
+{# Encabezado de página. migas = [("Estados financieros", "/eeff"), …]. id_titulo conserva el id
+   que la página ya tenga en su <h1> (der-top, banca-top, fecu-top…). #}
+{% macro page_head(titulo, bajada=none, migas=none, id_titulo=none) -%}
+<header class="page-head">
+    {% if migas %}<nav class="migas" aria-label="Ruta">{% for texto, url in migas %}<a href="{{ url }}">{{ texto }}</a><span aria-hidden="true">›</span>{% endfor %}<span aria-current="page">{{ titulo|striptags }}</span></nav>{% endif %}
+    <h1{% if id_titulo %} id="{{ id_titulo }}"{% endif %}>{{ titulo }}</h1>
+    {% if bajada %}<p class="bajada">{{ bajada }}</p>{% endif %}
+    {% if caller is defined %}<div class="page-acciones">{{ caller() }}</div>{% endif %}
+</header>
+{%- endmacro %}
+
+{# Cabecera de sección. `id` va en el <h2> (conserva los ids de ancla existentes). #}
+{% macro sec_head(titulo, id=none, num=none, fecha=none, fuente=none, arriba="#contenido") -%}
+<div class="sec-head">
+    <h2{% if id %} id="{{ id }}"{% endif %}>{% if num %}<span class="sec-num">{{ num }}</span>{% endif %}{{ titulo }}</h2>
+    {{ corte(fecha, fuente) if fecha }}
+    {% if arriba %}<a href="{{ arriba }}" class="sec-arriba">↑ arriba</a>{% endif %}
+</div>
+{%- endmacro %}
+
+{# Cifra clave. `valor` llega YA formateado (con |es). delta: número con signo para decidir
+   flecha y color; delta_txt: el texto a mostrar. invertir=true si bajar es bueno (costos). #}
+{% macro stat(label, valor, unidad=none, delta=none, delta_txt=none, ctx=none, fecha=none, fuente=none, invertir=false, tono=none) -%}
+<div class="stat">
+    <div class="stat-label">{{ label }}</div>
+    <div class="stat-valor{{ ' ' ~ tono if tono }}">{{ valor }}{% if unidad %}<span class="stat-unidad">{{ unidad }}</span>{% endif %}</div>
+    {% if delta is not none %}{% set bueno = (delta > 0) != invertir %}
+    <div class="stat-delta {{ '' if delta == 0 else ('pos' if bueno else 'neg') }}">{{ '▲' if delta > 0 else ('▼' if delta < 0 else '■') }} {{ delta_txt if delta_txt is not none else delta }}</div>
+    {% endif %}
+    {% if ctx %}<div class="stat-ctx">{{ ctx }}</div>{% endif %}
+    {{ corte(fecha, fuente) if fecha }}
+</div>
+{%- endmacro %}
+
+{# Tarjeta de gráfico. Conserva el id del div del gráfico. alto: sm | md | lg (tokens). #}
+{% macro viz(id, titulo, sub=none, fuente=none, fecha=none, alto="md", nota=none, clase="") -%}
+<figure class="viz {{ clase }}">
+    <figcaption class="viz-head">
+        <span class="viz-titulo">{{ titulo }}</span>
+        {% if sub %}<span class="viz-sub">{{ sub }}</span>{% endif %}
+    </figcaption>
+    <div id="{{ id }}" class="chart viz-cuerpo viz-{{ alto }}"></div>
+    {% if fuente or fecha or nota %}
+    <div class="viz-pie">{% if nota %}<span>{{ nota }}</span>{% endif %}{% if fuente %}<span>Fuente: {{ fuente }}</span>{% endif %}{{ corte(fecha) if fecha }}</div>
+    {% endif %}
+</figure>
+{%- endmacro %}
+
+{% macro aviso(nivel="info") -%}
+<div class="aviso aviso--{{ nivel }}" role="note"><div>{{ caller() }}</div></div>
+{%- endmacro %}
+
+{% macro metodo(titulo="Cómo se calcula y de dónde sale", abierto=false) -%}
+<details class="metodo"{% if abierto %} open{% endif %}><summary>{{ titulo }}</summary><div>{{ caller() }}</div></details>
+{%- endmacro %}
+
+{% macro vacio(texto) -%}<p class="vacio">{{ texto }}</p>{%- endmacro %}
+
+{# Barra proporcional dentro de una celda. tono: '' | 'pos' | 'neg'. El ancho usa punto decimal. #}
+{% macro barra(valor, maximo, tono="") -%}
+{%- set w = ((valor|abs) / maximo * 100) if (maximo and valor is not none) else 0 -%}
+<span class="barra {{ tono }}" aria-hidden="true"><i style="--w: {{ '%.1f'|format(w if w < 100 else 100) }}%"></i></span>
+{%- endmacro %}

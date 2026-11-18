@@ -24,10 +24,10 @@
                 <th>Serie</th>
                 <th>Categoría</th>
                 <th>Frecuencia</th>
-                <th style="text-align:right">Último dato</th>
+                <th class="num">Último dato</th>
                 <th>Fecha</th>
                 <th>Cobertura</th>
-                <th style="text-align:right">Obs.</th>
+                <th class="num">Obs.</th>
             </tr>
         </thead>
         <tbody>
@@ -39,7 +39,7 @@
                 </td>
                 <td>{{ f.cat_label }}</td>
                 <td>{{ freq_label.get(f.frequency, f.frequency or "—") }}</td>
-                <td style="text-align:right">
+                <td class="num">
                     {% if f.last_value is not none %}
                         {{ f.last_value|es(2) }}
                         <span class="eeff-meta">{{ f.unit_label }}</span>
@@ -47,7 +47,7 @@
                 </td>
                 <td style="white-space:nowrap">{{ f.last_date or "—" }}</td>
                 <td class="eeff-meta" style="white-space:nowrap">{{ ((f.first_date or "—")|string)[:7] }} → {{ ((f.last_date or "—")|string)[:7] }}</td>
-                <td style="text-align:right">{{ f.n_obs|es(0) }}</td>
+                <td class="num">{{ f.n_obs|es(0) }}</td>
             </tr>
             {% endfor %}
         </tbody>

@@ -10,8 +10,8 @@ títulos y bajadas). No cambia datos, cálculos ni rutas.
 |---|---|---|---|
 | F0 | Preparación y línea base | hecha (sin cambios de código) | — |
 | F1 | Tokens, tipografía y base | hecha | bdb5693 |
-| F2 | Encabezado y navegación | hecha | HASH_F2 |
-| F3 | Componentes (CSS + macros) | pendiente | |
+| F2 | Encabezado y navegación | hecha | 02de8ad |
+| F3 | Componentes (CSS + macros) | hecha | HASH_F3 |
 | F4 | Estándar de gráficos (`charts.js`) | pendiente | |
 | F5a | Páginas grupo A | pendiente | |
 | F5b | Páginas grupo B | pendiente | |

@@ -113,20 +113,20 @@ def _bc_decorar(fila: dict) -> dict:
 # Clasificaciones de entidad del hub de EEFF. Cada una tiene su plan de cuentas y fuente;
 # bancos conserva su propia vista/lógica (desglose por moneda), el resto comparte el patrón.
 EEFF_CLASSES = [
-    {"key": "corporativos", "url": "/eeff/corporativos", "icon": "🏢", "title": "Corporativos",
+    {"key": "corporativos", "url": "/eeff/corporativos", "icon": "building-2", "title": "Corporativos",
      "desc": "Sociedades anónimas y demás emisores que no caen en otra clasificación.",
      "meta": "CMF · archivo plano IFRS · trimestral"},
-    {"key": "bancos", "url": "/banca", "icon": "🏦", "title": "Bancos",
+    {"key": "bancos", "url": "/banca", "icon": "landmark", "title": "Bancos",
      "desc": "Balances y resultados con desglose por tipo de moneda (lógica propia).",
      "meta": "CMF/SBIF · mensual"},
-    {"key": "seguros", "url": "/eeff/seguros", "icon": "🛡️", "title": "Compañías de seguros",
+    {"key": "seguros", "url": "/eeff/seguros", "icon": "shield", "title": "Compañías de seguros",
      "desc": "Aseguradoras de vida y generales, con su plan de cuentas FECU.",
      "meta": "CMF · FECU seguros · trimestral"},
-    {"key": "intermediarios", "url": "/eeff/intermediarios", "icon": "📈",
+    {"key": "intermediarios", "url": "/eeff/intermediarios", "icon": "trending-up",
      "title": "Intermediarios de valores",
      "desc": "Corredores de bolsa y agentes de valores.",
      "meta": "CMF · FECU IFRS · trimestral"},
-    {"key": "agf", "url": "/eeff/agf", "icon": "💼", "title": "AGF",
+    {"key": "agf", "url": "/eeff/agf", "icon": "briefcase", "title": "AGF",
      "desc": "Administradoras generales de fondos y administradoras de fondos afines.",
      "meta": "CMF · archivo plano IFRS · trimestral"},
 ]
@@ -290,19 +290,19 @@ def _period_label(period: str) -> str:
 # univariante, porque ni la cadena estructural ni las bandas del backtest corporativo
 # aplican a entidades financieras (ver models/simple_forecast.py).
 PROY_CLASSES = [
-    {"url": "/proyecciones/corporativos", "icon": "🏢", "title": "Corporativos",
+    {"url": "/proyecciones/corporativos", "icon": "building-2", "title": "Corporativos",
      "desc": "Ingresos y resultado con modelo híbrido anclado en las encuestas del BCCh.",
      "meta": "Híbrido · bandas calibradas por backtest"},
-    {"url": "/proyecciones/bancos", "icon": "🏦", "title": "Bancos",
+    {"url": "/proyecciones/bancos", "icon": "landmark", "title": "Bancos",
      "desc": "Serie de EEFF total (consolidada, sin desglose por moneda), mensual.",
      "meta": "SARIMAX · bandas no calibradas"},
-    {"url": "/proyecciones/seguros", "icon": "🛡️", "title": "Compañías de seguros",
+    {"url": "/proyecciones/seguros", "icon": "shield", "title": "Compañías de seguros",
      "desc": "Total activo y resultado del período, vida y generales.",
      "meta": "SARIMAX · bandas no calibradas"},
-    {"url": "/proyecciones/intermediarios", "icon": "📈", "title": "Intermediarios de valores",
+    {"url": "/proyecciones/intermediarios", "icon": "trending-up", "title": "Intermediarios de valores",
      "desc": "Total activos y utilidad del ejercicio de corredores y agentes.",
      "meta": "SARIMAX · bandas no calibradas"},
-    {"url": "/proyecciones/agf", "icon": "💼", "title": "AGF",
+    {"url": "/proyecciones/agf", "icon": "briefcase", "title": "AGF",
      "desc": "Administradoras generales de fondos (mismo formato IFRS que corporativos).",
      "meta": "Híbrido · bandas calibradas por backtest"},
 ]
@@ -375,26 +375,26 @@ _PROY_HYBRID = {
 
 # Tarjetas del hub que reúne a los inversionistas institucionales (AFP + seguros).
 INST_CLASSES = [
-    {"url": "/seguros/cartera", "icon": "🛡️", "title": "Cartera de seguros",
+    {"url": "/seguros/cartera", "icon": "chart-pie", "title": "Cartera de seguros",
      "desc": "Asset allocation de las compañías de seguros: clase de activo, exposición "
              "extranjera, valorización y deriva histórica.",
      "meta": "CMF · Circular 1.835 · mensual"},
-    {"url": "/afp", "icon": "🏛️", "title": "AFP",
+    {"url": "/afp", "icon": "piggy-bank", "title": "AFP",
      "desc": "Rentabilidad por fondo, cartera del sistema y simulación neta de comisiones.",
      "meta": "Superintendencia de Pensiones · mensual"},
-    {"url": "/fondos", "icon": "📊", "title": "Fondos de pensiones",
+    {"url": "/fondos", "icon": "chart-column", "title": "Fondos de pensiones",
      "desc": "Retornos multi-horizonte y composición de cada fondo por AFP.",
      "meta": "Superintendencia de Pensiones · mensual"},
-    {"url": "/inversion-institucional/derivados", "icon": "⚖️", "title": "Derivados",
+    {"url": "/inversion-institucional/derivados", "icon": "scale", "title": "Derivados",
      "desc": "Cómo están posicionados en derivados las AFP, las aseguradoras, los fondos y "
              "otros sectores: dirección, instrumento y tamaño. Incluye el monitor de los "
              "swaps de tasa de las AFP.",
      "meta": "Banco Central (F099.DER) + CMF · mensual"},
-    {"url": "/inversion-institucional/emisor", "icon": "🔎", "title": "Inversión por emisor",
+    {"url": "/inversion-institucional/emisor", "icon": "search", "title": "Inversión por emisor",
      "desc": "Elige un emisor (empresa, banco, Fisco…) y ve cuánto tienen invertido en él las "
              "compañías de seguros y los fondos mutuos, y cómo cambió mes a mes.",
      "meta": "CMF · Circular 1.835 + cartera FFMM · mensual"},
-    {"url": "/inversion-institucional/emisores", "icon": "🔗", "title": "Emisores en común",
+    {"url": "/inversion-institucional/emisores", "icon": "link-2", "title": "Emisores en común",
      "desc": "Emisores que están a la vez en la cartera de las aseguradoras y de los fondos "
              "mutuos, cruzando instrumento por instrumento.",
      "meta": "CMF · Circular 1.835 + cartera FFMM · mensual"},

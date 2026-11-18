@@ -21,13 +21,13 @@
 <table class="eeff-table">
     <thead><tr>
         <th></th><th>Producto</th><th>Categoría</th>
-        <th style="text-align:right">12 meses</th>
-        <th style="text-align:right">Real 12m</th>
-        <th style="text-align:right">3 años (anual)</th>
-        <th style="text-align:right" title="Percentil dentro de su categoría a 12 meses (100 = mejor)">Posición</th>
-        <th style="text-align:right" title="Volatilidad anualizada (36 meses)">Volatilidad</th>
-        <th style="text-align:right" title="Remuneración + gasto operacional anual, ya descontados del valor cuota">Costo anual</th>
-        <th style="text-align:right">Patrimonio MM$</th>
+        <th class="num">12 meses</th>
+        <th class="num">Real 12m</th>
+        <th class="num">3 años (anual)</th>
+        <th title="Percentil dentro de su categoría a 12 meses (100 = mejor)" class="num">Posición</th>
+        <th title="Volatilidad anualizada (36 meses)" class="num">Volatilidad</th>
+        <th title="Remuneración + gasto operacional anual, ya descontados del valor cuota" class="num">Costo anual</th>
+        <th class="num">Patrimonio MM$</th>
     </tr></thead>
     <tbody>
     {% for r in rows %}
@@ -37,13 +37,13 @@
             {% if r.serie and r.tipo == 'ffmm' %}<span class="lead"> · serie {{ r.serie }}</span>{% endif %}
             <br><span class="lead">{{ r.proveedor_corto or '—' }}{% if r.moneda == 'USD' %} · en dólares{% endif %}</span></td>
         <td><span class="lead">{{ r.categoria or '—' }}</span></td>
-        <td style="text-align:right" class="{{ 'pos' if (r.rent_nom_12m or 0) >= 0 else 'neg' }}">{{ r.rent_nom_12m|pct }}</td>
-        <td style="text-align:right">{{ r.rent_real_12m|pct }}</td>
-        <td style="text-align:right">{{ r.rent_nom_36m_ann|pct }}</td>
-        <td style="text-align:right">{{ r.percentil_cat_12m|num }}</td>
-        <td style="text-align:right">{{ r.volatilidad_ann|pct(1, False) }}</td>
-        <td style="text-align:right">{{ r.costo_anual|pct(2, False) }}</td>
-        <td style="text-align:right">{{ r.patrimonio_clp_mm|num }}</td>
+        <td class="{{ 'pos' if (r.rent_nom_12m or 0) >= 0 else 'neg' }}">{{ r.rent_nom_12m|pct }}</td>
+        <td class="num">{{ r.rent_real_12m|pct }}</td>
+        <td class="num">{{ r.rent_nom_36m_ann|pct }}</td>
+        <td class="num">{{ r.percentil_cat_12m|num }}</td>
+        <td class="num">{{ r.volatilidad_ann|pct(1, False) }}</td>
+        <td class="num">{{ r.costo_anual|pct(2, False) }}</td>
+        <td class="num">{{ r.patrimonio_clp_mm|num }}</td>
     </tr>
     {% endfor %}
     </tbody>

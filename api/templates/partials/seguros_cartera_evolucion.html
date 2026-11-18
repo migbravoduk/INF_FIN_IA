@@ -17,18 +17,18 @@
         <thead>
             <tr>
                 <th>Clase de activo</th>
-                <th style="text-align:right">{{ desde }}</th>
-                <th style="text-align:right">{{ hasta }}</th>
-                <th style="text-align:right">Δ pp</th>
+                <th class="num">{{ desde }}</th>
+                <th class="num">{{ hasta }}</th>
+                <th class="num">Δ pp</th>
             </tr>
         </thead>
         <tbody>
             {% for d in deriva %}
             <tr>
                 <td>{{ d.clase }}</td>
-                <td style="text-align:right">{{ pct(d.inicio) }}</td>
-                <td style="text-align:right">{{ pct(d.fin) }}</td>
-                <td style="text-align:right">
+                <td class="num">{{ pct(d.inicio) }}</td>
+                <td class="num">{{ pct(d.fin) }}</td>
+                <td class="num">
                     <b class="{{ 'pos' if d.delta >= 0 else 'neg' }}">{{ d.delta|es(1, True) }}</b>
                 </td>
             </tr>

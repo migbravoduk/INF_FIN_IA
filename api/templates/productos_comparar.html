@@ -31,7 +31,7 @@ Alto Patrimonio o APV tienen requisitos de entrada y costos distintos a las Reta
     {% for label, key, fmt in filas %}
     <tr><td>{{ label }}</td>
         {% for p in prods %}{% set v = p[key] if fmt == 'txt' else p.m.get(key) %}
-        <td style="text-align:right">{% if fmt == 'txt' %}{{ v or '—' }}{% elif fmt == 'pct' %}{{ v|pct }}{% elif fmt == 'pct2' %}{{ v|pct(2, False) }}{% else %}{{ v|num }}{% endif %}</td>
+        <td class="num">{% if fmt == 'txt' %}{{ v or '—' }}{% elif fmt == 'pct' %}{{ v|pct }}{% elif fmt == 'pct2' %}{{ v|pct(2, False) }}{% else %}{{ v|num }}{% endif %}</td>
         {% endfor %}</tr>
     {% endfor %}
     </tbody>
@@ -69,7 +69,7 @@ Alto Patrimonio o APV tienen requisitos de entrada y costos distintos a las Reta
     <p class="lead">Porcentaje de la cartera que dos fondos tienen en los mismos instrumentos (suma de los
     pesos mínimos por nemotécnico). Un traslape alto significa que tener ambos diversifica poco.</p>
     <table class="eeff-table">
-    {% for a, b, t in traslape %}<tr><td>{{ a }} ↔ {{ b }}</td><td style="text-align:right"><b>{{ t|es(1) if t is not none else '—' }}%</b></td></tr>{% endfor %}
+    {% for a, b, t in traslape %}<tr><td>{{ a }} ↔ {{ b }}</td><td class="num"><b>{{ t|es(1) if t is not none else '—' }}%</b></td></tr>{% endfor %}
     </table>
 </section>
 {% endif %}

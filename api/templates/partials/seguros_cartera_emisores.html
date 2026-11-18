@@ -24,7 +24,7 @@
         <tr>
             <th>Emisor</th>
             <th>Tipo de instrumento</th>
-            <th style="text-align:right">Posiciones</th>
+            <th class="num">Posiciones</th>
             <th>Nominal por moneda</th>
         </tr>
     </thead>
@@ -48,7 +48,7 @@
                 {{ r.tipo }}
                 {% if not r.solo_un_tipo %}<span class="lead">(y otros)</span>{% endif %}
             </td>
-            <td style="text-align:right">{{ r.total|es(0) }}</td>
+            <td class="num">{{ r.total|es(0) }}</td>
             <td>
                 {% for m in r.monedas %}
                 <span style="display:inline-block; margin-right:1rem">
