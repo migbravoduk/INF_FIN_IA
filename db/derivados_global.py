@@ -444,6 +444,17 @@ def alertas(ind: dict, afp: dict, seg: dict, ffm: dict) -> list[dict]:
             if abs(cambio) > max(2000, abs(f["usd_neto_12"]) * 0.5):
                 out.append({"nivel": "info", "entidad": f["sector"],
                             "texto": f"su neto dólar-peso cambió {cambio:+,.0f} MMUSD en 12 meses".replace(",", ".")})
+    # Cada alerta dice a qué mes y fuente se refiere (las fuentes tienen rezagos distintos).
+    sectores = {f["sector"] for f in (ind or {}).get("filas", [])}
+    for x in out:
+        if x["entidad"].startswith("AFP"):
+            x.setdefault("fecha", (afp or {}).get("ultimo")); x.setdefault("fuente", "SP")
+        elif x["entidad"].startswith("Fondo mutuo"):
+            x.setdefault("fecha", (ffm or {}).get("ultimo")); x.setdefault("fuente", "CMF")
+        elif x["entidad"] in sectores:
+            x.setdefault("fecha", (ind or {}).get("ultimo")); x.setdefault("fuente", "Banco Central")
+        else:
+            x.setdefault("fecha", (seg or {}).get("ultimo")); x.setdefault("fuente", "CMF B.7")
     orden = {"alto": 0, "medio": 1, "info": 2}
     return sorted(out, key=lambda a: orden[a["nivel"]])
 

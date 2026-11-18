@@ -31,35 +31,47 @@
     <a href="/inversion-institucional/derivados" style="margin-left:auto">Monitor de swaps de AFP →</a>
 </nav>
 
+<div class="cortes" role="note">
+    <strong>Fechas de corte.</strong> Esta página junta fuentes con rezagos distintos; cada sección dice a qué mes se refiere.
+    <span>Banco Central (secciones 1–3): <b>{{ mer.ultimo|mes_es if mer else '—' }}</b></span>
+    <span>AFP por fondo, Superintendencia de Pensiones: <b>{{ afp.ultimo|mes_es if afp else '—' }}</b></span>
+    <span>Seguros, CMF B.7: <b>{{ seg.ultimo|mes_es if seg else '—' }}</b></span>
+    <span>Fondos mutuos, CMF: <b>{{ ffm.ultimo|mes_es if ffm else '—' }}</b></span>
+</div>
+
 {% if mer %}
 <div class="kpi-grid">
     <div class="kpi-card">
-        <span class="kpi-sub">Nocional vigente · {{ mer.ultimo }}</span>
+        <span class="kpi-sub">Nocional vigente</span>
         <span class="kpi-big">{{ (mer.total / 1e6)|es(2) }}</span>
         <span class="kpi-sub">billones de USD en contratos de los bancos
             {%- if mer.total_12 %} ({{ ((mer.total / mer.total_12 - 1) * 100)|es(0, True) }}% en 12 meses){% endif %}</span>
+        {{ corte(mer.ultimo, "Banco Central") }}
     </div>
     {% if afp %}<div class="kpi-card">
-        <span class="kpi-sub">Cobertura cambiaria AFP · {{ afp.ultimo }}</span>
+        <span class="kpi-sub">Cobertura cambiaria AFP</span>
         <span class="kpi-big">{{ pct(afp.total.cobertura) }}</span>
         <span class="kpi-sub">de la inversión extranjera ({{ (afp.total.ext / 1e3)|es(0) }} mil MMUSD) vendida a plazo contra pesos</span>
+        {{ corte(afp.ultimo, "SP") }}
     </div>{% endif %}
     {% if ind %}{% set f_afp = ind.filas|selectattr('sector', 'equalto', 'AFP')|first %}
     <div class="kpi-card">
         <span class="kpi-sub">Si el dólar sube {{ ind.shock.fx|es(0) }}%</span>
         <span class="kpi-big neg">{{ (f_afp.pyg_fx / 1e3)|es(1, True) }}</span>
         <span class="kpi-sub">mil MMUSD pierden las AFP en sus forwards (lo compensa su cartera extranjera)</span>
+        {{ corte(ind.ultimo, "Banco Central") }}
     </div>{% endif %}
     {% if tas %}<div class="kpi-card">
         <span class="kpi-sub">Swap cámara · si las tasas suben 1 pb</span>
         <span class="kpi-big neg">{{ tas.dv01.residentes|es(0, True) }}</span>
         <span class="kpi-sub">millones de $ para los residentes no bancos (reciben tasa fija); los bancos {{ tas.dv01.bancos|es(0, True) }}</span>
+        {{ corte(tas.ultimo, "Banco Central") }}
     </div>{% endif %}
 </div>
 {% endif %}
 
 {# ================================================================ 1 · MERCADO #}
-<h2 id="der-mercado" class="fecu-grp">1 · El mercado: dónde está el riesgo
+<h2 id="der-mercado" class="fecu-grp">1 · El mercado: dónde está el riesgo {{ corte(mer.ultimo, "Banco Central") if mer }}
     <a href="#der-top" class="minimap-top">↑ arriba</a></h2>
 {% if mer %}
 {% set c_tasa = mer.clases[0] %}
@@ -73,40 +85,40 @@
 </p>
 <div class="chart-grid">
     <div class="chart-block">
-        <h4>Nocional vigente por clase de riesgo (miles de millones de USD)</h4>
+        <h4>Nocional vigente por clase de riesgo (miles de millones de USD), {{ mer.serie.meses[0]|mes_es }} – {{ mer.ultimo|mes_es }}</h4>
         <div id="der-mer-serie" class="chart"></div>
     </div>
     <div class="chart-block">
-        <h4>Tasas de interés por tipo · {{ mer.ultimo }} (miles de millones de USD)</h4>
+        <h4>Tasas de interés por tipo, {{ mer.ultimo|mes_es }} (miles de millones de USD)</h4>
         <div id="der-mer-tasas" class="chart"></div>
     </div>
     <div class="chart-block">
-        <h4>Monedas contra peso: instrumento y contraparte · {{ mer.ultimo }}</h4>
+        <h4>Monedas contra peso: instrumento y contraparte, {{ mer.ultimo|mes_es }} (miles de millones de USD)</h4>
         <div id="der-mer-fx" class="chart"></div>
     </div>
 </div>
 {% else %}<p class="loading">Sin series del Banco Central cargadas.</p>{% endif %}
 
 {# ================================================================ 2 · INDUSTRIAS #}
-<h2 id="der-industrias" class="fecu-grp">2 · Industrias: quién vende y quién compra dólares a plazo
+<h2 id="der-industrias" class="fecu-grp">2 · Industrias: quién vende y quién compra dólares a plazo {{ corte(ind.ultimo, "Banco Central") if ind }}
     <a href="#der-top" class="minimap-top">↑ arriba</a></h2>
 {% if ind %}
 {% set vend = ind.filas|selectattr('usd_neto')|sort(attribute='usd_neto')|first %}
 {% set comp = ind.filas|selectattr('usd_neto')|sort(attribute='usd_neto', reverse=True)|first %}
 <p class="lectura">
     <strong>{{ vend.sector }}</strong> es el gran vendedor de dólares a plazo ({{ vend.usd_neto|es(0) }} MMUSD
-    neto al {{ ind.ultimo }}{% if vend.usd_neto_12 %}, {{ vend.usd_neto_12|es(0) }} hace un año{% endif %}): cubre
+    neto a {{ ind.ultimo|mes_es }}{% if vend.usd_neto_12 %}; {{ vend.usd_neto_12|es(0) }} un año antes{% endif %}): cubre
     en pesos una cartera invertida afuera. Del otro lado compran <strong>{{ comp.sector|lower }}</strong>
     ({{ comp.usd_neto|es(0, True) }}) y las empresas importadoras o endeudadas en dólares. Los bancos
     intermedian y se quedan con {{ ind.banco.usd_neto|es(0, True) }} MMUSD netos comprados.
 </p>
 <div class="chart-grid">
     <div class="chart-block">
-        <h4>Neto dólar-peso por sector · {{ ind.ultimo }} (MMUSD; ◆ = hace 12 meses)</h4>
+        <h4>Neto dólar-peso por sector, {{ ind.ultimo|mes_es }} (MMUSD; ◆ = un año antes)</h4>
         <div id="der-ind-bar" class="chart"></div>
     </div>
     <div class="chart-block">
-        <h4>Neto dólar-peso en el tiempo (MMUSD; negativo = vende dólares)</h4>
+        <h4>Neto dólar-peso en el tiempo, {{ ind.serie.meses[0]|mes_es }} – {{ ind.ultimo|mes_es }} (MMUSD; negativo = vende dólares)</h4>
         <div id="der-ind-serie" class="chart"></div>
     </div>
 </div>
@@ -115,7 +127,7 @@
     <thead><tr>
         <th>Sector</th>
         <th style="text-align:right">Compra USD</th><th style="text-align:right">Vende USD</th>
-        <th style="text-align:right">Neto USD-CLP</th><th style="text-align:right">Δ 12 meses</th>
+        <th style="text-align:right">Neto USD-CLP {{ ind.ultimo|mes_es }}</th><th style="text-align:right">Δ 12 meses</th>
         <th style="text-align:right">Otras monedas (neto)</th>
         <th style="text-align:right">UF neto (mill. UF)</th>
         <th style="text-align:right">Bruto USD-CLP</th>
@@ -152,7 +164,7 @@
 {% endif %}
 
 {# ================================================================ 3 · RIESGOS #}
-<h2 id="der-riesgos" class="fecu-grp">3 · Riesgos: qué pasa si se mueve el dólar, la inflación o las tasas
+<h2 id="der-riesgos" class="fecu-grp">3 · Riesgos: qué pasa si se mueve el dólar, la inflación o las tasas {{ corte(ind.ultimo, "Banco Central") if ind }}
     <a href="#der-top" class="minimap-top">↑ arriba</a></h2>
 {% if ind %}
 <p class="lectura">
@@ -164,33 +176,33 @@
 </p>
 <div class="chart-grid">
     <div class="chart-block">
-        <h4>Resultado en derivados si el dólar sube {{ ind.shock.fx|es(0) }}% (MMUSD)</h4>
+        <h4>Resultado en derivados si el dólar sube {{ ind.shock.fx|es(0) }}% (MMUSD; posiciones a {{ ind.ultimo|mes_es }})</h4>
         <div id="der-stress-fx" class="chart"></div>
     </div>
     <div class="chart-block">
-        <h4>Resultado si la inflación sorprende +{{ ind.shock.uf|es(0) }} pp (MMUSD, contratos UF-peso)</h4>
+        <h4>Resultado si la inflación sorprende +{{ ind.shock.uf|es(0) }} pp (MMUSD; contratos UF-peso a {{ ind.ultimo|mes_es }})</h4>
         <div id="der-stress-uf" class="chart"></div>
     </div>
 </div>
 {% endif %}
 {% if tas %}
-<h3 style="font-size:1rem;margin-top:1.6rem">Tasas en pesos: swap cámara por plazo</h3>
+<h3 style="font-size:1rem;margin-top:1.6rem">Tasas en pesos: swap cámara por plazo {{ corte(tas.ultimo, "Banco Central") }}</h3>
 <p class="lectura" style="font-size:.92rem">
     Los residentes no bancos (principalmente AFP y seguros) <strong>reciben tasa fija</strong> en swap
     cámara: ganan si las tasas bajan. Por cada punto base de alza pierden del orden de
     <strong>{{ (-tas.dv01.residentes)|es(0) }} millones de pesos</strong>; los no residentes,
     {{ (-tas.dv01.no_residentes)|es(0) }}. Los bancos tienen la posición contraria
     ({{ tas.dv01.bancos|es(0, True) }}). En tasas extranjeras, las AFP quedaron con un neto de
-    {{ mm(tas.afp_ext.neto) }} MMUSD en swaps (recibe fijo) al {{ tas.ultimo }}: es la posición del
+    {{ mm(tas.afp_ext.neto) }} MMUSD en swaps (recibe fijo) a {{ tas.ultimo|mes_es }}: es la posición del
     episodio de 2026, en detalle en el <a href="/inversion-institucional/derivados">monitor</a>.
 </p>
 <div class="chart-grid">
     <div class="chart-block">
-        <h4>Sensibilidad a +1 pb por plazo original (millones de $; negativo = pierde si suben)</h4>
+        <h4>Sensibilidad a +1 pb por plazo original, {{ tas.ultimo|mes_es }} (millones de $; negativo = pierde si suben)</h4>
         <div id="der-dv01" class="chart"></div>
     </div>
     <div class="chart-block">
-        <h4>Nocional bruto de swap cámara por plazo original (billones de $)</h4>
+        <h4>Nocional bruto de swap cámara por plazo original, {{ tas.ultimo|mes_es }} (billones de $)</h4>
         <div id="der-spc-bruto" class="chart"></div>
     </div>
 </div>
@@ -200,11 +212,11 @@
 {% endif %}
 
 {# ================================================================ 4 · COBERTURAS #}
-<h2 id="der-coberturas" class="fecu-grp">4 · Coberturas por entidad: ¿cubren o apuestan?
+<h2 id="der-coberturas" class="fecu-grp">4 · Coberturas por entidad: ¿cubren o apuestan? <span class="corte">cada bloque tiene su fecha</span>
     <a href="#der-top" class="minimap-top">↑ arriba</a></h2>
 
 {% if afp %}
-<h3 style="font-size:1rem">Fondos de pensiones, por AFP y fondo · {{ afp.ultimo }}</h3>
+<h3 style="font-size:1rem">Fondos de pensiones, por AFP y fondo {{ corte(afp.ultimo, "Superintendencia de Pensiones") }}</h3>
 {% set fe = afp.por_fondo|selectattr('fondo', 'equalto', 'E')|first %}
 {% set fa = afp.por_fondo|selectattr('fondo', 'equalto', 'A')|first %}
 <p class="lectura" style="font-size:.92rem">
@@ -215,11 +227,11 @@
 </p>
 <div class="chart-grid">
     <div class="chart-block">
-        <h4>Cobertura cambiaria: venta neta de USD a plazo / inversión extranjera (%)</h4>
+        <h4>Cobertura cambiaria, {{ afp.ultimo|mes_es }}: venta neta de USD a plazo / inversión extranjera (%)</h4>
         <div id="der-afp-cob" class="chart"></div>
     </div>
     <div class="chart-block">
-        <h4>Valorización de los swaps (% del fondo; negativo = pérdida no realizada)</h4>
+        <h4>Valorización de los swaps, {{ afp.ultimo|mes_es }} (% del fondo; negativo = pérdida no realizada)</h4>
         <div id="der-afp-sw" class="chart"></div>
     </div>
 </div>
@@ -245,11 +257,13 @@
 </div>
 <p class="lead">MMUSD. Fuente: cartera desagregada de la Superintendencia de Pensiones (forwards
     dólar-peso y UF-peso por AFP y fondo, cualquier contraparte; swaps a valor de mercado).
-    Llega con ~4 meses de rezago; el Banco Central (sección 2) va 3 meses adelante.</p>
+    Llega con ~4 meses de rezago: este bloque es de {{ afp.ultimo|mes_es }}, mientras las secciones 1–3
+    (Banco Central) son de {{ mer.ultimo|mes_es if mer else '—' }}. Por eso la venta de dólares de las AFP aquí
+    ({{ mm(afp.total.usd_neto_venta) }} MMUSD, todas las contrapartes) no coincide con la de la sección 2.</p>
 {% endif %}
 
 {% if seg %}
-<h3 style="font-size:1rem;margin-top:1.8rem">Compañías de seguros · {{ seg.ultimo }}</h3>
+<h3 style="font-size:1rem;margin-top:1.8rem">Compañías de seguros {{ corte(seg.ultimo, "CMF, archivos B.7 y B.8") }}</h3>
 <p class="lectura" style="font-size:.92rem">
     Las compañías tienen {{ (seg.total.ext_usd / 1e3)|es(1) }} mil MMUSD invertidos afuera y una posición
     corta en moneda extranjera vía derivados de {{ (seg.total.me_usd / 1e3)|es(1) }} mil: cubren cerca
@@ -282,7 +296,7 @@
 {% endif %}
 
 {% if ffm %}
-<h3 style="font-size:1rem;margin-top:1.8rem">Fondos mutuos · {{ ffm.ultimo }}</h3>
+<h3 style="font-size:1rem;margin-top:1.8rem">Fondos mutuos {{ corte(ffm.ultimo, "CMF, cartera mensual") }}</h3>
 <p class="lectura" style="font-size:.92rem">
     {{ ffm.n }} fondos usan derivados. El grueso del nocional está en fondos de deuda en pesos y UF que
     usan swaps y forwards de UF y de tasa (las tres mayores posiciones suman el {{ ffm.top3|es(0) }}%).
@@ -292,7 +306,7 @@
 </p>
 <div class="chart-grid">
     <div class="chart-block">
-        <h4>Fondos con inversión extranjera: cuánto cubren (%)</h4>
+        <h4>Fondos con inversión extranjera: cuánto cubren (%), {{ ffm.ultimo|mes_es }}</h4>
         <div class="table-scroll">
         <table class="eeff-table">
             <thead><tr><th>Fondo</th><th style="text-align:right">Extranjero (MMUSD)</th>
@@ -305,7 +319,7 @@
         </div>
     </div>
     <div class="chart-block">
-        <h4>Nocional sobre patrimonio: los más apalancados (veces)</h4>
+        <h4>Nocional sobre patrimonio: los más apalancados (veces), {{ ffm.ultimo|mes_es }}</h4>
         <div class="table-scroll">
         <table class="eeff-table">
             <thead><tr><th>Fondo</th><th style="text-align:right">Nocional (MM$)</th>
@@ -331,7 +345,7 @@
     dólar-peso cambió más de 50% (y más de 2.000 MMUSD) en un año.</p>
 {% for a in d.alertas %}
 <div class="alerta"><span class="badge {{ a.nivel }}">{{ a.nivel }}</span>
-    <div><strong>{{ a.entidad }}</strong> — {{ a.texto }}</div></div>
+    <div><strong>{{ a.entidad }}</strong> — {{ a.texto }} {{ corte(a.fecha, a.fuente) }}</div></div>
 {% else %}<p class="loading">Sin alertas con las reglas vigentes.</p>{% endfor %}
 
 {# ================================================================ 6 · MÉTODO #}
@@ -345,8 +359,8 @@
     sector; la del sector es la de signo contrario. Coincide exacta con lo que AFP, seguros, AGF y
     empresas reportan de sí mismos frente a los bancos. Identidades verificadas en el último mes:</p>
     <ul>{% for i in d.ident %}<li>{{ i.chequeo }}: diferencia {{ i.dif|es(3) }} MMUSD</li>{% endfor %}</ul>
-    <p><strong>Rezagos.</strong> Banco Central {{ mer.ultimo if mer else '—' }}; SP {{ afp.ultimo if afp else '—' }};
-    seguros {{ seg.ultimo if seg else '—' }}; fondos mutuos {{ ffm.ultimo if ffm else '—' }}.
+    <p><strong>Rezagos.</strong> Banco Central {{ mer.ultimo|mes_es if mer else '—' }} (~2 meses); SP {{ afp.ultimo|mes_es if afp else '—' }} (~4 meses);
+    seguros {{ seg.ultimo|mes_es if seg else '—' }}; fondos mutuos {{ ffm.ultimo|mes_es if ffm else '—' }}.
     Plan y validaciones: <code>docs/PLAN_DERIVADOS.md</code>.</p>
 </div>
 

@@ -39,6 +39,33 @@
         {% block content %}{% endblock %}
     </main>
 
+    <script>
+    /* Chequeo de diseño para scripts/ui_capturas.py: con ?chequeo_ui=1 marca en <body> si la
+       página desborda en horizontal, qué elementos se salen y cuántos textos miden < 12 px. */
+    (function () {
+        if (location.search.indexOf("chequeo_ui=1") < 0) { return; }
+        window.addEventListener("load", function () {
+            setTimeout(function () {
+                var w = document.documentElement.clientWidth, malos = [], chicos = 0;
+                document.querySelectorAll("body *").forEach(function (el) {
+                    if (el.closest(".js-plotly-plot, svg, script, style")) { return; }
+                    var r = el.getBoundingClientRect();
+                    if (r.width && r.right > w + 1 && !el.closest(".table-scroll, .tbl-wrap")) {
+                        var c = (typeof el.className === "string" && el.className) ? "." + el.className.split(" ")[0] : "";
+                        malos.push(el.tagName.toLowerCase() + (el.id ? "#" + el.id : "") + c);
+                    }
+                    var tieneTexto = [].some.call(el.childNodes, function (n) { return n.nodeType === 3 && n.textContent.trim(); });
+                    if (tieneTexto && parseFloat(getComputedStyle(el).fontSize) < 12) { chicos++; }
+                });
+                document.body.setAttribute("data-ui-desborde", String(document.documentElement.scrollWidth > w));
+                document.body.setAttribute("data-ui-culpables", malos.slice(0, 12).join(" "));
+                document.body.setAttribute("data-ui-letra-chica", String(chicos));
+                document.body.setAttribute("data-ui-ancho", String(window.innerWidth));
+            }, 3000);
+        });
+    })();
+    </script>
+
     <footer class="footer">
         <span>Fuentes: Banco Central de Chile, CMF y Superintendencia de Pensiones · v0.2.0</span>
         <span class="disclaimer">Información de carácter informativo, no constituye asesoría ni

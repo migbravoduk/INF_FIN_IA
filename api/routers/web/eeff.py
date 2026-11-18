@@ -34,6 +34,11 @@ def eeff(request: Request, rut: str = Query(""), db: Database = Depends(get_db))
     scope = "agf" if request.url.path.endswith("/agf") else "corporativos"
     cfg = _EEFF_SCOPES[scope]
     companies = records(db.get_cmf_companies(agf=cfg["agf"]))
+    if not rut:
+        # Sin empresa pedida, abre con una que tenga historia (la primera alfabética solía
+        # venir vacía), igual que /proyecciones/corporativos.
+        nombre = db.get_cmf_default_company(agf=cfg["agf"])
+        rut = next((str(c.get("rut")) for c in companies if c.get("company_name") == nombre), "")
     if rut:
         companies.sort(key=lambda c: str(c.get("rut")) != rut)  # la pedida queda primera
     return templates.TemplateResponse(request, "eeff.html", {

@@ -82,6 +82,29 @@ def _agf_corto(s) -> str:
                     for w in t.split()).replace("Itau", "Itaú").replace("ITAU", "Itaú")
 
 
+_MESES_ES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"]
+
+
+def _mes_es(x) -> str:
+    """202609 / '2026-09' / '2026-09-30' -> 'sep 2026'. Si no reconoce el formato, lo devuelve tal cual."""
+    t = str(x or "").replace("-", "")
+    if len(t) < 6 or not t[:6].isdigit() or not 1 <= int(t[4:6]) <= 12:
+        return str(x or "—")
+    return f"{_MESES_ES[int(t[4:6]) - 1]} {t[:4]}"
+
+
+def _corte(fecha, fuente: str = ""):
+    """Etiqueta "dato a sep 2026 · Banco Central" para títulos de sección, gráficos y tarjetas:
+    cada cifra dice a qué mes se refiere y de qué fuente sale (las fuentes tienen rezagos distintos)."""
+    from markupsafe import Markup, escape
+    if not fecha:
+        return Markup("")
+    txt = f"dato a {_mes_es(fecha)}" + (f" · {fuente}" if fuente else "")
+    return Markup(f'<span class="corte" title="Mes al que se refiere el dato y su fuente">{escape(txt)}</span>')
+
+
+templates.env.filters["mes_es"] = _mes_es
+templates.env.globals["corte"] = _corte
 templates.env.filters["agf_corto"] = _agf_corto
 templates.env.filters["pct"] = _pct
 templates.env.filters["num"] = _num

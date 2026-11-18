@@ -1,0 +1,40 @@
+<!doctype html>
+<!--
+  api/static/ui_movil.html — Herramienta de diagnóstico de scripts/ui_capturas.py.
+  Chrome sin ventana no baja de 500 px de ancho: para ver una vista como en un celular se la
+  carga en un iframe del ancho pedido (?w=390&h=2400&src=/afp). Copia a su propio <body> el
+  resultado del chequeo de diseño de base.html (?chequeo_ui=1) para leerlo con --dump-dom.
+-->
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <title>Vista móvil (diagnóstico)</title>
+    <style>
+        html, body { margin: 0; background: #000; }
+        iframe { border: 0; display: block; }
+    </style>
+</head>
+<body>
+<iframe id="f" title="vista"></iframe>
+<script>
+(function () {
+    var q = new URLSearchParams(location.search);
+    var w = +(q.get("w") || 390), h = +(q.get("h") || 2400), src = q.get("src") || "/";
+    var f = document.getElementById("f");
+    f.width = w; f.height = h; f.style.width = w + "px"; f.style.height = h + "px";
+    f.src = src + (src.indexOf("?") < 0 ? "?" : "&") + "chequeo_ui=1";
+    f.onload = function () {
+        setTimeout(function () {
+            try {
+                var b = f.contentDocument.body;
+                ["desborde", "culpables", "letra-chica", "ancho"].forEach(function (k) {
+                    var v = b.getAttribute("data-ui-" + k);
+                    document.body.setAttribute("data-ui-" + k, v === null ? "?" : (v || "-"));
+                });
+            } catch (e) { document.body.setAttribute("data-ui-desborde", "error"); }
+        }, 4500);
+    };
+})();
+</script>
+</body>
+</html>

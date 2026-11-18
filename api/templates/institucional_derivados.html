@@ -22,7 +22,7 @@
 {% else %}
 
 {# ============================ 1 · MONITOR ============================ #}
-<h2 style="margin-top:1.5rem">1 · Monitor de los swaps de tasa de las AFP</h2>
+<h2 style="margin-top:1.5rem">1 · Monitor de los swaps de tasa de las AFP {{ corte(m.ultimo, "Banco Central") }}</h2>
 <p class="lead">Banco Central, montos vigentes de los fondos de pensiones (todas las AFP y fondos
 juntos: el Banco Central no los separa). Último dato: <strong>{{ m.ultimo }}</strong>; se publica con ~2 meses de rezago.</p>
 
@@ -101,14 +101,14 @@ máximo histórico (+10% sobre el máximo previo y &gt; 1× los activos). Se mue
 </details>
 
 {# ============================ 2 · SECTORES ============================ #}
-<h2 style="margin-top:2.5rem">2 · Quién está de qué lado del dólar</h2>
+<h2 style="margin-top:2.5rem">2 · Quién está de qué lado del dólar {{ corte(sec.meses[-1] if sec and sec.meses else none, "Banco Central") }}</h2>
 <p class="lead">Neto de derivados de monedas por sector (MMUSD, mismo eje en todos). Negativo = vende
 dólares a plazo; positivo = los compra. Los bancos son la contraparte de casi todos.</p>
 <div class="chart-grid" id="d-sectores"></div>
 
 {# ============================ 3 · AFP DETALLE ============================ #}
 {% if det %}
-<h2 style="margin-top:2.5rem">3 · AFP: dólar, UF y tasas en pesos</h2>
+<h2 style="margin-top:2.5rem">3 · AFP: dólar, UF y tasas en pesos {{ corte(det.ultimo, "Banco Central") }}</h2>
 <div class="afp-stats">
     <div><span>USD-CLP comprador / vendedor (MMUSD)</span><b>{{ det.usd.com|es(0) }} / {{ det.usd.vta|es(0) }}</b></div>
     <div><span>Neto USD-CLP</span><b>{{ det.usd.net|es(0) }}</b><span>con bancos {{ det.usd.net_bancos|es(0) }} · no residentes {{ det.usd.net_nr|es(0) }}</span></div>
@@ -132,7 +132,7 @@ dólares a plazo; positivo = los compra. Los bancos son la contraparte de casi t
 
 
 {# ============================ 4 · AFP POR ADMINISTRADORA (SP) ============================ #}
-<h2 style="margin-top:2.5rem">4 · Swaps y forwards por AFP, fondo y contraparte</h2>
+<h2 style="margin-top:2.5rem">4 · Swaps y forwards por AFP, fondo y contraparte {{ corte(sw.ultimo if sw else none, "Superintendencia de Pensiones") }}</h2>
 {% if sw %}
 <p class="lead">Superintendencia de Pensiones, cartera desagregada ({{ sw.ultimo }}; la SP publica con
 ~4 meses de rezago, por eso llega antes el Banco Central). Swaps = <b>valorización</b> del contrato
@@ -184,7 +184,7 @@ del sistema ({{ fw.total.neto|es(0) }}) está en línea con el de la sección 3 
 {% else %}<p class="loading">Sin cartera desagregada de la SP cargada (<code>main.py backfill-sp-detalle</code>).</p>{% endif %}
 
 {# ============================ 5 · SEGUROS ============================ #}
-<h2 style="margin-top:2.5rem">5 · Compañías de seguros, contrato a contrato</h2>
+<h2 style="margin-top:2.5rem">5 · Compañías de seguros, contrato a contrato {{ corte(seg.ultimo if seg else none, "CMF B.7") }}</h2>
 {% if seg %}
 <p class="lead">CMF, Circular 1.835, archivo B.7 ({{ seg.ultimo }}). Posición en moneda extranjera:
 + pata larga, − pata corta, en USD equivalentes. El valor razonable cuadra con el total de derivados
@@ -214,7 +214,7 @@ precio implícito no calza con la UF o el dólar del cierre y queda fuera de las
 {% else %}<p class="loading">Aún sin datos del archivo B.7 (<code>main.py backfill-derivados-seguros</code>).</p>{% endif %}
 
 {# ============================ 5 · FONDOS MUTUOS ============================ #}
-<h2 style="margin-top:2.5rem">6 · Fondos mutuos, fondo por fondo</h2>
+<h2 style="margin-top:2.5rem">6 · Fondos mutuos, fondo por fondo {{ corte(ffmm.ultimo if ffmm else none, "CMF") }}</h2>
 {% if ffmm %}
 <p class="lead">CMF, cartera de fondos mutuos, archivos FUTU (forwards, swaps, futuros) y OPCI (opciones), {{ ffmm.ultimo }}:
 {{ ffmm.n_fondos }} fondos con derivados. Neto USD = compras − ventas de dólares a plazo (forwards y futuros).

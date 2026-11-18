@@ -396,6 +396,13 @@ pares pero empeora h3).
   riesgos (+10% dólar, +1 pp UF, DV01 de swap cámara), coberturas por AFP × fondo, compañía de
   seguros y fondo mutuo, alertas. Identidades por sector cuadran exacto (testeadas). Detalle en
   `docs/PLAN_DERIVADOS.md`.
+- 2026-11-18 · fechas de corte en derivados: global `corte(fecha, fuente)` y filtro `mes_es`
+  (`api/deps.py`); "dato a sep 2026 · Banco Central" en cada sección, tarjeta, gráfico y alerta de
+  `/derivados` y del monitor de AFP, más una franja de fechas que explica los rezagos distintos.
+  `/eeff/corporativos` abre con Cencosud. Herramientas para el rediseño: `scripts/ui_capturas.py`
+  (escritorio + celular real de 390 px vía `api/static/ui_movil.html`, chequeo de desborde y letra
+  < 12 px) y `scripts/ui_guard.py` (ids, names, hx-* y destinos de gráficos). Plan estético para
+  ejecutar con Sonnet: `docs/PLAN_ESTETICA.md`.
 
 ---
 

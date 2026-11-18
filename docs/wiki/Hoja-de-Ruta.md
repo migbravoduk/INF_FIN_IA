@@ -46,6 +46,9 @@ entidad sobre 376 series nuevas del Banco Central y las fuentes por entidad (SP,
 Pendientes: duración residual del swap cámara (hoy plazo original), valorización por sector
 (no existe en el BCCh), objetivo `1512` de seguros.
 
+18-nov (2): fechas de corte explícitas en las vistas de derivados; **plan estético completo**
+en [`docs/PLAN_ESTETICA.md`](../PLAN_ESTETICA.md) (fases F0–F7, para ejecutar hoy con Sonnet).
+
 ### Pendientes consolidados (17-nov-2026)
 
 Modelos y análisis:
