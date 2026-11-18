@@ -1,18 +1,20 @@
 {% extends "base.html" %}
+{% import "partials/_ui.html" as ui %}
 
 {% block title %}Comparar empresas · INF_FIN_IA{% endblock %}
 
 {% block content %}
-<h1>Comparar empresas</h1>
-<p class="subtitle">Misma partida en varias empresas, normalizada a base 100 (primer período de cada una)</p>
+{{ ui.page_head("Comparar empresas", "Hasta tres empresas en la misma partida y los mismos indicadores.") }}
+<p class="nota mt-0">La partida se normaliza a base 100 en el primer período de cada empresa.</p>
 
-<form class="eeff-form"
+{# .eeff-form se conserva: compare-ratios la usa en hx-include. #}
+<form class="filtros eeff-form"
       hx-get="/comparar/chart"
       hx-target="#compare-result"
       hx-trigger="change"
       hx-swap="innerHTML">
 
-    <label>Partida
+    <label class="ancho">Partida
         <select name="account">
             <option value="" selected>— elegir partida —</option>
             {% for p in partidas %}
@@ -21,31 +23,25 @@
         </select>
     </label>
 
-    <div style="display:flex; gap:2rem; align-items:flex-start; margin-top:1rem; flex-wrap:wrap;">
-        <div style="border-right: 1px solid var(--border); padding-right: 2rem;">
-            <strong>Opción A: Libre (hasta 3)</strong>
-            <div style="margin-top:0.5rem; display:flex; gap:1rem;">
-                {% for slot in ["c1", "c2", "c3"] %}
-                <label>Empresa {{ loop.index }}
-                    <input list="cmp-companies" name="{{ slot }}" autocomplete="off" placeholder="Buscar…">
-                </label>
-                {% endfor %}
-            </div>
-        </div>
+    <div class="filtros-grupo">
+        <strong class="filtros-titulo">Opción A: libre (hasta 3)</strong>
+        {% for slot in ["c1", "c2", "c3"] %}
+        <label>Empresa {{ loop.index }}
+            <input list="cmp-companies" name="{{ slot }}" autocomplete="off" placeholder="Buscar…">
+        </label>
+        {% endfor %}
+    </div>
 
-        <div>
-            <strong>Opción B: Sectorial (Top 5)</strong>
-            <div style="margin-top:0.5rem;">
-                <label>Sector / Actividad
-                    <select name="sector">
-                        <option value="" selected>— No usar —</option>
-                        {% for s in sectors %}
-                        <option value="{{ s }}">{{ s }}</option>
-                        {% endfor %}
-                    </select>
-                </label>
-            </div>
-        </div>
+    <div class="filtros-grupo">
+        <strong class="filtros-titulo">Opción B: sectorial (top 5)</strong>
+        <label class="ancho">Sector / actividad
+            <select name="sector">
+                <option value="" selected>— No usar —</option>
+                {% for s in sectors %}
+                <option value="{{ s }}">{{ s }}</option>
+                {% endfor %}
+            </select>
+        </label>
     </div>
 
     <datalist id="cmp-companies">
@@ -53,13 +49,13 @@
     </datalist>
 </form>
 
-<section id="compare-result">
+<div id="compare-result">
     <p class="loading">Elige una partida y 2–3 empresas para comparar.</p>
-</section>
+</div>
 
-<section id="compare-ratios"
+<div id="compare-ratios"
          hx-get="/comparar/ratios"
          hx-trigger="change from:.eeff-form"
          hx-include=".eeff-form"
-         hx-swap="innerHTML"></section>
+         hx-swap="innerHTML"></div>
 {% endblock %}

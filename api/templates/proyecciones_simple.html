@@ -3,15 +3,14 @@
   univariante (bancos, seguros, intermediarios). Selector de entidad + horizonte.
 #}
 {% extends "base.html" %}
+{% import "partials/_ui.html" as ui %}
 
 {% block title %}{{ page_title }} · INF_FIN_IA{% endblock %}
 
 {% block content %}
-<p class="crumb"><a href="/proyecciones">← Proyecciones</a></p>
-<h1>{{ page_title }}</h1>
-<p class="subtitle">{{ page_subtitle }}</p>
+{{ ui.page_head(page_title, page_subtitle, migas=[("Proyecciones", "/proyecciones")]) }}
 
-<form class="eeff-form" id="proys-form"
+<form class="filtros" id="proys-form"
       hx-get="{{ endpoint }}"
       hx-target="#proys-results"
       hx-trigger="load, change"
@@ -26,10 +25,10 @@
     </label>
     {% endif %}
 
-    <label>Entidad
+    <label class="ancho">Entidad
         <select name="entity" id="proys-entity">
             {% for e in entities %}
-            <option value="{{ e.id }}" data-kind="{{ e.kind }}">{{ e.name }}</option>
+            <option value="{{ e.id }}" data-kind="{{ e.kind }}">{{ e.name|nombre }}</option>
             {% endfor %}
         </select>
     </label>
@@ -45,7 +44,7 @@
 
 <p id="proys-loading" class="loading htmx-indicator">Ajustando modelo y proyectando…</p>
 
-<section id="proys-results"></section>
+<div id="proys-results"></div>
 
 <script>
 // Filtra el selector de entidades según el subtipo (ramo / tipo de intermediario).

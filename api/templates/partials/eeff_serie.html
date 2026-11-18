@@ -3,11 +3,9 @@
   series = [{period, value}], account = nombre de la partida.
   El <script> se ejecuta al insertarse vía HTMX (Plotly global de base.html).
 #}
+{% import "partials/_ui.html" as ui %}
 {% if series %}
-<div class="chart-block" style="margin-top:1rem">
-    <h4>{{ account }} — evolución por período</h4>
-    <div id="serie-chart" class="chart"></div>
-</div>
+{{ ui.viz("serie-chart", account, sub="evolución por período", alto="md", clase="mt-3") }}
 <script>
 (function () {
     var data = {{ series | tojson }};
@@ -16,18 +14,15 @@
         Plotly.newPlot("serie-chart", [{
             x: data.map(function (d) { return d.period; }),
             y: data.map(function (d) { return d.value; }),
-            type: "bar", marker: { color: "#38bdf8" }
+            type: "bar", marker: { color: INF.COLOR.foco }
         }], {
-            margin: { t: 10, r: 10, b: 40, l: 80 }, height: 300,
-            paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)",
-            font: { color: "#94a3b8" },
-            xaxis: { type: "category", gridcolor: "#334155" },
-            yaxis: { gridcolor: "#334155" }
-        }, { displayModeBar: false, responsive: true });
+            margin: { t: 10, r: 10, b: 40, l: 80 },
+            xaxis: { type: "category" }
+        });
     }
     draw();
 })();
 </script>
 {% elif account %}
-<p class="loading">Sin serie para esa partida.</p>
+{{ ui.vacio("Sin serie para esa partida.") }}
 {% endif %}

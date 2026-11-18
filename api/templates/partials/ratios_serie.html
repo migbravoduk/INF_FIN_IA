@@ -2,34 +2,32 @@
   partials/ratios_serie.html — Evolución de un indicador por período.
   series = [{period, value}], label, is_pct.
 #}
+{% import "partials/_ui.html" as ui %}
 {% if series %}
-<div class="chart-block" style="margin-top:1rem">
-    <h4>{{ label }} — evolución por período
-        {% if is_pct %}<span class="lead">(del período: income acumulado en el año)</span>{% endif %}
-    </h4>
-    <div id="ratios-serie-chart" class="chart"></div>
-</div>
+{{ ui.viz("ratios-serie-chart", label,
+          sub=("evolución por período" ~ (" · del período: income acumulado en el año" if is_pct else "")), alto="md", clase="mt-3") }}
 <script>
 (function () {
     var data = {{ series | tojson }};
     var isPct = {{ 'true' if is_pct else 'false' }};
     function draw() {
         if (!window.Plotly) { return setTimeout(draw, 100); }
+        var ref = INF.refH(0);
         Plotly.newPlot("ratios-serie-chart", [{
             x: data.map(function (d) { return d.period; }),
             y: data.map(function (d) { return d.value; }),
-            type: "scatter", mode: "lines+markers", line: { color: "#38bdf8", width: 2 },
+            type: "scatter", mode: "lines+markers", line: { color: INF.COLOR.foco, width: 2 },
             connectgaps: false
         }], {
-            margin: { t: 10, r: 10, b: 40, l: 55 }, height: 300,
-            paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)",
-            font: { color: "#94a3b8" },
-            xaxis: { type: "category", gridcolor: "#334155" },
-            yaxis: { gridcolor: "#334155", ticksuffix: isPct ? "%" : "x" }
-        }, { displayModeBar: false, responsive: true });
+            margin: { t: 10, r: 10, b: 40, l: 55 },
+            xaxis: { type: "category" },
+            yaxis: { ticksuffix: isPct ? "%" : "x" },
+            shapes: [ref.shape]
+        });
     }
     draw();
 })();
+</script>
 {% elif label %}
-<p class="loading">Sin serie para ese indicador.</p>
+{{ ui.vacio("Sin serie para ese indicador.") }}
 {% endif %}

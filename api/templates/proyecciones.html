@@ -1,20 +1,19 @@
 {% extends "base.html" %}
+{% import "partials/_ui.html" as ui %}
 
 {% block title %}{{ page_title }} · INF_FIN_IA{% endblock %}
 
 {% block content %}
-<p class="crumb"><a href="/proyecciones">← Proyecciones</a></p>
-<h1>{{ page_title }}</h1>
-<p class="subtitle">{{ page_subtitle }}</p>
+{{ ui.page_head(page_title, page_subtitle, migas=[("Proyecciones", "/proyecciones")]) }}
 
-<form class="eeff-form"
+<form class="filtros"
       hx-get="/proyecciones/chart"
       hx-target="#proyecciones-results"
       hx-trigger="load, change"
       hx-swap="innerHTML"
       hx-indicator="#proy-loading">
 
-    <label>Empresa
+    <label class="ancho">Empresa
         <input list="companies-list" name="company" autocomplete="off"
                placeholder="Escribe para buscar… ({{ companies|length }} empresas)"
                value="{{ default_company }}">
@@ -36,7 +35,7 @@
 
 <p id="proy-loading" class="loading htmx-indicator">Ajustando modelos y proyectando…</p>
 
-<section id="proyecciones-results">
+<div id="proyecciones-results">
     <p class="loading">Cargando proyecciones…</p>
-</section>
+</div>
 {% endblock %}

@@ -4,16 +4,19 @@
   results = [{account, unit_note, history:[{period,value}], forecast:[{period,mean,lo80,hi80,lo95,hi95}]}]
   meta = {entity_name, rut, kind, unit, cadence, spec, n_obs}
 #}
+{% import "partials/_ui.html" as ui %}
 {% if results %}
-<div class="eeff-head">
-    <h2>{{ meta.entity_name }}</h2>
-    <span class="eeff-meta">
-        {{ meta.rut }}{% if meta.kind %} · {{ meta.kind }}{% endif %} ·
-        cifras en {{ meta.unit }} · serie {{ meta.cadence }}
-    </span>
-</div>
+<header class="page-head mt-0">
+    <h2 class="mb-3">{{ meta.entity_name|nombre }}</h2>
+    <div class="page-acciones mt-0">
+        <span class="chip">{{ meta.rut }}</span>
+        {% if meta.kind %}<span class="chip chip--acento">{{ meta.kind }}</span>{% endif %}
+        <span class="chip">cifras en {{ meta.unit }}</span>
+        <span class="chip">serie {{ meta.cadence }}</span>
+    </div>
+</header>
 
-<p class="warn-box">
+{% call ui.aviso("warn") %}
     {% if results | selectattr("calibradas") | list | length == results | length %}
     <strong>Bandas calibradas fuera de muestra.</strong> Los intervalos 80% y 95% son los
     cuantiles del error real del mismo modelo en un backtest de esta clasificación (orígenes
@@ -32,24 +35,20 @@
     como saltos de nivel en la historia (ej. BICE absorbe a Security en nov-2025, con los
     activos pasando de 11,9 a 21,5 billones) e inflan la tendencia estimada. Revisa la serie
     histórica antes de leer la proyección de una entidad que haya cambiado de perímetro.
-</p>
+{% endcall %}
 
 {% for r in results %}
-<div class="chart-block" style="margin-top:1.5rem">
-    <h4>{{ r.account }}
-        <span class="lead">— {{ r.unit_note }} · {{ r.spec }} · {{ r.n_obs }} obs.</span></h4>
-    {% if r.uf_note %}<p class="lead" style="margin:0.25rem 0 0">{{ r.uf_note }}</p>{% endif %}
-    {% if r.atipicos %}<p class="lead" style="margin:0.25rem 0 0">
-        {{ r.atipicos | length }} dato(s) atípico(s) en la historia
-        ({% for a in r.atipicos %}{{ a.period }}{% if not loop.last %}, {% endif %}{% endfor %}, marcados con ✕).
-        {% if r.atipicos_usados %}El modelo usa tendencia + estacionalidad en su lugar.
-        {% else %}Solo se informan: eliminarlos antes de calibrar se midió en esta clasificación
-        y no pasó la regla de adopción.{% endif %}</p>{% endif %}
-    {% if r.acotado %}<p class="lead" style="margin:0.25rem 0 0; color:#fbbf24">
-        El SARIMAX salió fuera del rango histórico y se reemplazó por
-        {{ "el último valor" if r.stock else "el naive estacional" }}.</p>{% endif %}
-    <div id="proys-chart-{{ loop.index }}" class="chart"></div>
-</div>
+{{ ui.viz("proys-chart-" ~ loop.index, r.account, sub=(r.unit_note ~ " · " ~ r.spec ~ " · " ~ r.n_obs ~ " obs."), alto="lg", clase="mt-5") }}
+{% if r.uf_note %}<p class="nota">{{ r.uf_note }}</p>{% endif %}
+{% if r.atipicos %}<p class="nota">
+    {{ r.atipicos | length }} dato(s) atípico(s) en la historia
+    ({% for a in r.atipicos %}{{ a.period }}{% if not loop.last %}, {% endif %}{% endfor %}, marcados con ✕).
+    {% if r.atipicos_usados %}El modelo usa tendencia + estacionalidad en su lugar.
+    {% else %}Solo se informan: eliminarlos antes de calibrar se midió en esta clasificación
+    y no pasó la regla de adopción.{% endif %}</p>{% endif %}
+{% if r.acotado %}{% call ui.aviso("warn") %}
+    El SARIMAX salió fuera del rango histórico y se reemplazó por
+    {{ "el último valor" if r.stock else "el naive estacional" }}.{% endcall %}{% endif %}
 {% endfor %}
 
 <script>
@@ -87,9 +86,9 @@
                 { x: fxc, y: lo80, mode: "lines", line: { width: 0 }, fill: "tonexty",
                   fillcolor: "rgba(56,189,248,0.22)", name: "IC 80%", hoverinfo: "skip", legendrank: 3 },
                 { x: hx, y: hy, mode: "lines+markers", name: "Historia", legendrank: 1,
-                  line: { color: "#38bdf8", width: 2 }, marker: { size: 3 }, hovertemplate: hov + "<extra>historia</extra>" },
+                  line: { color: INF.COLOR.foco, width: 2 }, marker: { size: 3 }, hovertemplate: hov + "<extra>historia</extra>" },
                 { x: fxc, y: mean, mode: "lines+markers", name: "Proyección", legendrank: 2,
-                  line: { color: "#f472b6", width: 2, dash: "dash" }, marker: { size: 4 },
+                  line: { color: INF.PALETA[4], width: 2, dash: "dash" }, marker: { size: 4 },
                   hovertemplate: hov + "<extra>proyección</extra>" }
             ];
             if (r.atipicos && r.atipicos.length) {
@@ -97,20 +96,18 @@
                     y: r.atipicos.map(function (a) { return k(a.valor); }),
                     customdata: r.atipicos.map(function (a) { return k(a.limpio); }),
                     mode: "markers", name: "Atípico aislado", legendrank: 5,
-                    marker: { symbol: "x", size: 11, color: "#fbbf24", line: { width: 2 } },
+                    marker: { symbol: "x", size: 11, color: INF.PALETA[3], line: { width: 2 } },
                     hovertemplate: "%{x}<br>dato: %{y:,.1f}<br>calibrado con: %{customdata:,.1f}<extra>atípico</extra>" });
             }
 
+            var hoy = INF.hoy(lastP, "proyección →");
             Plotly.newPlot(el, traces, {
-                margin: { t: 30, r: 10, b: 40, l: 70 }, height: 360,
+                margin: { t: 30, r: 10, b: 40, l: 70 },
                 xaxis: { type: "category", categoryorder: "array", categoryarray: allCats,
                          tickvals: anuales, ticktext: anuales.map(function (c) { return c.slice(0, 4); }) },
                 yaxis: { title: { text: ("{{ meta.unit if meta else '' }} " + (unidad ? "· " + unidad : "")).trim() } },
-                shapes: [{ type: "line", xref: "x", yref: "paper", x0: lastP, x1: lastP, y0: 0, y1: 1,
-                           line: { color: "#64748b", width: 1, dash: "dot" } }],
-                annotations: [{ x: lastP, xref: "x", y: 1, yref: "paper", yanchor: "top", xanchor: "left",
-                                xshift: 4, text: "proyección →", showarrow: false,
-                                font: { size: 10, color: "#94a3b8" } }],
+                shapes: [hoy.shape],
+                annotations: [hoy.annotation],
                 legend: { orientation: "h", y: 1, yanchor: "bottom", x: 0, traceorder: "normal" }
             });
         });
@@ -119,7 +116,7 @@
 })();
 </script>
 {% elif meta %}
-<p class="loading">
+<p class="vacio">
     No hay serie suficiente para proyectar {{ meta.entity_name }}
     (se requieren al menos 16 observaciones).
 </p>

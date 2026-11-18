@@ -2,23 +2,30 @@
   partials/ranking_table.html — Top empresas por un ratio.
   rows = [{company_name, rut, value, currency}], metric_label, period, is_pct.
 #}
+{% import "partials/_ui.html" as ui %}
 {% if rows %}
-<div class="eeff-group">
-    <h4>{{ metric_label }} · período {{ period }} <span class="lead">(top 15 · "del período")</span></h4>
-    <table class="rank-table">
+{% set maximo_abs = rows|map(attribute='value')|map('abs')|max %}
+<section class="sec mt-0">
+    {{ ui.sec_head(metric_label, fecha=period, fuente="CMF", arriba=none) }}
+    <p class="nota mt-0">Top 15 · valor del período.</p>
+    <div class="tbl-wrap">
+    <table class="tbl" aria-label="Ranking de empresas por {{ metric_label }}">
+        <thead><tr><th class="num">#</th><th>Empresa</th><th class="num">{{ metric_label }}</th></tr></thead>
         <tbody>
         {% for r in rows %}
             <tr>
-                <td class="pos-n">{{ loop.index }}</td>
-                <td class="acct">{{ r.company_name }}</td>
-                <td class="num {{ 'pos' if r.value >= 0 else 'neg' }}">
+                <td class="num muted">{{ loop.index }}</td>
+                <td class="ent">{{ r.company_name|nombre }}{% if r.sector %}<span class="sub">{{ r.sector }}</span>{% endif %}</td>
+                <td class="num {{ 'pos' if r.value > 0 else 'neg' if r.value < 0 }}">
                     {{ r.value|es(1, True) ~ "%" if is_pct else r.value|es(2) ~ "x" }}
+                    {{ ui.barra(r.value, maximo_abs, 'pos' if r.value >= 0 else 'neg') }}
                 </td>
             </tr>
         {% endfor %}
         </tbody>
     </table>
-</div>
+    </div>
+</section>
 {% else %}
-<p class="loading">Sin datos para ese período.</p>
+{{ ui.vacio("Sin datos para ese período.") }}
 {% endif %}

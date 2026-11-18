@@ -1,19 +1,18 @@
 {% extends "base.html" %}
+{% import "partials/_ui.html" as ui %}
 
 {% block title %}{{ page_title }} · INF_FIN_IA{% endblock %}
 
 {% block content %}
-<p class="crumb"><a href="/eeff">← Estados financieros</a></p>
-<h1>{{ page_title }}</h1>
-<p class="subtitle">{{ page_subtitle }}</p>
+{{ ui.page_head(page_title, page_subtitle, migas=[("Estados financieros", "/eeff")]) }}
 
-<form class="eeff-form" id="eeff-form"
+<form class="filtros" id="eeff-form"
       hx-get="/eeff/table"
       hx-target="#eeff-results"
       hx-trigger="load, company-picked, change from:#eeff-serie"
       hx-swap="innerHTML">
 
-    <label>Empresa
+    <label class="ancho">Empresa
         <div class="combo" id="eeff-combo">
             <input type="text" id="eeff-company-input" autocomplete="off"
                    placeholder="Escribe para buscar… ({{ companies|length }} empresas)"
@@ -67,7 +66,7 @@
 })();
 </script>
 
-<section id="eeff-results">
+<div id="eeff-results">
     <p class="loading">Cargando estados financieros…</p>
-</section>
+</div>
 {% endblock %}

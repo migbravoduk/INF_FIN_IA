@@ -3,49 +3,47 @@
   results = [{account, history: [{period, value}], forecast: [{period, mean, lo80, hi80, lo95, hi95}]}]
   assumptions = [{period, act_yoy, ipc_yoy, tc}], meta = {company_name, rut, currency, survey, model}
 #}
+{% import "partials/_ui.html" as ui %}
 {% if results %}
-<div class="proy-meta" style="margin-bottom:1rem">
-    <h2>{{ meta.company_name }}</h2>
-    <p class="subtitle">
+<header class="page-head mt-0">
+    <h2 class="mb-3">{{ meta.company_name|nombre }}</h2>
+    <p class="nota mt-0">
         Moneda del reporte: {{ meta.currency or "—" }} (unidades) ·
         Encuesta EEE: {{ meta.survey }} ·
         Modelo: {{ meta.model.modelo or "SARIMAX" }} ·
         Bandas: {{ meta.model.bandas or "del modelo" }} ·
         {{ meta.model.n_obs }} trimestres de historia
     </p>
-</div>
+</header>
 
 {% for r in results %}
-<div class="chart-block" style="margin-top:1.5rem">
-    <h4>{{ r.account }} — trimestral (desacumulado) y proyección</h4>
-    {% if r.atipicos %}<p class="lead" style="margin:0.25rem 0 0">
-        {{ r.atipicos | length }} dato(s) atípico(s) en la historia
-        ({% for a in r.atipicos %}{{ a.period }}{% if not loop.last %}, {% endif %}{% endfor %}, marcados con ✕).
-        {% if r.atipicos_usados %}El modelo usa tendencia + estacionalidad en su lugar.
-        {% else %}Solo se informan: el margen se ancla en la mediana de 4 trimestres, que ya
-        es robusta a un trimestre atípico (eliminarlos se midió y no mejoró la proyección).{% endif %}</p>{% endif %}
-    {% if r.acotado %}<p class="lead" style="margin:0.25rem 0 0; color:#fbbf24">
-        El SARIMAX salió fuera del rango histórico (proyección explosiva) y se reemplazó por el
-        naive estacional en los trimestres que le tocan (1 a 3).</p>{% endif %}
-    <div id="proy-chart-{{ loop.index }}" class="chart"></div>
-</div>
+{{ ui.viz("proy-chart-" ~ loop.index, r.account, sub="trimestral (desacumulado) y proyección", alto="lg", clase="mt-5") }}
+{% if r.atipicos %}<p class="nota">
+    {{ r.atipicos | length }} dato(s) atípico(s) en la historia
+    ({% for a in r.atipicos %}{{ a.period }}{% if not loop.last %}, {% endif %}{% endfor %}, marcados con ✕).
+    {% if r.atipicos_usados %}El modelo usa tendencia + estacionalidad en su lugar.
+    {% else %}Solo se informan: el margen se ancla en la mediana de 4 trimestres, que ya
+    es robusta a un trimestre atípico (eliminarlos se midió y no mejoró la proyección).{% endif %}</p>{% endif %}
+{% if r.acotado %}{% call ui.aviso("warn") %}
+    El SARIMAX salió fuera del rango histórico (proyección explosiva) y se reemplazó por el
+    naive estacional en los trimestres que le tocan (1 a 3).{% endcall %}{% endif %}
 {% endfor %}
 
-<div class="eeff-group table-scroll" style="margin-top:2rem">
-    <h4>Supuestos macro (anclados en las encuestas EEE + EOF del BCCh)</h4>
-    <table class="bank-table">
+<h3 class="sub-head">Supuestos macro (anclados en las encuestas EEE + EOF del BCCh)</h3>
+<div class="tbl-wrap">
+    <table class="tbl tbl--densa">
         <thead>
             <tr>
-                <th class="acct">Trimestre</th>
-                <th>Actividad (var. 12m %)</th>
-                <th>Inflación (var. 12m %)</th>
-                <th>Tipo de cambio (CLP/USD)</th>
+                <th>Trimestre</th>
+                <th class="num">Actividad (var. 12m %)</th>
+                <th class="num">Inflación (var. 12m %)</th>
+                <th class="num">Tipo de cambio (CLP/USD)</th>
             </tr>
         </thead>
         <tbody>
         {% for a in assumptions %}
             <tr>
-                <td class="acct">{{ a.period }}</td>
+                <td class="ent">{{ a.period }}</td>
                 <td class="num">{{ a.act_yoy|es(2) }}</td>
                 <td class="num">{{ a.ipc_yoy|es(2) }}</td>
                 <td class="num">{{ a.tc|es(1) }}</td>
@@ -56,21 +54,21 @@
 </div>
 
 {% if structural %}
-<div class="eeff-group table-scroll" style="margin-top:2rem">
-    <h4>Trayectoria estructural (activos operacionales → rotación → margen)</h4>
-    <table class="bank-table">
+<h3 class="sub-head">Trayectoria estructural (activos operacionales → rotación → margen)</h3>
+<div class="tbl-wrap">
+    <table class="tbl tbl--densa">
         <thead>
             <tr>
-                <th class="acct">Trimestre</th>
-                <th>Activos operacionales</th>
-                <th>Rotación (ingresos 4T / activos)</th>
-                <th>Margen operacional (4T)</th>
+                <th>Trimestre</th>
+                <th class="num">Activos operacionales</th>
+                <th class="num">Rotación (ingresos 4T / activos)</th>
+                <th class="num">Margen operacional (4T)</th>
             </tr>
         </thead>
         <tbody>
         {% for s in structural %}
             <tr>
-                <td class="acct">{{ s.period }}</td>
+                <td class="ent">{{ s.period }}</td>
                 <td class="num">{{ s.activos|es(0) }}</td>
                 <td class="num">{{ s.rotacion|es(3) }}</td>
                 <td class="num">{{ ((s.margen * 100)|es(1) ~ '%') if s.margen is not none else "—" }}</td>
@@ -78,35 +76,34 @@
         {% endfor %}
         </tbody>
     </table>
-    <p style="color:#94a3b8; font-size:.85rem">Margen operacional = ganancia sin reajuste por UF ni
-        diferencias de cambio, sobre ingresos. Esas dos partidas se proyectan aparte (abajo).</p>
 </div>
+<p class="nota">Margen operacional = ganancia sin reajuste por UF ni
+        diferencias de cambio, sobre ingresos. Esas dos partidas se proyectan aparte (abajo).</p>
 {% endif %}
 
 {% if nonop %}
-<div class="eeff-group table-scroll" style="margin-top:1.5rem">
-    <h4>Resultado no operacional ligado a la macro (después de impuestos, en la moneda de reporte)</h4>
-    <table class="bank-table">
-        <thead><tr><th class="acct">Partida</th><th>Exposición estimada</th>
-            {% for t in nonop[0].trimestres %}<th>{{ t.period }}</th>{% endfor %}</tr></thead>
+<h3 class="sub-head">Resultado no operacional ligado a la macro (después de impuestos, en la moneda de reporte)</h3>
+<div class="tbl-wrap">
+    <table class="tbl tbl--densa">
+        <thead><tr><th>Partida</th><th class="num">Exposición estimada</th>
+            {% for t in nonop[0].trimestres %}<th class="num">{{ t.period }}</th>{% endfor %}</tr></thead>
         <tbody>
         {% for n in nonop %}
-            <tr><td class="acct">{{ n.nombre }}<br><span style="color:#94a3b8;font-size:.8rem">× {{ n.impulsor }}</span></td>
+            <tr><td class="ent">{{ n.nombre }}<span class="sub">× {{ n.impulsor }}</span></td>
                 <td class="num">{{ (n.k / 100)|es(0) }} por punto</td>
                 {% for t in n.trimestres %}<td class="num" title="impulsor {{ (t.x * 100)|es(2) }}%">{{ t.monto|es(0) }}</td>{% endfor %}
             </tr>
         {% endfor %}
         </tbody>
     </table>
-    <p style="color:#94a3b8; font-size:.85rem">Exposición = cuánto cambia la partida (antes de impuestos)
+</div>
+<p class="nota">Exposición = cuánto cambia la partida (antes de impuestos)
         por cada punto porcentual de inflación UF o de variación del dólar en el trimestre, estimada con
         los últimos 12 trimestres. Negativa en reajuste = deudora neta en UF.</p>
-</div>
 {% endif %}
 
-<details style="margin-top:1.5rem">
-    <summary>Nota metodológica</summary>
-    <p style="color:#94a3b8; font-size:.9rem; line-height:1.5">
+{% call ui.metodo("Nota metodológica") %}
+<p>
         Modelo <strong>híbrido por horizonte</strong>, calibrado por backtest fuera de
         muestra (80 empresas × 8 orígenes, nov-2026): el primer trimestre usa un SARIMAX puro
         (momentum de la propia serie, con un tope que lo reemplaza por el naive estacional si
@@ -129,7 +126,7 @@
         cada empresa. Las proyecciones son un ejercicio estadístico, no una recomendación
         de inversión.
     </p>
-</details>
+{% endcall %}
 
 <script>
 (function () {
@@ -171,9 +168,9 @@
                 { x: fxc, y: lo80, mode: "lines", line: { width: 0 }, fill: "tonexty",
                   fillcolor: "rgba(56,189,248,0.22)", name: "IC 80%", hoverinfo: "skip", legendrank: 3 },
                 { x: hx, y: hy, mode: "lines+markers", name: "Historia", legendrank: 1,
-                  line: { color: "#38bdf8", width: 2 }, marker: { size: 4 }, hovertemplate: hov + "<extra>historia</extra>" },
+                  line: { color: INF.COLOR.foco, width: 2 }, marker: { size: 4 }, hovertemplate: hov + "<extra>historia</extra>" },
                 { x: fxc, y: mean, mode: "lines+markers", name: "Proyección", legendrank: 2,
-                  line: { color: "#f472b6", width: 2, dash: "dash" }, marker: { size: 4 },
+                  line: { color: INF.PALETA[4], width: 2, dash: "dash" }, marker: { size: 4 },
                   hovertemplate: hov + "<extra>proyección</extra>" }
             ];
             if (r.atipicos && r.atipicos.length) {
@@ -181,12 +178,13 @@
                     y: r.atipicos.map(function (a) { return k(a.valor); }),
                     customdata: r.atipicos.map(function (a) { return k(a.limpio); }),
                     mode: "markers", name: "Atípico aislado", legendrank: 5,
-                    marker: { symbol: "x", size: 11, color: "#fbbf24", line: { width: 2 } },
+                    marker: { symbol: "x", size: 11, color: INF.PALETA[3], line: { width: 2 } },
                     hovertemplate: "%{x}<br>dato: %{y:,.1f}<br>calibrado con: %{customdata:,.1f}<extra>atípico</extra>" });
             }
 
+            var hoy = INF.hoy(lastP, "proyección →");
             Plotly.newPlot(el, traces, {
-                margin: { t: 30, r: 10, b: 40, l: 70 }, height: 360,
+                margin: { t: 30, r: 10, b: 40, l: 70 },
                 xaxis: {
                     type: "category",
                     categoryorder: "array",
@@ -196,11 +194,8 @@
                 },
                 yaxis: { title: { text: "{{ meta.currency or '' }} · " + unidad } },
                 // Línea "hoy": separa lo observado de lo proyectado.
-                shapes: [{ type: "line", xref: "x", yref: "paper", x0: lastP, x1: lastP, y0: 0, y1: 1,
-                           line: { color: "#64748b", width: 1, dash: "dot" } }],
-                annotations: [{ x: lastP, xref: "x", y: 1, yref: "paper", yanchor: "top", xanchor: "left",
-                                xshift: 4, text: "proyección →", showarrow: false,
-                                font: { size: 10, color: "#94a3b8" } }],
+                shapes: [hoy.shape],
+                annotations: [hoy.annotation],
                 legend: { orientation: "h", y: 1, yanchor: "bottom", x: 0, traceorder: "normal" }
             });
         });
@@ -209,5 +204,5 @@
 })();
 </script>
 {% elif meta %}
-<p class="loading">No hay serie trimestral suficiente para proyectar {{ meta.company_name }} (se requieren ≥16 trimestres de ERFG).</p>
+<p class="vacio">No hay serie trimestral suficiente para proyectar {{ meta.company_name }} (se requieren ≥16 trimestres de ERFG).</p>
 {% endif %}

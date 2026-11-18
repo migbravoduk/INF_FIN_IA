@@ -1,67 +1,49 @@
 {#
-  partials/bc_serie.html — Serie macro: tarjetas de estadísticas + gráfico de línea.
+  partials/bc_serie.html — Serie macro: cifras clave + gráfico de línea.
   meta = {name, cat_label, unit_label, es_tasa, description}, serie = [{date, value}],
   stats = {last, last_date, yoy_pct, yoy_abs, min, max, n_obs}.
 #}
+{% import "partials/_ui.html" as ui %}
 {% if not meta %}
-<p class="loading">Serie no encontrada.</p>
+{{ ui.vacio("Serie no encontrada.") }}
 {% elif not serie %}
-<p class="loading">Sin observaciones en el rango elegido.</p>
+{{ ui.vacio("Sin observaciones en el rango elegido.") }}
 {% else %}
 
 {% if es_expectativa %}
-<div class="warn-box">
+{% call ui.aviso("warn") %}
     Serie de <strong>expectativas</strong>, no de dato observado: es la mediana de una
     encuesta del BCCh sobre el futuro. No la leas como historia efectiva.
-</div>
+{% endcall %}
 {% endif %}
 
-<div class="kpi-grid">
-    <div class="kpi-card">
-        <span class="kpi-sub">Último dato</span>
-        <span class="kpi-big">{{ stats.last|es(2) }}</span>
-        <span class="kpi-sub">{{ meta.unit_label }} · {{ stats.last_date }}</span>
-    </div>
+<div class="stats">
+    {{ ui.stat("Último dato", stats.last|es(2), unidad=meta.unit_label, fecha=stats.last_date, fuente="Banco Central") }}
 
-    <div class="kpi-card">
-        <span class="kpi-sub">Variación 12 meses</span>
-        {# Una tasa se compara en puntos porcentuales: decir que la TPM "cayó 5,3%"
-           al pasar de 4,75 a 4,50 confunde la variación relativa con la efectiva. #}
-        {% if meta.es_tasa %}
-            {% if stats.yoy_abs is not none %}
-            <span class="kpi-big {{ 'pos' if stats.yoy_abs >= 0 else 'neg' }}">
-                {{ stats.yoy_abs|es(2, True) }} pp
-            </span>
-            <span class="kpi-sub">puntos porcentuales</span>
-            {% else %}<span class="kpi-big">—</span><span class="kpi-sub">sin dato comparable</span>{% endif %}
+    {# Una tasa se compara en puntos porcentuales: decir que la TPM "cayó 5,3%"
+       al pasar de 4,75 a 4,50 confunde la variación relativa con la efectiva. #}
+    {% if meta.es_tasa %}
+        {% if stats.yoy_abs is not none %}
+        {{ ui.stat("Variación 12 meses", stats.yoy_abs|es(2, True), unidad="pp", delta=stats.yoy_abs,
+                   delta_txt=(stats.yoy_abs|es(2, True) ~ " puntos porcentuales"), ctx="vs. el mismo mes del año anterior") }}
         {% else %}
-            {% if stats.yoy_pct is not none %}
-            <span class="kpi-big {{ 'pos' if stats.yoy_pct >= 0 else 'neg' }}">
-                {{ stats.yoy_pct|es(1, True) }}%
-            </span>
-            <span class="kpi-sub">vs. mismo mes del año anterior</span>
-            {% else %}<span class="kpi-big">—</span><span class="kpi-sub">sin dato comparable</span>{% endif %}
+        {{ ui.stat("Variación 12 meses", "—", ctx="sin dato comparable") }}
         {% endif %}
-    </div>
+    {% else %}
+        {% if stats.yoy_pct is not none %}
+        {{ ui.stat("Variación 12 meses", stats.yoy_pct|es(1, True), unidad="%", delta=stats.yoy_pct,
+                   delta_txt=(stats.yoy_pct|es(1, True) ~ "% anual"), ctx="vs. el mismo mes del año anterior") }}
+        {% else %}
+        {{ ui.stat("Variación 12 meses", "—", ctx="sin dato comparable") }}
+        {% endif %}
+    {% endif %}
 
-    <div class="kpi-card">
-        <span class="kpi-sub">Rango del período</span>
-        <span class="kpi-big">{{ stats.min|es(2) }} – {{ stats.max|es(2) }}</span>
-        <span class="kpi-sub">mínimo y máximo</span>
-    </div>
-
-    <div class="kpi-card">
-        <span class="kpi-sub">Observaciones</span>
-        <span class="kpi-big">{{ stats.n_obs|es(0) }}</span>
-        <span class="kpi-sub">en el rango mostrado</span>
-    </div>
+    {{ ui.stat("Rango del período", (stats.min|es(2)) ~ " – " ~ (stats.max|es(2)), ctx="mínimo y máximo") }}
+    {{ ui.stat("Observaciones", stats.n_obs|es(0), ctx="en el rango mostrado") }}
 </div>
 
-<div class="chart-block">
-    <h4>{{ meta.name }}{% if meta.unit_label %} <span class="eeff-meta">({{ meta.unit_label }})</span>{% endif %}</h4>
-    {% if meta.description %}<p class="eeff-meta">{{ meta.description }}</p>{% endif %}
-    <div id="bc-serie-chart" class="chart"></div>
-</div>
+{{ ui.viz("bc-serie-chart", meta.name, sub=((meta.unit_label if meta.unit_label else "") ~ ((" · " ~ meta.description) if meta.description else "")),
+          fuente="Banco Central", fecha=stats.last_date, alto="lg") }}
 
 <script>
 (function () {
@@ -69,23 +51,32 @@
     var esTasa = {{ 'true' if meta.es_tasa else 'false' }};
     function draw() {
         if (!window.Plotly) { return setTimeout(draw, 100); }
-        Plotly.newPlot("bc-serie-chart", [{
-            x: data.map(function (d) { return d.date; }),
-            y: data.map(function (d) { return d.value; }),
-            type: "scatter", mode: "lines",
-            line: { color: "#38bdf8", width: 2 },
+        var x = data.map(function (d) { return d.date; });
+        var y = data.map(function (d) { return d.value; });
+        var u = data[data.length - 1];
+        var traces = [{
+            x: x, y: y, type: "scatter", mode: "lines", showlegend: false,
+            line: { color: INF.COLOR.foco, width: 2 },
             fill: esTasa ? "none" : "tozeroy",
-            fillcolor: "rgba(56,189,248,0.10)",
-            hovertemplate: "%{x|%Y-%m-%d}<br><b>%{y:,.2f}</b><extra></extra>"
-        }], {
-            margin: { t: 10, r: 10, b: 40, l: 70 }, height: 340,
-            paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)",
-            font: { color: "#94a3b8" },
-            xaxis: { gridcolor: "#334155" },
+            fillcolor: "rgba(92,179,255,0.10)",
+            hovertemplate: "%{x|%d-%m-%Y}<br><b>%{y:,.2f}</b><extra></extra>"
+        }];
+        // Marcador (rombo) en el valor de hace 12 meses, si está en la serie.
+        var d12 = new Date(u.date); d12.setFullYear(d12.getFullYear() - 1);
+        var objetivo = d12.toISOString().slice(0, 10), previo = null;
+        data.forEach(function (d) { if (d.date.slice(0, 10) <= objetivo) { previo = d; } });
+        if (previo && (new Date(objetivo) - new Date(previo.date.slice(0, 10))) < 45 * 86400000) {
+            traces.push({ x: [previo.date], y: [previo.value], type: "scatter", mode: "markers", showlegend: false,
+                          marker: { symbol: "diamond", size: 10, color: INF.COLOR.tinta, line: { color: "#111a2c", width: 1 } },
+                          hovertemplate: "hace 12 meses<br>%{x|%d-%m-%Y}: <b>%{y:,.2f}</b><extra></extra>" });
+        }
+        Plotly.newPlot("bc-serie-chart", traces, {
+            margin: { t: 10, r: 80, b: 40, l: 70 },
+            annotations: INF.etiquetasFinales([{ x: x, y: y, texto: "<b>" + INF.fmt(u.value, 2) + "</b>", color: INF.COLOR.foco }]),
             // Las tasas no arrancan en cero: hacerlo aplasta el movimiento, que es lo que
             // interesa. Los niveles sí, para que la magnitud se lea bien.
-            yaxis: { gridcolor: "#334155", rangemode: esTasa ? "normal" : "tozero" }
-        }, { displayModeBar: false, responsive: true });
+            yaxis: { rangemode: esTasa ? "normal" : "tozero" }
+        });
     }
     draw();
 })();

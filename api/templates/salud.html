@@ -1,12 +1,13 @@
 {% extends "base.html" %}
+{% import "partials/_ui.html" as ui %}
 
-{% block title %}Salud Financiera · INF_FIN_IA{% endblock %}
+{% block title %}Salud financiera · INF_FIN_IA{% endblock %}
 
 {% block content %}
-<h1>Salud Financiera (Mix de Indicadores)</h1>
-<p class="subtitle">Gráfico de dispersión para detectar unicornios y empresas en riesgo.</p>
+{{ ui.page_head("Salud financiera: rentabilidad contra endeudamiento",
+    "Cada burbuja es una empresa: rentabilidad sobre patrimonio (ROE) en el eje vertical, deuda sobre patrimonio en el horizontal y tamaño según liquidez.") }}
 
-<form class="eeff-form"
+<form class="filtros"
       hx-get="/salud/chart"
       hx-target="#salud-result"
       hx-trigger="load, change"
@@ -20,7 +21,7 @@
         </select>
     </label>
 
-    <label>Sector / Actividad
+    <label class="ancho">Sector / actividad
         <select name="sector">
             <option value="" selected>— Todos los sectores —</option>
             {% for s in sectors %}
@@ -30,7 +31,7 @@
     </label>
 </form>
 
-<section id="salud-result" style="margin-top: 2rem;">
+<div id="salud-result">
     <p class="loading">Cargando matriz de riesgo vs rentabilidad…</p>
-</section>
+</div>
 {% endblock %}

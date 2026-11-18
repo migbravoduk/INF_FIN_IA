@@ -1,27 +1,29 @@
 {% extends "base.html" %}
+{% import "partials/_ui.html" as ui %}
 
 {% block title %}Bancos · INF_FIN_IA{% endblock %}
 
 {% block content %}
-<h1 id="banca-top">Estados financieros de bancos</h1>
-<p class="subtitle">CMF · Bancos e Instituciones Financieras — desglose por tipo de moneda (SBIF)</p>
+{{ ui.page_head("Estados financieros de bancos",
+    "Balance y resultados de cada banco, con desglose por moneda (pesos, UF, dólar y otras monedas).",
+    migas=[("Estados financieros", "/eeff")], id_titulo="banca-top") }}
 
-<nav class="banca-minimap" aria-label="Secciones de la vista de bancos">
-    <span class="minimap-label">Ir a:</span>
+<nav class="toc" aria-label="Secciones de la vista de bancos">
+    <span class="toc-label">Ir a</span>
     <a href="#banca-detalle">Detalle por moneda</a>
     <a href="#banca-evolutivo">Evolutivo (total)</a>
 </nav>
 
-<form class="eeff-form" id="banca-form"
+<form class="filtros" id="banca-form"
       hx-get="/banca/table"
       hx-target="#banca-results"
       hx-trigger="load, change"
       hx-swap="innerHTML">
 
-    <label>Banco
+    <label class="ancho">Banco
         <select name="bank" id="banca-bank-sel">
             {% for b in banks %}
-            <option value="{{ b.bank_code }}">{{ b.bank_name }}</option>
+            <option value="{{ b.bank_code }}">{{ b.bank_name|nombre }}</option>
             {% endfor %}
         </select>
     </label>
@@ -53,31 +55,21 @@
     </label>
 </form>
 
-<h2 id="banca-detalle" style="font-size:1rem;color:var(--muted);margin-top:1.2rem">Detalle por moneda (período seleccionado)</h2>
-<section id="banca-results">
+<section class="sec mt-0">
+{{ ui.sec_head("Detalle por moneda (período seleccionado)", id="banca-detalle", fuente="CMF") }}
+<div id="banca-results">
     <p class="loading">Cargando detalle por moneda…</p>
+</div>
 </section>
 
-<h2 id="banca-evolutivo" style="font-size:1rem;color:var(--muted);margin-top:2rem">
-    Serie de tiempo — total consolidado
-    <a href="#banca-top" class="minimap-top" title="Volver arriba">↑ arriba</a>
-</h2>
-<section id="banca-evolucion" class="evol-scroll"
+<section class="sec">
+{{ ui.sec_head("Serie de tiempo: total consolidado", id="banca-evolutivo", fuente="CMF", arriba="#banca-top") }}
+<div id="banca-evolucion" class="evol-scroll"
          hx-get="/banca/evolucion"
          hx-trigger="load, change from:#banca-bank-sel, change from:#banca-type-sel, change from:#banca-serie-sel"
          hx-include="#banca-bank-sel, #banca-type-sel, #banca-serie-sel"
          hx-swap="innerHTML">
     <p class="loading">Cargando evolución del total…</p>
+</div>
 </section>
-
-<style>
-/* El mini-mapa pegajoso y sus estilos son compartidos → api/static/app.css */
-/* Compensar la barra pegajosa al saltar a un ancla, para que el título no quede tapado. */
-#banca-detalle, #banca-evolutivo { scroll-margin-top: 3.5rem; }
-
-/* La matriz evolutiva bancaria (400+ cuentas) va en caja scrolleable con encabezado fijo,
-   para que no sepulte el detalle por moneda. */
-#banca-evolucion .table-scroll { max-height: 65vh; overflow-y: auto; }
-#banca-evolucion .evol-table thead th { position: sticky; top: 0; background: var(--bg, #0f172a); z-index: 2; }
-</style>
 {% endblock %}

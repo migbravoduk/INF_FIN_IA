@@ -678,7 +678,7 @@ form.htmx-request { background-image: linear-gradient(90deg, transparent, var(--
 /* Filtros (formularios HTMX). .eeff-form es alias y NO se quita de compare.html */
 .filtros, .eeff-form { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--sp-3) var(--sp-4);
     padding: var(--sp-4); margin: 0 0 var(--sp-5); background: var(--s1); border: 1px solid var(--line); border-radius: var(--r); }
-.filtros label, .eeff-form label { display: flex; flex-direction: column; gap: 0.35rem; flex: 0 1 240px; min-width: 170px;
+.filtros label, .eeff-form label { display: flex; flex-direction: column; gap: 0.35rem; flex: 0 1 280px; min-width: 190px;
     font-size: var(--fs-xs); font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
 .filtros label.ancho, .eeff-form label.ancho { flex-basis: 380px; }
 .filtros select, .filtros input, .eeff-form select, .eeff-form input { width: 100%; min-width: 0; text-transform: none; letter-spacing: 0; font-weight: 400; }
@@ -787,3 +787,31 @@ a.chip:hover { color: var(--ink); border-color: var(--line-strong); }
 /* Leyenda HTML del gráfico comparativo: chips */
 .cmp-legend { gap: var(--sp-2); margin: var(--sp-3) 0 var(--sp-2); font-size: var(--fs-sm); }
 .cmp-leg-item { padding: 0.15rem 0.6rem; border: 1px solid var(--line); border-radius: 999px; background: var(--s1); color: var(--ink-2); }
+
+/* Dupont (descomposición del ROE) */
+.dupont { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-around; gap: var(--sp-4);
+          padding: var(--sp-4); background: var(--s1); border: 1px solid var(--line); border-radius: var(--r); }
+.dupont-factor { text-align: center; }
+.dupont-factor span { display: block; font-size: var(--fs-sm); color: var(--muted); margin-bottom: 0.25rem; }
+.dupont-factor b { font-size: var(--fs-lg); font-variant-numeric: tabular-nums; }
+.dupont-op { font-size: var(--fs-lg); color: var(--faint); font-weight: 700; }
+.dupont-resultado { text-align: center; padding: 0.5rem 1rem; background: var(--accent-weak);
+                    border: 1px solid rgba(92, 179, 255, 0.4); border-radius: var(--r-sm); }
+.dupont-resultado span { display: block; font-size: var(--fs-sm); font-weight: 600; color: var(--accent); margin-bottom: 0.25rem; }
+.dupont-resultado b { font-size: var(--fs-xl); color: var(--accent); font-variant-numeric: tabular-nums; }
+/* Nombres de cuenta: ancho máximo cómodo en tablas densas */
+.tbl--densa td.ent { max-width: 420px; }
+
+/* Casilla dentro de un formulario de filtros: en una línea, sin mayúsculas */
+.filtros label.chk, .eeff-form label.chk { flex: 0 0 auto; flex-direction: row; align-items: center; gap: 0.5rem; min-width: 0;
+    text-transform: none; letter-spacing: 0; font-size: var(--fs-sm); font-weight: 500; color: var(--ink-2); min-height: 38px; }
+.stat-valor { overflow-wrap: anywhere; }
+
+/* Grupos dentro de un formulario de filtros (p. ej. comparar empresas) */
+.filtros-grupo { flex: 1 1 100%; display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--sp-3) var(--sp-4);
+                 padding-top: var(--sp-3); border-top: 1px solid var(--line); }
+.filtros-titulo { flex-basis: 100%; font-size: var(--fs-sm); color: var(--ink-2); }
+
+/* Indicadores de carga de HTMX: ocultos hasta que hay una solicitud en curso */
+.htmx-indicator { display: none; }
+.htmx-request .htmx-indicator, .htmx-request.htmx-indicator { display: flex; }

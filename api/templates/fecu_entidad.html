@@ -7,20 +7,19 @@
   ramo o tipo de intermediario), kind_label, entities [{rut, company_name, kind}].
 #}
 {% extends "base.html" %}
+{% import "partials/_ui.html" as ui %}
 
 {% block title %}{{ page_title }} · INF_FIN_IA{% endblock %}
 
 {% block content %}
-<p class="crumb"><a href="/eeff">← Estados financieros</a></p>
-<h1 id="fecu-top">{{ page_title }}</h1>
-<p class="subtitle">{{ page_subtitle }}</p>
+{{ ui.page_head(page_title, page_subtitle, migas=[("Estados financieros", "/eeff")], id_titulo="fecu-top") }}
 
-<nav class="banca-minimap" aria-label="Secciones">
-    <span class="minimap-label">Ir a:</span>
+<nav class="toc" aria-label="Secciones">
+    <span class="toc-label">Ir a</span>
     {% for g in groups %}<a href="#grp-{{ g.code }}">{{ g.label }}</a>{% endfor %}
 </nav>
 
-<form class="eeff-form" id="fecu-form"
+<form class="filtros" id="fecu-form"
       hx-get="{{ endpoint }}"
       hx-target="#fecu-results"
       hx-trigger="load, change"
@@ -34,10 +33,10 @@
     </label>
     {% endif %}
 
-    <label>Entidad
+    <label class="ancho">Entidad
         <select name="rut" id="fecu-rut">
             {% for e in entities %}
-            <option value="{{ e.rut }}" data-kind="{{ e.kind }}">{{ e.company_name }}</option>
+            <option value="{{ e.rut }}" data-kind="{{ e.kind }}">{{ e.company_name|nombre }}</option>
             {% endfor %}
         </select>
     </label>
@@ -53,9 +52,9 @@
     </label>
 </form>
 
-<section id="fecu-results">
+<div id="fecu-results">
     <p class="loading">Cargando estados financieros…</p>
-</section>
+</div>
 
 <script>
 // Filtra el selector de entidades según el subtipo elegido (ramo / tipo de intermediario),
@@ -84,10 +83,4 @@
     applyFilter();
 })();
 </script>
-
-<style>
-/* Mini-mapa, migas y anclas: estilos compartidos en api/static/app.css */
-#fecu-results .table-scroll { max-height: 70vh; overflow-y: auto; }
-#fecu-results .evol-table thead th { position: sticky; top: 0; background: var(--bg, #0f172a); z-index: 2; }
-</style>
 {% endblock %}

@@ -2,25 +2,28 @@
   partials/banca_table.html — Balance o resultados de un banco.
   Recibe `meta`, `rows` (registros), `report_type` ('balance'|'resultado').
 #}
+{% import "partials/_ui.html" as ui %}
 {% macro fmt(v) %}{{ v|es(0) if v not in (none, 0, 0.0) else "—" }}{% endmacro %}
 {# Celda numérica: negativos en rojo (provisiones, pérdidas, ajustes), resto en tinta. #}
-{% macro cell(v, extra="") %}<td class="num{{ ' ' ~ extra if extra }}{{ ' neg-val' if v and v < 0 }}">{{ fmt(v) }}</td>{% endmacro %}
+{% macro cell(v, extra="") %}<td class="num{{ ' fuerte' if extra == 'strong' }}{{ ' neg' if v and v < 0 }}">{{ fmt(v) }}</td>{% endmacro %}
 
 {% if meta %}
-<div class="eeff-head">
-    <h3>{{ meta.bank_name }}</h3>
-    <span class="eeff-meta">
-        Ficha {{ meta.bank_code }} · período {{ meta.period }} ·
-        {{ "Balance" if report_type == "balance" else "Estado de resultados" }} ·
-        cifras en pesos (CLP; el plan CMF previo a 2022 reportaba en millones) · negativos en rojo
-    </span>
-</div>
+<header class="page-head mt-0">
+    <h3 class="mb-3">{{ meta.bank_name|nombre }}</h3>
+    <div class="page-acciones mt-0">
+        <span class="chip">Ficha {{ meta.bank_code }}</span>
+        <span class="chip">período {{ meta.period }}</span>
+        <span class="chip chip--acento">{{ "Balance" if report_type == "balance" else "Estado de resultados" }}</span>
+        <span class="chip">cifras en pesos (CLP; el plan CMF previo a 2022 reportaba en millones)</span>
+        <span class="chip">negativos en rojo</span>
+    </div>
+</header>
 
 {% if graph_accounts %}
-<form class="eeff-graf" hx-get="/banca/serie" hx-target="#banca-serie" hx-trigger="change" hx-swap="innerHTML">
+<form class="filtros" hx-get="/banca/serie" hx-target="#banca-serie" hx-trigger="change" hx-swap="innerHTML">
     <input type="hidden" name="bank" value="{{ meta.bank_code }}">
     <input type="hidden" name="type" value="{{ report_type }}">
-    <label>Graficar cuenta (evolución por período)
+    <label class="ancho">Graficar cuenta (evolución por período)
         <select name="account">
             <option value="" selected>— elegir cuenta —</option>
             {% for a in graph_accounts %}
@@ -32,30 +35,30 @@
 <div id="banca-serie"></div>
 {% endif %}
 
-<div class="eeff-group table-scroll">
-    <h4 style="font-size: 0.9rem; color: var(--muted); margin-bottom: 0.5rem;">Desglose por Moneda ({{ meta.period }})</h4>
-    <table class="bank-table">
+<h3 class="sub-head">Desglose por moneda ({{ meta.period }})</h3>
+<div class="tbl-wrap tbl-wrap--alto">
+    <table class="tbl tbl--fija-1" aria-label="Desglose por moneda del período {{ meta.period }}">
         <thead>
             {% if report_type == "balance" %}
             <tr>
-                <th class="acct">Cuenta</th>
-                <th>CLP no reaj.</th>
-                <th>Reaj. UF</th>
-                <th>Reaj. USD</th>
-                <th>M. extranjera</th>
-                <th class="strong">Total ({{ meta.period }})</th>
+                <th>Cuenta</th>
+                <th class="num">CLP no reaj.</th>
+                <th class="num">Reaj. UF</th>
+                <th class="num">Reaj. USD</th>
+                <th class="num">M. extranjera</th>
+                <th class="num">Total ({{ meta.period }})</th>
             </tr>
             {% else %}
             <tr>
-                <th class="acct">Cuenta</th>
-                <th class="strong">Total ({{ meta.period }})</th>
+                <th>Cuenta</th>
+                <th class="num">Total ({{ meta.period }})</th>
             </tr>
             {% endif %}
         </thead>
         <tbody>
         {% for r in rows %}
-            <tr class="{{ 'total-row' if r.is_total else '' }}">
-                <td class="acct">{{ r.account_name }}</td>
+            <tr class="{{ 'total' if r.is_total else '' }}">
+                <td class="ent">{{ r.account_name }}</td>
                 {% if report_type == "balance" %}
                 {{ cell(r.val_clp_no_reaj) }}
                 {{ cell(r.val_clp_reaj_ipc) }}
@@ -69,25 +72,25 @@
     </table>
 </div>
 
-<div class="eeff-group table-scroll" style="margin-top: 2rem;">
-    <h4 style="font-size: 0.9rem; color: var(--muted); margin-bottom: 0.5rem;">Evolutivo Histórico Reciente (Total Consolidado)</h4>
-    <table class="bank-table">
+<h3 class="sub-head">Evolutivo histórico reciente (total consolidado)</h3>
+<div class="tbl-wrap tbl-wrap--alto">
+    <table class="tbl tbl--fija-1" aria-label="Evolutivo histórico reciente del total consolidado">
         <thead>
             <tr>
-                <th class="acct">Cuenta</th>
-                <th class="strong">Total ({{ meta.period }})</th>
+                <th>Cuenta</th>
+                <th class="num">Total ({{ meta.period }})</th>
                 {% for p in history_periods %}
-                <th>Hist. {{ p }}</th>
+                <th class="num">Hist. {{ p }}</th>
                 {% endfor %}
             </tr>
         </thead>
         <tbody>
         {% for r in rows %}
-            <tr class="{{ 'total-row' if r.is_total else '' }}">
-                <td class="acct">{{ r.account_name }}</td>
+            <tr class="{{ 'total' if r.is_total else '' }}">
+                <td class="ent">{{ r.account_name }}</td>
                 {{ cell(r.val_total, "strong") }}
                 {% for h in r.history %}
-                <td class="num{{ ' neg-val' if h and h < 0 }}" style="color: #94a3b8;">{{ fmt(h) }}</td>
+                <td class="num muted{{ ' neg' if h and h < 0 }}">{{ fmt(h) }}</td>
                 {% endfor %}
             </tr>
         {% endfor %}
@@ -95,5 +98,5 @@
     </table>
 </div>
 {% else %}
-<p class="loading">No hay datos bancarios para esa combinación.</p>
+{{ ui.vacio("No hay datos bancarios para esa combinación.") }}
 {% endif %}

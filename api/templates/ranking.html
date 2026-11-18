@@ -1,12 +1,13 @@
 {% extends "base.html" %}
+{% import "partials/_ui.html" as ui %}
 
 {% block title %}Ranking · INF_FIN_IA{% endblock %}
 
 {% block content %}
-<h1>Ranking de empresas por indicador</h1>
-<p class="subtitle">Top 15 empresas (CMF) por un ratio financiero en un período</p>
+{{ ui.page_head("Ranking de empresas por indicador",
+    "Las 15 empresas con el valor más alto del indicador elegido en el período.") }}
 
-<form class="eeff-form"
+<form class="filtros"
       hx-get="/ranking/table"
       hx-target="#ranking-result"
       hx-trigger="load, change"
@@ -28,7 +29,7 @@
         </select>
     </label>
 
-    <label>Sector / Actividad
+    <label class="ancho">Sector / actividad
         <select name="sector">
             <option value="" selected>— Todos los sectores —</option>
             {% for s in sectors %}
@@ -38,7 +39,7 @@
     </label>
 </form>
 
-<section id="ranking-result">
+<div id="ranking-result">
     <p class="loading">Calculando ranking…</p>
-</section>
+</div>
 {% endblock %}
