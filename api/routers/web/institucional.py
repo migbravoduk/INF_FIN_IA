@@ -78,6 +78,14 @@ def inversion_institucional_derivados(request: Request, db: Database = Depends(g
     })
 
 
+@router.get("/derivados")
+def derivados_global(request: Request, db: Database = Depends(get_db)):
+    """Derivados de toda la economía: mercado, industrias, riesgos y coberturas por entidad
+    (db/derivados_global.py)."""
+    from db.derivados_global import resumen
+    return templates.TemplateResponse(request, "derivados.html", {"d": resumen(db)})
+
+
 @router.get("/inversion-institucional")
 def inversion_institucional(request: Request):
     """Hub de inversionistas institucionales: AFP y compañías de seguros."""

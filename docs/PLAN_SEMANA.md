@@ -391,6 +391,11 @@ pares pero empeora h3).
   verde solo para variaciones positivas, campos oscuros; proyecciones por defecto Cencosud y en
   miles de millones con línea "hoy"; AFP neta como gráfico de pesas; FFMM sin series rotas
   (salto −90%/×10 en un mes); bloque AFP del emisor con ventana SP. Verificado con capturas.
+- 2026-11-18 · vista `/derivados` (pestaña propia): derivados de toda la economía. 376 series
+  F099.DER nuevas (bancos por contraparte, instrumento, tipo de swap y plazo). Mercado, industrias,
+  riesgos (+10% dólar, +1 pp UF, DV01 de swap cámara), coberturas por AFP × fondo, compañía de
+  seguros y fondo mutuo, alertas. Identidades por sector cuadran exacto (testeadas). Detalle en
+  `docs/PLAN_DERIVADOS.md`.
 
 ---
 

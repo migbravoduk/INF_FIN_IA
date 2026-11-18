@@ -41,6 +41,11 @@ desagregada de la SP** (`sp_cartera_detalle`, 2010→2026-06): swaps y forwards 
 contraparte, y las AFP en la vista por emisor. Revisión visual con capturas y correcciones de
 gráficos (bitácora de `docs/PLAN_SEMANA.md` §7).
 
+18-nov: **vista `/derivados`** (pestaña propia): mercado, industrias, riesgos y coberturas por
+entidad sobre 376 series nuevas del Banco Central y las fuentes por entidad (SP, B.7, FUTU/OPCI).
+Pendientes: duración residual del swap cámara (hoy plazo original), valorización por sector
+(no existe en el BCCh), objetivo `1512` de seguros.
+
 ### Pendientes consolidados (17-nov-2026)
 
 Modelos y análisis:

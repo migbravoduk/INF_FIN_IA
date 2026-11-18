@@ -1,0 +1,474 @@
+{% extends "base.html" %}
+{#
+  derivados.html — Derivados de toda la economía: mercado, industrias, riesgos y coberturas.
+  d = db.derivados_global.resumen(): {mer, ind, tas, afp, seg, ffm, alertas, ident}
+  Montos en millones de USD (MMUSD) salvo que se indique. Neto = comprador − vendedor.
+#}
+{% block title %}Derivados · exposición y riesgo · INF_FIN_IA{% endblock %}
+
+{% macro mm(v, d=0) %}{{ v|es(d) if v is not none else '—' }}{% endmacro %}
+{% macro signo(v, d=0) %}{% if v is none %}—{% else %}<span class="{{ 'pos' if v > 0 else 'neg' if v < 0 }}">{{ v|es(d, True) }}</span>{% endif %}{% endmacro %}
+{% macro pct(v, d=0) %}{{ (v|es(d) ~ '%') if v is not none else '—' }}{% endmacro %}
+
+{% block content %}
+{% set mer, ind, tas, afp, seg, ffm = d.mer, d.ind, d.tas, d.afp, d.seg, d.ffm %}
+<h1 id="der-top">Derivados en Chile: exposición y riesgo</h1>
+<p class="subtitle">
+    Quién está posicionado en derivados, en qué riesgo, en qué dirección y con qué tamaño: el
+    mercado completo según los bancos (Banco Central), cada industria frente a ellos, y bajando
+    a cada AFP y fondo, compañía de seguros y fondo mutuo. Las preguntas: ¿cubren o apuestan?,
+    ¿qué pierden si se mueve el dólar, la inflación o las tasas?, ¿dónde se concentra?
+</p>
+
+<nav class="banca-minimap" aria-label="Secciones">
+    <span class="minimap-label">Ir a:</span>
+    <a href="#der-mercado">Mercado</a>
+    <a href="#der-industrias">Industrias</a>
+    <a href="#der-riesgos">Riesgos</a>
+    <a href="#der-coberturas">Coberturas por entidad</a>
+    <a href="#der-alertas">Alertas</a>
+    <a href="#der-metodo">Cómo se lee</a>
+    <a href="/inversion-institucional/derivados" style="margin-left:auto">Monitor de swaps de AFP →</a>
+</nav>
+
+{% if mer %}
+<div class="kpi-grid">
+    <div class="kpi-card">
+        <span class="kpi-sub">Nocional vigente · {{ mer.ultimo }}</span>
+        <span class="kpi-big">{{ (mer.total / 1e6)|es(2) }}</span>
+        <span class="kpi-sub">billones de USD en contratos de los bancos
+            {%- if mer.total_12 %} ({{ ((mer.total / mer.total_12 - 1) * 100)|es(0, True) }}% en 12 meses){% endif %}</span>
+    </div>
+    {% if afp %}<div class="kpi-card">
+        <span class="kpi-sub">Cobertura cambiaria AFP · {{ afp.ultimo }}</span>
+        <span class="kpi-big">{{ pct(afp.total.cobertura) }}</span>
+        <span class="kpi-sub">de la inversión extranjera ({{ (afp.total.ext / 1e3)|es(0) }} mil MMUSD) vendida a plazo contra pesos</span>
+    </div>{% endif %}
+    {% if ind %}{% set f_afp = ind.filas|selectattr('sector', 'equalto', 'AFP')|first %}
+    <div class="kpi-card">
+        <span class="kpi-sub">Si el dólar sube {{ ind.shock.fx|es(0) }}%</span>
+        <span class="kpi-big neg">{{ (f_afp.pyg_fx / 1e3)|es(1, True) }}</span>
+        <span class="kpi-sub">mil MMUSD pierden las AFP en sus forwards (lo compensa su cartera extranjera)</span>
+    </div>{% endif %}
+    {% if tas %}<div class="kpi-card">
+        <span class="kpi-sub">Swap cámara · si las tasas suben 1 pb</span>
+        <span class="kpi-big neg">{{ tas.dv01.residentes|es(0, True) }}</span>
+        <span class="kpi-sub">millones de $ para los residentes no bancos (reciben tasa fija); los bancos {{ tas.dv01.bancos|es(0, True) }}</span>
+    </div>{% endif %}
+</div>
+{% endif %}
+
+{# ================================================================ 1 · MERCADO #}
+<h2 id="der-mercado" class="fecu-grp">1 · El mercado: dónde está el riesgo
+    <a href="#der-top" class="minimap-top">↑ arriba</a></h2>
+{% if mer %}
+{% set c_tasa = mer.clases[0] %}
+<p class="lectura">
+    De cada 100 dólares de nocional vigente, <strong>{{ (c_tasa.monto / mer.total * 100)|es(0) }}</strong> están en
+    derivados de <strong>tasas de interés</strong> (casi todo swap cámara en pesos y OIS sobre tasas
+    extranjeras), {{ (mer.clases[1].monto / mer.total * 100)|es(0) }} en <strong>monedas</strong> y
+    {{ (mer.clases[2].monto / mer.total * 100)|es(0) }} en <strong>UF contra peso</strong>. El mercado se
+    duplica por contar ambos lados de cada contrato bancario: el tamaño importa para la liquidez y
+    el riesgo de contraparte; la exposición la da el <em>neto</em> de cada sector (sección 2).
+</p>
+<div class="chart-grid">
+    <div class="chart-block">
+        <h4>Nocional vigente por clase de riesgo (miles de millones de USD)</h4>
+        <div id="der-mer-serie" class="chart"></div>
+    </div>
+    <div class="chart-block">
+        <h4>Tasas de interés por tipo · {{ mer.ultimo }} (miles de millones de USD)</h4>
+        <div id="der-mer-tasas" class="chart"></div>
+    </div>
+    <div class="chart-block">
+        <h4>Monedas contra peso: instrumento y contraparte · {{ mer.ultimo }}</h4>
+        <div id="der-mer-fx" class="chart"></div>
+    </div>
+</div>
+{% else %}<p class="loading">Sin series del Banco Central cargadas.</p>{% endif %}
+
+{# ================================================================ 2 · INDUSTRIAS #}
+<h2 id="der-industrias" class="fecu-grp">2 · Industrias: quién vende y quién compra dólares a plazo
+    <a href="#der-top" class="minimap-top">↑ arriba</a></h2>
+{% if ind %}
+{% set vend = ind.filas|selectattr('usd_neto')|sort(attribute='usd_neto')|first %}
+{% set comp = ind.filas|selectattr('usd_neto')|sort(attribute='usd_neto', reverse=True)|first %}
+<p class="lectura">
+    <strong>{{ vend.sector }}</strong> es el gran vendedor de dólares a plazo ({{ vend.usd_neto|es(0) }} MMUSD
+    neto al {{ ind.ultimo }}{% if vend.usd_neto_12 %}, {{ vend.usd_neto_12|es(0) }} hace un año{% endif %}): cubre
+    en pesos una cartera invertida afuera. Del otro lado compran <strong>{{ comp.sector|lower }}</strong>
+    ({{ comp.usd_neto|es(0, True) }}) y las empresas importadoras o endeudadas en dólares. Los bancos
+    intermedian y se quedan con {{ ind.banco.usd_neto|es(0, True) }} MMUSD netos comprados.
+</p>
+<div class="chart-grid">
+    <div class="chart-block">
+        <h4>Neto dólar-peso por sector · {{ ind.ultimo }} (MMUSD; ◆ = hace 12 meses)</h4>
+        <div id="der-ind-bar" class="chart"></div>
+    </div>
+    <div class="chart-block">
+        <h4>Neto dólar-peso en el tiempo (MMUSD; negativo = vende dólares)</h4>
+        <div id="der-ind-serie" class="chart"></div>
+    </div>
+</div>
+<div class="table-scroll" style="margin-top:1rem">
+<table class="eeff-table">
+    <thead><tr>
+        <th>Sector</th>
+        <th style="text-align:right">Compra USD</th><th style="text-align:right">Vende USD</th>
+        <th style="text-align:right">Neto USD-CLP</th><th style="text-align:right">Δ 12 meses</th>
+        <th style="text-align:right">Otras monedas (neto)</th>
+        <th style="text-align:right">UF neto (mill. UF)</th>
+        <th style="text-align:right">Bruto USD-CLP</th>
+    </tr></thead>
+    <tbody>
+    {% for f in ind.filas %}
+    <tr>
+        <td>{{ f.sector }}</td>
+        <td class="num">{{ mm(f.usd_compra) }}</td><td class="num">{{ mm(f.usd_venta) }}</td>
+        <td class="num"><b>{{ signo(f.usd_neto) }}</b></td>
+        <td class="num">{{ signo((f.usd_neto - f.usd_neto_12) if f.usd_neto is not none and f.usd_neto_12 is not none else none) }}</td>
+        <td class="num">{{ signo(f.otras_me) }}</td>
+        <td class="num">{{ signo(f.uf_neto_mill, 1) }}</td>
+        <td class="num">{{ mm(f.usd_bruto) }}</td>
+    </tr>
+    {% endfor %}
+    <tr class="total-row">
+        <td>Bancos (su propia posición)</td><td></td><td></td>
+        <td class="num">{{ signo(ind.banco.usd_neto) }}</td><td></td>
+        <td class="num">{{ signo(ind.banco.me_neto - ind.banco.usd_neto) }}</td>
+        <td class="num">{{ signo(ind.banco.uf_neto_mill, 1) }}</td><td></td>
+    </tr>
+    </tbody>
+</table>
+</div>
+<p class="lead">
+    Posición de cada sector frente a los bancos residentes (lo que el banco reporta, con el signo
+    del sector). "Otras monedas" = moneda extranjera contra peso menos la parte en dólares: en
+    seguros es grande ({{ (ind.filas|selectattr('sector', 'equalto', 'Seguros')|first).otras_me|es(0) }} MMUSD):
+    cubren bonos en euros y otras monedas con cross currency swaps. UF neto positivo = compra UF a
+    plazo (gana si la inflación sorprende al alza). No residentes operan además NDF contra los
+    bancos (neto del banco {{ mm(ind.ndf_nr) }} MMUSD).
+</p>
+{% endif %}
+
+{# ================================================================ 3 · RIESGOS #}
+<h2 id="der-riesgos" class="fecu-grp">3 · Riesgos: qué pasa si se mueve el dólar, la inflación o las tasas
+    <a href="#der-top" class="minimap-top">↑ arriba</a></h2>
+{% if ind %}
+<p class="lectura">
+    Un alza de {{ ind.shock.fx|es(0) }}% del dólar le resta <strong>{{ (f_afp.pyg_fx / 1e3)|es(1) }} mil MMUSD</strong>
+    a los forwards de las AFP y le suma {{ ((ind.filas|selectattr('sector', 'equalto', 'No residentes')|first).pyg_fx / 1e3)|es(1) }}
+    mil a los no residentes. Para quien cubre, la pérdida del derivado se compensa con la ganancia de
+    la cartera extranjera; para quien no tiene ese activo detrás, es la exposición. La sensibilidad
+    es lineal (forwards: nocional × shock), sin opcionalidad.
+</p>
+<div class="chart-grid">
+    <div class="chart-block">
+        <h4>Resultado en derivados si el dólar sube {{ ind.shock.fx|es(0) }}% (MMUSD)</h4>
+        <div id="der-stress-fx" class="chart"></div>
+    </div>
+    <div class="chart-block">
+        <h4>Resultado si la inflación sorprende +{{ ind.shock.uf|es(0) }} pp (MMUSD, contratos UF-peso)</h4>
+        <div id="der-stress-uf" class="chart"></div>
+    </div>
+</div>
+{% endif %}
+{% if tas %}
+<h3 style="font-size:1rem;margin-top:1.6rem">Tasas en pesos: swap cámara por plazo</h3>
+<p class="lectura" style="font-size:.92rem">
+    Los residentes no bancos (principalmente AFP y seguros) <strong>reciben tasa fija</strong> en swap
+    cámara: ganan si las tasas bajan. Por cada punto base de alza pierden del orden de
+    <strong>{{ (-tas.dv01.residentes)|es(0) }} millones de pesos</strong>; los no residentes,
+    {{ (-tas.dv01.no_residentes)|es(0) }}. Los bancos tienen la posición contraria
+    ({{ tas.dv01.bancos|es(0, True) }}). En tasas extranjeras, las AFP quedaron con un neto de
+    {{ mm(tas.afp_ext.neto) }} MMUSD en swaps (recibe fijo) al {{ tas.ultimo }}: es la posición del
+    episodio de 2026, en detalle en el <a href="/inversion-institucional/derivados">monitor</a>.
+</p>
+<div class="chart-grid">
+    <div class="chart-block">
+        <h4>Sensibilidad a +1 pb por plazo original (millones de $; negativo = pierde si suben)</h4>
+        <div id="der-dv01" class="chart"></div>
+    </div>
+    <div class="chart-block">
+        <h4>Nocional bruto de swap cámara por plazo original (billones de $)</h4>
+        <div id="der-spc-bruto" class="chart"></div>
+    </div>
+</div>
+<p class="lead">Sensibilidad ≈ nocional neto × duración aproximada del plazo × 0,01%. Se usa el plazo
+    <em>original</em> del contrato (el Banco Central no publica el residual para swap cámara por
+    contraparte): es una cota superior.</p>
+{% endif %}
+
+{# ================================================================ 4 · COBERTURAS #}
+<h2 id="der-coberturas" class="fecu-grp">4 · Coberturas por entidad: ¿cubren o apuestan?
+    <a href="#der-top" class="minimap-top">↑ arriba</a></h2>
+
+{% if afp %}
+<h3 style="font-size:1rem">Fondos de pensiones, por AFP y fondo · {{ afp.ultimo }}</h3>
+{% set fe = afp.por_fondo|selectattr('fondo', 'equalto', 'E')|first %}
+{% set fa = afp.por_fondo|selectattr('fondo', 'equalto', 'A')|first %}
+<p class="lectura" style="font-size:.92rem">
+    La cobertura crece a medida que el fondo es más conservador: el Fondo A vende a plazo el
+    {{ pct(fa.cobertura) }} de su inversión extranjera y el Fondo E el {{ pct(fe.cobertura) }}. Pero en el E
+    la inversión extranjera es chica ({{ fe.ext|es(0) }} MMUSD) y los derivados pesan mucho más: sus
+    swaps valían {{ fe.swaps_pct|es(1) }}% del fondo. Celdas sobre 100% = vende más dólares de los que tiene afuera.
+</p>
+<div class="chart-grid">
+    <div class="chart-block">
+        <h4>Cobertura cambiaria: venta neta de USD a plazo / inversión extranjera (%)</h4>
+        <div id="der-afp-cob" class="chart"></div>
+    </div>
+    <div class="chart-block">
+        <h4>Valorización de los swaps (% del fondo; negativo = pérdida no realizada)</h4>
+        <div id="der-afp-sw" class="chart"></div>
+    </div>
+</div>
+<div class="table-scroll" style="margin-top:1rem">
+<table class="eeff-table">
+    <thead><tr><th>Fondo (7 AFP)</th><th style="text-align:right">Activos</th><th style="text-align:right">Inversión extranjera</th>
+        <th style="text-align:right">Vende USD a plazo (neto)</th><th style="text-align:right">Cobertura</th>
+        <th style="text-align:right">Compra UF a plazo (neto)</th><th style="text-align:right">Swaps (valorización)</th>
+        <th style="text-align:right">Swaps / fondo</th></tr></thead>
+    <tbody>
+    {% for f in afp.por_fondo %}
+    <tr><td>Fondo {{ f.fondo }}</td><td class="num">{{ mm(f.activos) }}</td><td class="num">{{ mm(f.ext) }}</td>
+        <td class="num">{{ mm(f.usd_neto_venta) }}</td><td class="num"><b>{{ pct(f.cobertura) }}</b></td>
+        <td class="num">{{ mm(f.uf_neto) }}</td><td class="num">{{ signo(f.swaps) }}</td>
+        <td class="num">{{ signo(f.swaps_pct, 2) }}%</td></tr>
+    {% endfor %}
+    <tr class="total-row"><td>Total</td><td class="num">{{ mm(afp.total.activos) }}</td><td class="num">{{ mm(afp.total.ext) }}</td>
+        <td class="num">{{ mm(afp.total.usd_neto_venta) }}</td><td class="num">{{ pct(afp.total.cobertura) }}</td>
+        <td class="num">{{ mm(afp.total.uf_neto) }}</td><td class="num">{{ signo(afp.total.swaps) }}</td>
+        <td class="num">{{ signo(afp.total.swaps / afp.total.activos * 100, 2) }}%</td></tr>
+    </tbody>
+</table>
+</div>
+<p class="lead">MMUSD. Fuente: cartera desagregada de la Superintendencia de Pensiones (forwards
+    dólar-peso y UF-peso por AFP y fondo, cualquier contraparte; swaps a valor de mercado).
+    Llega con ~4 meses de rezago; el Banco Central (sección 2) va 3 meses adelante.</p>
+{% endif %}
+
+{% if seg %}
+<h3 style="font-size:1rem;margin-top:1.8rem">Compañías de seguros · {{ seg.ultimo }}</h3>
+<p class="lectura" style="font-size:.92rem">
+    Las compañías tienen {{ (seg.total.ext_usd / 1e3)|es(1) }} mil MMUSD invertidos afuera y una posición
+    corta en moneda extranjera vía derivados de {{ (seg.total.me_usd / 1e3)|es(1) }} mil: cubren cerca
+    del <strong>{{ pct(seg.total.cobertura) }}</strong>. Es un mercado concentrado: las tres mayores
+    suman el {{ seg.top3|es(0) }}% del nocional. La mayoría de los contratos declara un objetivo
+    "1512", que la CMF no documenta en el manual; "CBE" es cobertura explícita.
+</p>
+<div class="table-scroll">
+<table class="eeff-table">
+    <thead><tr><th>Compañía</th><th style="text-align:right">Nocional (MMUSD)</th><th style="text-align:right">% del mercado</th>
+        <th style="text-align:right">Neto moneda ext.</th><th style="text-align:right">Inversión extranjera</th>
+        <th style="text-align:right">Cobertura</th><th style="text-align:right">Valor razonable</th>
+        <th style="text-align:right">Objetivo CBE / INV / 1512</th><th style="text-align:right">Contraparte exterior</th></tr></thead>
+    <tbody>
+    {% for f in seg.filas %}
+    <tr><td>{{ f.nombre }}<br><span class="lead">{{ f.ramo }} · {{ f.contratos }} contratos · {{ f.contrapartes }} contrapartes</span></td>
+        <td class="num">{{ mm(f.bruto_mmusd) }}</td><td class="num">{{ pct(f.peso, 1) }}</td>
+        <td class="num">{{ signo(f.me_usd) }}</td><td class="num">{{ mm(f.ext_usd) }}</td>
+        <td class="num"><b class="{{ 'neg' if f.cobertura and f.cobertura > 120 }}">{{ pct(f.cobertura) }}</b></td>
+        <td class="num">{{ signo(f.vr_mmusd, 1) }}</td>
+        <td class="num">{{ f.pct_cbe|es(0) }} / {{ f.pct_inv|es(0) }} / {{ f.pct_otro|es(0) }}%</td>
+        <td class="num">{{ pct(f.pct_exterior) }}</td></tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+<p class="lead">Fuente: CMF, archivos B.7 (derivados, contrato a contrato) y B.8 (cartera por código,
+    para la inversión extranjera). Neto en moneda extranjera = patas en moneda extranjera largas −
+    cortas, en USD equivalentes. Se muestran las {{ seg.filas|length }} mayores de {{ seg.n }}.</p>
+{% endif %}
+
+{% if ffm %}
+<h3 style="font-size:1rem;margin-top:1.8rem">Fondos mutuos · {{ ffm.ultimo }}</h3>
+<p class="lectura" style="font-size:.92rem">
+    {{ ffm.n }} fondos usan derivados. El grueso del nocional está en fondos de deuda en pesos y UF que
+    usan swaps y forwards de UF y de tasa (las tres mayores posiciones suman el {{ ffm.top3|es(0) }}%).
+    Los {{ ffm.cubiertos_total.n }} fondos con cartera en el exterior cubren en promedio el
+    {{ pct(ffm.cubiertos_total.cobertura) }} de esa inversión.
+    {% if ffm.apalancados %}En {{ ffm.apalancados|length }} fondos el nocional supera el patrimonio.{% endif %}
+</p>
+<div class="chart-grid">
+    <div class="chart-block">
+        <h4>Fondos con inversión extranjera: cuánto cubren (%)</h4>
+        <div class="table-scroll">
+        <table class="eeff-table">
+            <thead><tr><th>Fondo</th><th style="text-align:right">Extranjero (MMUSD)</th>
+                <th style="text-align:right">Neto USD</th><th style="text-align:right">Cobertura</th></tr></thead>
+            <tbody>{% for f in ffm.cubiertos %}
+            <tr><td>{{ f.fondo }}<br><span class="lead">{{ f.agf|agf_corto }} · RUN {{ f.run }}</span></td>
+                <td class="num">{{ mm(f.ext_usd, 1) }}</td><td class="num">{{ signo(f.neto_usd, 1) }}</td>
+                <td class="num"><b>{{ pct(f.cobertura) }}</b></td></tr>{% endfor %}</tbody>
+        </table>
+        </div>
+    </div>
+    <div class="chart-block">
+        <h4>Nocional sobre patrimonio: los más apalancados (veces)</h4>
+        <div class="table-scroll">
+        <table class="eeff-table">
+            <thead><tr><th>Fondo</th><th style="text-align:right">Nocional (MM$)</th>
+                <th style="text-align:right">Veces patrimonio</th><th>Instrumentos</th></tr></thead>
+            <tbody>{% for f in ffm.apalancados %}
+            <tr><td>{{ f.fondo }}<br><span class="lead">{{ f.agf|agf_corto }} · RUN {{ f.run }}</span></td>
+                <td class="num">{{ mm(f.bruto_mm) }}</td><td class="num"><b>{{ f.veces|es(1) }}×</b></td>
+                <td><span class="lead">{{ f.subyacentes }}</span></td></tr>{% endfor %}</tbody>
+        </table>
+        </div>
+    </div>
+</div>
+<p class="lead">Fuente: CMF, cartera mensual de fondos mutuos (FUTU/OPCI para derivados, EXTR para la
+    cartera extranjera). El nocional de un swap de tasa no es dinero invertido: "veces patrimonio"
+    mide tamaño de la apuesta de tasa o UF, no apalancamiento financiero en sentido estricto.</p>
+{% endif %}
+
+{# ================================================================ 5 · ALERTAS #}
+<h2 id="der-alertas" class="fecu-grp">5 · Alertas
+    <a href="#der-top" class="minimap-top">↑ arriba</a></h2>
+<p class="lead">Reglas fijas: cobertura &gt; 100% (AFP) o &gt; 120% (seguros) = posición más allá del
+    activo cubierto; swaps bajo −1% del fondo; fondo mutuo con nocional &gt; patrimonio; sector cuyo neto
+    dólar-peso cambió más de 50% (y más de 2.000 MMUSD) en un año.</p>
+{% for a in d.alertas %}
+<div class="alerta"><span class="badge {{ a.nivel }}">{{ a.nivel }}</span>
+    <div><strong>{{ a.entidad }}</strong> — {{ a.texto }}</div></div>
+{% else %}<p class="loading">Sin alertas con las reglas vigentes.</p>{% endfor %}
+
+{# ================================================================ 6 · MÉTODO #}
+<h2 id="der-metodo" class="fecu-grp">6 · Cómo se lee y de dónde sale
+    <a href="#der-top" class="minimap-top">↑ arriba</a></h2>
+<div class="lead" style="font-size:.82rem;line-height:1.55;max-width:62rem">
+    <p><strong>Nocionales, no valor de mercado.</strong> Las cifras del Banco Central son montos
+    vigentes: dicen tamaño y dirección, no ganancia ni pérdida. La valorización solo existe por
+    entidad (swaps de AFP en la cartera de la SP, valor razonable de seguros en el B.7).</p>
+    <p><strong>Sectores vistos por los bancos.</strong> Los bancos reportan su posición frente a cada
+    sector; la del sector es la de signo contrario. Coincide exacta con lo que AFP, seguros, AGF y
+    empresas reportan de sí mismos frente a los bancos. Identidades verificadas en el último mes:</p>
+    <ul>{% for i in d.ident %}<li>{{ i.chequeo }}: diferencia {{ i.dif|es(3) }} MMUSD</li>{% endfor %}</ul>
+    <p><strong>Rezagos.</strong> Banco Central {{ mer.ultimo if mer else '—' }}; SP {{ afp.ultimo if afp else '—' }};
+    seguros {{ seg.ultimo if seg else '—' }}; fondos mutuos {{ ffm.ultimo if ffm else '—' }}.
+    Plan y validaciones: <code>docs/PLAN_DERIVADOS.md</code>.</p>
+</div>
+
+<script>
+(function () {
+    var MER = {{ mer | tojson }}, IND = {{ ind | tojson }}, TAS = {{ tas | tojson }}, AFP = {{ afp | tojson }};
+    var PAL = window.INF_PALETA || ["#3987e5", "#d95926", "#199e70", "#c98500", "#d55181", "#0ca30c", "#9085e9", "#e66767"];
+    function es(v, d) { return v === null || v === undefined ? "—" : v.toLocaleString("es-CL", {minimumFractionDigits: d || 0, maximumFractionDigits: d || 0}); }
+    function k(a, f) { return a.map(function (v) { return v === null ? null : v / f; }); }
+    function txt(v, signo) {
+        if (v === null || v === undefined) { return ""; }
+        return (signo && v > 0 ? "+" : "") + v.toLocaleString("es-CL", {maximumFractionDigits: 0});
+    }
+    // Barras divergentes con la etiqueta afuera: holgura a ambos lados para que el texto de
+    // una barra negativa no se monte sobre los nombres del eje.
+    function rango(vals) {
+        var xs = vals.filter(function (v) { return v !== null && v !== undefined; }).concat([0]);
+        var lo = Math.min.apply(null, xs), hi = Math.max.apply(null, xs), pad = (hi - lo) * 0.22 || 1;
+        return [lo < 0 ? lo - pad : 0, hi > 0 ? hi + pad : pad * 0.2];
+    }
+    function draw() {
+        if (!window.Plotly) { return setTimeout(draw, 100); }
+        var H = 300;
+        if (MER && MER.serie) {
+            var s = MER.serie;
+            Plotly.newPlot("der-mer-serie", [
+                {x: s.meses, y: k(s.tasas, 1e3), name: "Tasas", type: "scatter", mode: "lines", stackgroup: "a", line: {width: 1, color: PAL[0]}},
+                {x: s.meses, y: k(s.monedas, 1e3), name: "Monedas", type: "scatter", mode: "lines", stackgroup: "a", line: {width: 1, color: PAL[1]}},
+                {x: s.meses, y: k(s.inflacion, 1e3), name: "UF-peso", type: "scatter", mode: "lines", stackgroup: "a", line: {width: 1, color: PAL[2]}}
+            ], {height: H, margin: {t: 30, r: 10, b: 30, l: 55}, hovermode: "x unified",
+                yaxis: {hoverformat: ",.0f"}, legend: {orientation: "h", y: 1, yanchor: "bottom", x: 0}});
+            var t = MER.tasas.slice().reverse();
+            Plotly.newPlot("der-mer-tasas", [{type: "bar", orientation: "h", y: t.map(function (r) { return r.tipo; }),
+                x: t.map(function (r) { return r.monto / 1e3; }), marker: {color: PAL[0]},
+                texttemplate: "%{x:,.0f}", textposition: "outside", cliponaxis: false,
+                hovertemplate: "%{y}: %{x:,.0f} mil MMUSD<extra></extra>"}],
+                {height: H, margin: {t: 10, r: 50, b: 30, l: 10}, showlegend: false, yaxis: {automargin: true}});
+            var fx = MER.instrumentos_fx.concat([{tipo: "", monto: null}]).concat(MER.contraparte_fx).reverse();
+            Plotly.newPlot("der-mer-fx", [{type: "bar", orientation: "h", y: fx.map(function (r, i) { return r.tipo || " "; }),
+                x: fx.map(function (r) { return r.monto === null ? null : r.monto / 1e3; }),
+                marker: {color: fx.map(function (r) { return MER.contraparte_fx.indexOf(r) >= 0 ? PAL[6] : PAL[1]; })},
+                texttemplate: "%{x:,.0f}", textposition: "outside", cliponaxis: false,
+                hovertemplate: "%{y}: %{x:,.0f} mil MMUSD<extra></extra>"}],
+                {height: H, margin: {t: 10, r: 50, b: 30, l: 10}, showlegend: false,
+                 xaxis: {title: {text: "miles de millones de USD"}}, yaxis: {automargin: true}});
+        }
+        if (IND && IND.filas) {
+            var f = IND.filas.slice().sort(function (a, b) { return (a.usd_neto || 0) - (b.usd_neto || 0); });
+            Plotly.newPlot("der-ind-bar", [
+                {type: "bar", orientation: "h", y: f.map(function (r) { return r.sector; }), x: f.map(function (r) { return r.usd_neto; }),
+                 name: IND.ultimo, marker: {color: f.map(function (r) { return r.usd_neto < 0 ? "#d95926" : "#3987e5"; })},
+                 text: f.map(function (r) { return txt(r.usd_neto, true); }), textposition: "outside", cliponaxis: true,
+                 textfont: {color: "#e2e8f0", size: 11},
+                 hovertemplate: "%{y}<br>neto %{x:,.0f} MMUSD<extra></extra>"},
+                {type: "scatter", mode: "markers", y: f.map(function (r) { return r.sector; }), x: f.map(function (r) { return r.usd_neto_12; }),
+                 name: "hace 12 meses", marker: {symbol: "diamond", size: 9, color: "#e2e8f0", line: {color: "#1e293b", width: 1}},
+                 hovertemplate: "%{y}<br>hace 12 meses %{x:,.0f}<extra></extra>"}
+            ], {height: H + 20, margin: {t: 30, r: 60, b: 30, l: 10}, yaxis: {automargin: true},
+                xaxis: {zeroline: true, zerolinecolor: "#94a3b8", showgrid: true,
+                        range: rango(f.map(function (r) { return r.usd_neto; }).concat(f.map(function (r) { return r.usd_neto_12; })))},
+                legend: {orientation: "h", y: 1, yanchor: "bottom", x: 0}});
+            var s2 = IND.serie, tr = [];
+            Object.keys(s2.usd).forEach(function (n, i) {
+                tr.push({x: s2.meses, y: s2.usd[n], name: n, type: "scatter", mode: "lines", line: {width: 2, color: PAL[i % PAL.length]}});
+            });
+            Plotly.newPlot("der-ind-serie", tr, {height: H + 20, margin: {t: 50, r: 10, b: 30, l: 60}, hovermode: "x unified",
+                yaxis: {zeroline: true, zerolinecolor: "#94a3b8", hoverformat: ",.0f"}, legend: {orientation: "h", y: 1, yanchor: "bottom", x: 0}});
+            function stress(id, campo) {
+                var g = IND.filas.slice().sort(function (a, b) { return (a[campo] || 0) - (b[campo] || 0); });
+                Plotly.newPlot(id, [{type: "bar", orientation: "h", y: g.map(function (r) { return r.sector; }),
+                    x: g.map(function (r) { return r[campo]; }),
+                    marker: {color: g.map(function (r) { return (r[campo] || 0) < 0 ? "#e66767" : "#0ca30c"; })},
+                    text: g.map(function (r) { return txt(r[campo], true); }), textposition: "outside", cliponaxis: true,
+                    textfont: {color: "#e2e8f0", size: 11},
+                    hovertemplate: "%{y}: %{text} MMUSD<extra></extra>"}],
+                    {height: H, margin: {t: 10, r: 20, b: 30, l: 10}, showlegend: false, yaxis: {automargin: true},
+                     xaxis: {zeroline: true, zerolinecolor: "#94a3b8", showgrid: true,
+                             range: rango(g.map(function (r) { return r[campo]; }))}});
+            }
+            stress("der-stress-fx", "pyg_fx");
+            stress("der-stress-uf", "pyg_uf");
+        }
+        if (TAS && TAS.filas) {
+            var pl = TAS.filas.map(function (r) { return r.plazo; });
+            function dv(g) { return TAS.filas.map(function (r) { return r[g] === null ? null : r[g] * r.anios * 0.1; }); }
+            Plotly.newPlot("der-dv01", [
+                {type: "bar", x: pl, y: dv("R.63"), name: "Residentes no bancos", marker: {color: PAL[1]}},
+                {type: "bar", x: pl, y: dv("N.NR"), name: "No residentes", marker: {color: PAL[6]}}
+            ], {height: H, margin: {t: 30, r: 10, b: 50, l: 60}, barmode: "relative",
+                yaxis: {zeroline: true, zerolinecolor: "#94a3b8", hoverformat: ",.0f"},
+                legend: {orientation: "h", y: 1, yanchor: "bottom", x: 0}});
+            Plotly.newPlot("der-spc-bruto", [{type: "bar", x: pl, y: TAS.filas.map(function (r) { return r.bruto / 1e3; }),
+                marker: {color: PAL[0]}, texttemplate: "%{y:,.0f}", textposition: "outside", cliponaxis: false,
+                hovertemplate: "%{x}: %{y:,.1f} billones de $<extra></extra>"}],
+                {height: H, margin: {t: 20, r: 10, b: 50, l: 50}, showlegend: false});
+        }
+        if (AFP && AFP.filas) {
+            var afps = AFP.afps, fondos = AFP.fondos;
+            function z(campo) {
+                return afps.map(function (a) { return fondos.map(function (fd) {
+                    var r = AFP.filas.filter(function (x) { return x.afp === a && x.fondo === fd; })[0];
+                    return r && r[campo] !== null ? r[campo] : null; }); });
+            }
+            var nombres = afps.map(function (a) { return a.charAt(0) + a.slice(1).toLowerCase(); });
+            var cols = fondos.map(function (x) { return "Fondo " + x; });
+            var zc = z("cobertura");
+            Plotly.newPlot("der-afp-cob", [{type: "heatmap", z: zc, x: cols, y: nombres, zmin: 0, zmax: 100,
+                colorscale: [[0, "#1e3a5f"], [0.5, "#3987e5"], [1, "#cde2fb"]], xgap: 2, ygap: 2,
+                text: zc.map(function (r) { return r.map(function (v) { return v === null ? "" : es(v) + "%" + (v > 100 ? " ⚠" : ""); }); }),
+                texttemplate: "%{text}", textfont: {size: 11},
+                hovertemplate: "%{y} · %{x}<br>cobertura %{text}<extra></extra>", colorbar: {ticksuffix: "%", thickness: 10}}],
+                {height: H, margin: {t: 10, r: 10, b: 30, l: 10}, yaxis: {autorange: "reversed", automargin: true, showgrid: false}});
+            var zs = z("swaps_pct");
+            Plotly.newPlot("der-afp-sw", [{type: "heatmap", z: zs, x: cols, y: nombres, zmid: 0, zmin: -3, zmax: 3,
+                colorscale: [[0, "#b91c1c"], [0.5, "#383835"], [1, "#3987e5"]], xgap: 2, ygap: 2,
+                text: zs.map(function (r) { return r.map(function (v) { return v === null ? "" : es(v, 2) + "%"; }); }),
+                texttemplate: "%{text}", textfont: {size: 11},
+                hovertemplate: "%{y} · %{x}<br>swaps %{text} del fondo<extra></extra>", colorbar: {ticksuffix: "%", thickness: 10}}],
+                {height: H, margin: {t: 10, r: 10, b: 30, l: 10}, yaxis: {autorange: "reversed", automargin: true, showgrid: false}});
+        }
+    }
+    draw();
+})();
+</script>
+{% endblock %}

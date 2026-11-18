@@ -68,3 +68,57 @@ def test_neto_ffmm_mismo_signo_que_bcch(db):
     s = resumen_ffmm(db)["serie"]
     pares = [(a, b) for a, b in zip(s["neto_usd"], s["bcch_agf"]) if b is not None and abs(b) > 100]
     assert pares and sum((a < 0) == (b < 0) for a, b in pares) / len(pares) >= 0.9
+
+
+# --- Vista /derivados (db/derivados_global.py) ---------------------------------------------
+
+def test_global_identidades_por_sector(db):
+    import db.derivados_global as G
+    ids = G.identidades(db)
+    if not ids:
+        pytest.skip("sin series de bancos por contraparte")
+    for i in ids:
+        assert abs(i["dif"]) < 1.0, i          # MMUSD: cuadran salvo redondeo
+
+
+def test_global_espejo_banco_sector(db):
+    # La posición del sector = − la del banco frente a él (AFP se reporta a sí misma).
+    import db.derivados as D
+    w = D._frame(db, {"b": G_P + "40.R.42.NET.Z.MMUSD.CLPUSD.Z.Z.0.M",
+                      "s": G_P + "42.R.40.NET.Z.MMUSD.CLPUSD.Z.Z.0.M"}).dropna()
+    if w.empty:
+        pytest.skip("sin series")
+    assert ((w["b"] + w["s"]).abs() < 1.0).all()
+
+
+def test_global_dv01_suma_cero(db):
+    import db.derivados_global as G
+    t = G.tasas(db)
+    if not t:
+        pytest.skip("sin swap cámara por plazo")
+    dv = t["dv01"]
+    assert abs(dv["residentes"] + dv["no_residentes"] + dv["bancos"]) < 1.0
+
+
+def test_global_cobertura_afp_razonable(db):
+    import db.derivados_global as G
+    a = G.coberturas_afp(db)
+    if not a:
+        pytest.skip("sin cartera SP")
+    assert 0 < a["total"]["cobertura"] < 100
+    # Más conservador, más cubierto (A < C < E)
+    c = {f["fondo"]: f["cobertura"] for f in a["por_fondo"]}
+    assert c["A"] < c["C"] < c["E"]
+
+
+G_P = "F099.DER.STO.Z."
+
+
+def test_alertas_agrupan_por_afp():
+    from db.derivados_global import alertas
+    afp = {"filas": [{"afp": "CAPITAL", "fondo": f, "cobertura": cob, "swaps_pct": sw}
+                     for f, cob, sw in (("A", 15, -1.2), ("C", 40, -2.5), ("E", 105, -0.5))]}
+    out = alertas({}, afp, {}, {})
+    swaps = [a for a in out if "swaps" in a["texto"]]
+    assert len(swaps) == 1 and swaps[0]["nivel"] == "alto" and "A, C" in swaps[0]["texto"]
+    assert any("105%" in a["texto"] for a in out)          # sobrecobertura del Fondo E

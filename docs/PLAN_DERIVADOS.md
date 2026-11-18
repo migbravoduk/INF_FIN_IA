@@ -199,6 +199,33 @@ qué instrumento.
 FUTU/OPCI: neto en dólares, UF y tasa; mayores posiciones; fondos que usan derivados para
 invertir (futuros de índice, opciones) y no solo para cubrir.
 
+## Vista `/derivados` (18-nov-2026): derivados de toda la economía
+
+Pestaña propia en el menú. `db/derivados_global.py` + `api/templates/derivados.html`.
+
+- **Datos nuevos:** 376 series `F099.DER` más (categoría `derivados_sector`, desde 2022):
+  posiciones de los bancos frente a cada sector contraparte (AGF 38, corredoras 39, AFP 42,
+  seguros 44, otros 50, empresas 55A, residentes no bancos 63, no residentes NR) en dólar-peso,
+  moneda extranjera-peso y UF-peso (comprador/vendedor/neto/total); totales bancarios por clase
+  (tasas, monedas, inflación), por instrumento (forward, CCS, otros, NDF) y por tipo de swap
+  (cámara pesos/UF, OIS, fijo-variable, basis); swap cámara por plazo original frente a
+  residentes no bancos y no residentes; plazos residuales de monedas y UF.
+- **Convención validada:** posición del sector = − la del banco frente a él (coincide exacto con
+  lo que AFP, seguros, AGF y empresas reportan frente a los bancos). Σ sectores residentes =
+  residentes no bancos; residentes no bancos + no residentes = neto bancario (interbancario
+  neta cero). Diferencias < 0,001 MMUSD; testeado (`tests/test_derivados.py`).
+- **Secciones:** mercado (2,04 billones de USD de nocional bancario a sep-2026: 56% tasas, 25%
+  monedas, 18% UF); industrias (quién vende y compra dólares a plazo: AFP −35.091, no
+  residentes +27.098, empresas +10.151, bancos se quedan +5.289); riesgos (+10% dólar, +1 pp de
+  inflación, sensibilidad del swap cámara a 1 pb por plazo original: residentes −3.892 MM$/pb,
+  no residentes −1.912, bancos +5.805; suman cero); coberturas por entidad (AFP × fondo: 30% del
+  total, de 17% en el A a 97% en el E, Habitat E 121%; seguros: 95% con Penta 143%; fondos
+  mutuos con cartera extranjera: 19%, y 10 fondos con nocional > patrimonio); alertas con
+  reglas fijas.
+- **Límites:** nocionales, no valor de mercado (la valorización solo existe por entidad); DV01
+  con plazo original (cota superior); "veces patrimonio" de fondos mutuos mide tamaño de la
+  apuesta de tasa/UF, no apalancamiento financiero; objetivo `1512` de seguros sin documentar.
+
 ## Fases
 
 | Fase | Qué | Esfuerzo | Validación antes de mostrar |

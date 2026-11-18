@@ -41,6 +41,7 @@ ROUTE_SOURCES: list[tuple[str, list[str]]] = [
     ("/afp", ["sp_cuotas", "sp_cartera"]),
     ("/fondos", ["sp_cuotas", "sp_cartera"]),
     ("/inversion-institucional", ["cmf_cartera", "sp_cuotas", "sp_cartera", "cmf_fm_cuotas"]),
+    ("/derivados", ["bcentral", "cmf_cartera", "sp_cartera", "cmf_fm_cartera"]),
 ]
 
 _TTL = 300

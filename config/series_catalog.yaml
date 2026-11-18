@@ -1365,6 +1365,3023 @@ bcentral:
     publish_lag_days: 60
     description: "Monto vigente neto | Derivados de monedas montos vigentes de Administradoras generales de fondos, datos mensuales (USD-CLP)"
 
+  # --- Derivados globales (BCCh, F099.DER): bancos por contraparte y por plazo, y los
+  # sectores que reportan solo monedas. Vista /derivados (db/derivados_global.py).
+  # Generado desde el catálogo BDE (SearchSeries mensual, 18-nov-2026). Desde ene-2022.
+  # Las series 'Bancos · … vs. X' son la posición DEL BANCO frente al sector X: la del
+  # sector es la de signo contrario.
+
+  - id: F099.DER.STO.Z.38.N.NR.COM.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados AGF · ME-CLP · vs. no residentes · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente comprador | Derivados de monedas montos vigentes de Administradoras generales de fondos, datos mensuales (moneda nacional contra moneda extranjera)"
+
+  - id: F099.DER.STO.Z.38.N.NR.NET.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados AGF · ME-CLP · vs. no residentes · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente neto | Derivados de monedas montos vigentes de Administradoras generales de fondos, datos mensuales (moneda nacional contra moneda extranjera)"
+
+  - id: F099.DER.STO.Z.38.N.NR.TOT.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados AGF · ME-CLP · vs. no residentes · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente total con no residentes, ME-ML | Derivados de monedas montos vigentes de Administradoras generales de fondos, datos mensuales (moneda nacional contra moneda extranjera)"
+
+  - id: F099.DER.STO.Z.38.N.NR.VTA.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados AGF · ME-CLP · vs. no residentes · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente vendedor | Derivados de monedas montos vigentes de Administradoras generales de fondos, datos mensuales (moneda nacional contra moneda extranjera)"
+
+  - id: F099.DER.STO.Z.38.R.40.NET.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados AGF · ME-CLP · vs. bancos · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente neto | Derivados de monedas montos vigentes de Administradoras generales de fondos, datos mensuales (moneda nacional contra moneda extranjera)"
+
+  - id: F099.DER.STO.Z.39.N.NR.COM.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Corredoras · ME-CLP · vs. no residentes · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente comprador | Derivados de monedas montos vigentes de Corredoras de bolsa y agencias de valores, datos mensuales (moneda nacional contra moneda extranjera) (millones de dólares)"
+
+  - id: F099.DER.STO.Z.39.N.NR.NET.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Corredoras · ME-CLP · vs. no residentes · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente neto | Derivados de monedas montos vigentes de Corredoras de bolsa y agencias de valores, datos mensuales (moneda nacional contra moneda extranjera) (millones de dólares)"
+
+  - id: F099.DER.STO.Z.39.N.NR.TOT.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Corredoras · ME-CLP · vs. no residentes · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente total con no residentes, ME-ML | Derivados de monedas montos vigentes de Corredoras de bolsa y agencias de valores, datos mensuales (moneda nacional contra moneda extranjera) (millones de dólares)"
+
+  - id: F099.DER.STO.Z.39.N.NR.VTA.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Corredoras · ME-CLP · vs. no residentes · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente vendedor | Derivados de monedas montos vigentes de Corredoras de bolsa y agencias de valores, datos mensuales (moneda nacional contra moneda extranjera) (millones de dólares)"
+
+  - id: F099.DER.STO.Z.39.R.40.NET.Z.MMUSD.CLPUSD.Z.Z.0.M
+    name: "Derivados Corredoras · USD-CLP · vs. bancos · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente neto | Derivados de monedas montos vigentes de Corredoras de bolsa y agencias de valores, datos mensuales (USD-CLP) (millones de dólares)"
+
+  - id: F099.DER.STO.Z.39.R.40.NET.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Corredoras · ME-CLP · vs. bancos · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente neto | Derivados de monedas montos vigentes de Corredoras de bolsa y agencias de valores, datos mensuales (moneda nacional contra moneda extranjera) (millones de dólares)"
+
+  - id: F099.DER.STO.Z.40.N.63.COM.Z.MUF.MLML.Z.Z.0.M
+    name: "Derivados Bancos · UF-CLP · vs. no residentes (no bancos) · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "Compra UF; residentes no bancos, monto vigente total, total, derivados de UF-CLP montos vigentes por contraparte de bancos residentes; derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.N.63.NET.Z.MUF.MLML.Z.Z.0.M
+    name: "Derivados Bancos · UF-CLP · vs. no residentes (no bancos) · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "Neto; residentes no bancos, monto vigente total, total, derivados de UF-CLP montos vigentes por contraparte de bancos residentes; derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.N.63.TOT.Z.MUF.MLML.Z.Z.0.M
+    name: "Derivados Bancos · UF-CLP · vs. no residentes (no bancos) · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "Residentes no bancos; monto vigente total, total, derivados de UF-CLP montos vigentes por contraparte de bancos residentes; derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.N.63.VTA.Z.MUF.MLML.Z.Z.0.M
+    name: "Derivados Bancos · UF-CLP · vs. no residentes (no bancos) · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "Venta UF; residentes no bancos, monto vigente total, total, derivados de UF-CLP montos vigentes por contraparte de bancos residentes; derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.N.NR.COM.CCS.MUF.MLML.Z.Z.0.M
+    name: "Derivados Bancos · UF-CLP · cross currency swap · vs. no residentes · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "Compras UF; no residentes, interbancario, swap, total, monto vigente, total, montos vigentes por instrumento y sector de bancos residentes; derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.N.NR.COM.FWD.MUF.MLML.Z.Z.0.M
+    name: "Derivados Bancos · UF-CLP · forward · vs. no residentes · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "Compras UF; no residentes, forward, monto vigente, total, montos vigentes por instrumento y sector de bancos residentes; derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.N.NR.COM.Z.MMUSD.CLPUSD.Z.Z.0.M
+    name: "Derivados Bancos · USD-CLP · vs. no residentes · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente comprador; derivados de monedas montos vigentes de bancos residentes USD-CLP; posición; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.N.NR.COM.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Bancos · ME-CLP · vs. no residentes · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente comprador; derivados de monedas montos vigentes de bancos residentes; posición; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.N.NR.COM.Z.MUF.MLML.Z.Z.0.M
+    name: "Derivados Bancos · UF-CLP · vs. no residentes · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "Compra UF; no residentes, monto vigente total, total, derivados de UF-CLP montos vigentes por contraparte de bancos residentes; derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.N.NR.NET.CCS.MUF.MLML.Z.Z.0.M
+    name: "Derivados Bancos · UF-CLP · cross currency swap · vs. no residentes · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "Neto; no residentes, interbancario, swap, total, monto vigente, total, montos vigentes por instrumento y sector de bancos residentes; derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.N.NR.NET.FWD.MUF.MLML.Z.Z.0.M
+    name: "Derivados Bancos · UF-CLP · forward · vs. no residentes · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "Neto; no residentes, forward, monto vigente, total, montos vigentes por instrumento y sector de bancos residentes; derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.N.NR.NET.NDF.MMUSD.CLPUSD.C.Z.0.M
+    name: "Derivados Bancos · USD-CLP · NDF · vs. no residentes · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Total, Forward por compensación (NDF) de montos vigentes netos de bancos residentes con no residentes, datos mensuales (USD-CLP), millones de dólares, Banco Central de Chile"
+
+  - id: F099.DER.STO.Z.40.N.NR.NET.SWP.MMMCLP.SPC.R.Z.0.M
+    name: "Derivados Bancos · cámara · swap · vs. no residentes · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "No residentes"
+
+  - id: F099.DER.STO.Z.40.N.NR.NET.Z.MMUSD.CLPUSD.Z.Z.0.M
+    name: "Derivados Bancos · USD-CLP · vs. no residentes · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente neto; derivados de monedas montos vigentes de bancos residentes USD-CLP; posición; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.N.NR.NET.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Bancos · ME-CLP · vs. no residentes · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente neto; derivados de monedas montos vigentes de bancos residentes; posición; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.N.NR.NET.Z.MUF.MLML.Z.Z.0.M
+    name: "Derivados Bancos · UF-CLP · vs. no residentes · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "Neto; no residentes, monto vigente total, total, derivados de UF-CLP montos vigentes por contraparte de bancos residentes; derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.N.NR.TOT.CCS.MUF.MLML.Z.Z.0.M
+    name: "Derivados Bancos · UF-CLP · cross currency swap · vs. no residentes · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "No residentes; interbancario, swap, total, monto vigente, total, montos vigentes por instrumento y sector de bancos residentes; derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.N.NR.TOT.FWD.MUF.MLML.Z.Z.0.M
+    name: "Derivados Bancos · UF-CLP · forward · vs. no residentes · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "No residentes; forward, monto vigente, total, montos vigentes por instrumento y sector de bancos residentes; derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.N.NR.TOT.SWP.MMMCLP.SPC.R.Z.0.M
+    name: "Derivados Bancos · cámara · swap · vs. no residentes · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "No Residentes; posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.N.NR.TOT.Z.MMUSD.CLFOME.Z.Z.0.M
+    name: "Derivados Bancos · otras ME-UF · vs. no residentes · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "No residentes; derivados de monedas montos vigentes de bancos residentes, total, total, ME-CLF; derivados; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.N.NR.TOT.Z.MMUSD.CLFUSD.Z.Z.0.M
+    name: "Derivados Bancos · USD-UF · vs. no residentes · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "No residentes; derivados de monedas montos vigentes de bancos residentes, total, total, USD-CLF; derivados; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.N.NR.TOT.Z.MMUSD.CLPOME.Z.Z.0.M
+    name: "Derivados Bancos · otras ME-CLP · vs. no residentes · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "No residentes; derivados de monedas montos vigentes de bancos residentes, total, total, ME-CLP; derivados; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.N.NR.TOT.Z.MMUSD.CLPUSD.Z.Z.0.M
+    name: "Derivados Bancos · USD-CLP · vs. no residentes · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "No residentes, CLP-USD; derivados de monedas montos vigentes de bancos residentes, total, total, USD-CLP; derivados; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.N.NR.TOT.Z.MMUSD.MEME.Z.Z.0.M
+    name: "Derivados Bancos · ME-ME · vs. no residentes · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "No residentes; derivados de monedas montos vigentes de bancos residentes, total, total, ME-ME; derivados; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.N.NR.TOT.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Bancos · ME-CLP · vs. no residentes · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "No residentes; derivados de monedas montos vigentes de bancos residentes; derivados; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.N.NR.TOT.Z.MUF.MLML.R.Z.0.M
+    name: "Derivados Bancos · UF-CLP · vs. no residentes · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "No residentes; derivados de UF-CLP montos vigentes por plazo residual de bancos residentes; derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.N.NR.TOT.Z.MUF.MLML.Z.Z.0.M
+    name: "Derivados Bancos · UF-CLP · vs. no residentes · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "No residentes; monto vigente total, total, derivados de UF-CLP montos vigentes por contraparte de bancos residentes; derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.N.NR.VTA.CCS.MUF.MLML.Z.Z.0.M
+    name: "Derivados Bancos · UF-CLP · cross currency swap · vs. no residentes · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "Ventas UF; no residentes, interbancario, swap, total, monto vigente, total, montos vigentes por instrumento y sector de bancos residentes; derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.N.NR.VTA.FWD.MUF.MLML.Z.Z.0.M
+    name: "Derivados Bancos · UF-CLP · forward · vs. no residentes · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "Ventas UF; no residentes, forward, monto vigente, total, montos vigentes por instrumento y sector de bancos residentes; derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.N.NR.VTA.Z.MMUSD.CLPUSD.Z.Z.0.M
+    name: "Derivados Bancos · USD-CLP · vs. no residentes · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente vendedor; derivados de monedas montos vigentes de bancos residentes USD-CLP; posición; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.N.NR.VTA.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Bancos · ME-CLP · vs. no residentes · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente vendedor; derivados de monedas montos vigentes de bancos residentes; posición; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.N.NR.VTA.Z.MUF.MLML.Z.Z.0.M
+    name: "Derivados Bancos · UF-CLP · vs. no residentes · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "Venta UF; no residentes, monto vigente total, total, derivados de UF-CLP montos vigentes por contraparte de bancos residentes; derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.38.COM.Z.MMUSD.CLPUSD.Z.Z.0.M
+    name: "Derivados Bancos · USD-CLP · vs. AGF · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente comprador; derivados de monedas montos vigentes de bancos residentes USD-CLP; posición; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.38.COM.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Bancos · ME-CLP · vs. AGF · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente comprador; derivados de monedas montos vigentes de bancos residentes; posición; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.38.COM.Z.MUF.MLML.Z.Z.0.M
+    name: "Derivados Bancos · UF-CLP · vs. AGF · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "Compra UF; administradoras generales de fondos, monto vigente total, total, derivados de UF-CLP montos vigentes por contraparte de bancos residentes; derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.38.NET.Z.MMUSD.CLPUSD.Z.Z.0.M
+    name: "Derivados Bancos · USD-CLP · vs. AGF · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente neto; derivados de monedas montos vigentes de bancos residentes USD-CLP; posición; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.38.NET.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Bancos · ME-CLP · vs. AGF · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente neto; derivados de monedas montos vigentes de bancos residentes; posición; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.38.NET.Z.MUF.MLML.Z.Z.0.M
+    name: "Derivados Bancos · UF-CLP · vs. AGF · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "Neto; administradoras generales de fondos, monto vigente total, total, derivados de UF-CLP montos vigentes por contraparte de bancos residentes; derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.38.TOT.Z.MMUSD.CLPUSD.Z.Z.0.M
+    name: "Derivados Bancos · USD-CLP · vs. AGF · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Administradoras generales de fondos; derivados de monedas montos vigentes de bancos residentes USD-CLP; posición; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.38.TOT.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Bancos · ME-CLP · vs. AGF · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Administradoras generales de fondos; derivados de monedas montos vigentes de bancos residentes; posición; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.38.TOT.Z.MUF.MLML.Z.Z.0.M
+    name: "Derivados Bancos · UF-CLP · vs. AGF · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "Administradoras Generales de Fondos; monto vigente total, total, derivados de UF-CLP montos vigentes por contraparte de bancos residentes; derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.38.VTA.Z.MMUSD.CLPUSD.Z.Z.0.M
+    name: "Derivados Bancos · USD-CLP · vs. AGF · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente vendedor; derivados de monedas montos vigentes de bancos residentes USD-CLP; posición; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.38.VTA.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Bancos · ME-CLP · vs. AGF · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente vendedor; derivados de monedas montos vigentes de bancos residentes; posición; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.38.VTA.Z.MUF.MLML.Z.Z.0.M
+    name: "Derivados Bancos · UF-CLP · vs. AGF · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "Venta UF; administradoras generales de fondos, monto vigente total, total, derivados de UF-CLP montos vigentes por contraparte de bancos residentes; derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.39.COM.Z.MMUSD.CLPUSD.Z.Z.0.M
+    name: "Derivados Bancos · USD-CLP · vs. corredoras · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente comprador; derivados de monedas montos vigentes de bancos residentes USD-CLP; posición; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.39.COM.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Bancos · ME-CLP · vs. corredoras · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente comprador; derivados de monedas montos vigentes de bancos residentes; posición; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.39.COM.Z.MUF.MLML.Z.Z.0.M
+    name: "Derivados Bancos · UF-CLP · vs. corredoras · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "Compra UF; corredores de bolsa, monto vigente total, total, derivados de UF-CLP montos vigentes por contraparte de bancos residentes; derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.39.NET.Z.MMUSD.CLPUSD.Z.Z.0.M
+    name: "Derivados Bancos · USD-CLP · vs. corredoras · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente neto; derivados de monedas montos vigentes de bancos residentes USD-CLP; posición; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.39.NET.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Bancos · ME-CLP · vs. corredoras · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente neto; derivados de monedas montos vigentes de bancos residentes; posición; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.39.NET.Z.MUF.MLML.Z.Z.0.M
+    name: "Derivados Bancos · UF-CLP · vs. corredoras · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "Neto; corredores de bolsa, monto vigente total, total, derivados de UF-CLP montos vigentes por contraparte de bancos residentes; derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.39.TOT.Z.MMUSD.CLPUSD.Z.Z.0.M
+    name: "Derivados Bancos · USD-CLP · vs. corredoras · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Corredoras de bolsa y agencias de valores; derivados de monedas montos vigentes de bancos residentes USD-CLP; posición; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.39.TOT.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Bancos · ME-CLP · vs. corredoras · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Corredoras de bolsa y agencias de valores; derivados de monedas montos vigentes de bancos residentes; posición; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.39.TOT.Z.MUF.MLML.Z.Z.0.M
+    name: "Derivados Bancos · UF-CLP · vs. corredoras · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "Corredoras de Bolsa; monto vigente total, total, derivados de UF-CLP montos vigentes por contraparte de bancos residentes; derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.39.VTA.Z.MMUSD.CLPUSD.Z.Z.0.M
+    name: "Derivados Bancos · USD-CLP · vs. corredoras · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente vendedor; derivados de monedas montos vigentes de bancos residentes USD-CLP; posición; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.39.VTA.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Bancos · ME-CLP · vs. corredoras · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente vendedor; derivados de monedas montos vigentes de bancos residentes; posición; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.39.VTA.Z.MUF.MLML.Z.Z.0.M
+    name: "Derivados Bancos · UF-CLP · vs. corredoras · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "Venta UF; corredores de bolsa, monto vigente total, total, derivados de UF-CLP montos vigentes por contraparte de bancos residentes; derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.40.COM.SWP.MMUSD.EFV.Z.Z.0.M
+    name: "Derivados Bancos · tasas ext. fijo-variable · swap · vs. bancos · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Interbancario; monto vigente total, total, swap fijo-variable sobre tasas extranjeras montos vigentes de bancos residentes, datos mensuales (millones de USD); derivados; mensual; millones de USD; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.40.TOT.CCS.MUF.MLML.Z.Z.0.M
+    name: "Derivados Bancos · UF-CLP · cross currency swap · vs. bancos · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "Interbancario; Montos vigentes de bancos residentes sobre derivados de Unidad de Fomento - Peso Chileno (UF-CLP) por instrumento, datos diarios (miles de UF); derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.40.TOT.FWD.MUF.MLML.Z.Z.0.M
+    name: "Derivados Bancos · UF-CLP · forward · vs. bancos · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "Interbancario; Montos vigentes de bancos residentes sobre derivados de Unidad de Fomento - Peso Chileno (UF-CLP) por instrumento, datos diarios (miles de UF); derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.40.TOT.SWP.MMMCLP.SPC.R.Z.0.M
+    name: "Derivados Bancos · cámara · swap · vs. bancos · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Interbancario; posiciones totales, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.40.TOT.SWP.MMUSD.EOIS.Z.Z.0.M
+    name: "Derivados Bancos · OIS tasas ext. · swap · vs. bancos · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Interbancario; monto vigente total, total, derivados de OIS (overnight index swap) sobre tasas extranjeras montos vigentes de bancos residentes; derivados; mensual; millones de USD; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.40.TOT.Z.MMUSD.CLFOME.Z.Z.0.M
+    name: "Derivados Bancos · otras ME-UF · vs. bancos · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Interbancario; derivados de monedas montos vigentes de bancos residentes, total, total, ME-CLF; derivados; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.40.TOT.Z.MMUSD.CLFUSD.Z.Z.0.M
+    name: "Derivados Bancos · USD-UF · vs. bancos · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Interbancario; derivados de monedas montos vigentes de bancos residentes, total, total, USD-CLF; derivados; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.40.TOT.Z.MMUSD.CLPOME.Z.Z.0.M
+    name: "Derivados Bancos · otras ME-CLP · vs. bancos · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Interbancario; derivados de monedas montos vigentes de bancos residentes, total, total, ME-CLP; derivados; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.40.TOT.Z.MMUSD.CLPUSD.Z.Z.0.M
+    name: "Derivados Bancos · USD-CLP · vs. bancos · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Interbancario, CLP-USD; derivados de monedas montos vigentes de bancos residentes, total, total, USD-CLP; derivados; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.40.TOT.Z.MMUSD.MEME.Z.Z.0.M
+    name: "Derivados Bancos · ME-ME · vs. bancos · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Interbancario; derivados de monedas montos vigentes de bancos residentes, total, total, ME-ME; derivados; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.40.TOT.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Bancos · ME-CLP · vs. bancos · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Interbancario; derivados de monedas montos vigentes de bancos residentes; derivados; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.40.TOT.Z.MUF.MLML.R.Z.0.M
+    name: "Derivados Bancos · UF-CLP · vs. bancos · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "Interbancario; interbancario, derivados de UF-CLP montos vigentes por plazo residual de bancos residentes; derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.40.TOT.Z.MUF.MLML.Z.Z.0.M
+    name: "Derivados Bancos · UF-CLP · vs. bancos · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "Interbancario; monto vigente total, total, derivados de UF-CLP montos vigentes por contraparte de bancos residentes; derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.42.COM.Z.MMUSD.CLPUSD.Z.Z.0.M
+    name: "Derivados Bancos · USD-CLP · vs. AFP · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente comprador; derivados de monedas montos vigentes de bancos residentes USD-CLP; posición; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.42.COM.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Bancos · ME-CLP · vs. AFP · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente comprador; derivados de monedas montos vigentes de bancos residentes; posición; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.42.COM.Z.MUF.MLML.Z.Z.0.M
+    name: "Derivados Bancos · UF-CLP · vs. AFP · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "Compra UF; fondos de pensiones, monto vigente total, total, derivados de UF-CLP montos vigentes por contraparte de bancos residentes; derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.42.NET.Z.MMUSD.CLPUSD.Z.Z.0.M
+    name: "Derivados Bancos · USD-CLP · vs. AFP · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente neto; derivados de monedas montos vigentes de bancos residentes USD-CLP; posición; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.42.NET.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Bancos · ME-CLP · vs. AFP · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente neto; derivados de monedas montos vigentes de bancos residentes; posición; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.42.NET.Z.MUF.MLML.Z.Z.0.M
+    name: "Derivados Bancos · UF-CLP · vs. AFP · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "Neto; fondos de pensiones, monto vigente total, total, derivados de UF-CLP montos vigentes por contraparte de bancos residentes; derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.42.TOT.Z.MMUSD.CLPUSD.Z.Z.0.M
+    name: "Derivados Bancos · USD-CLP · vs. AFP · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Fondos de pensiones; derivados de monedas montos vigentes de bancos residentes USD-CLP; posición; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.42.TOT.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Bancos · ME-CLP · vs. AFP · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Fondos de pensiones; derivados de monedas montos vigentes de bancos residentes; posición; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.42.TOT.Z.MUF.MLML.Z.Z.0.M
+    name: "Derivados Bancos · UF-CLP · vs. AFP · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "Fondos de Pensiones; monto vigente total, total, derivados de UF-CLP montos vigentes por contraparte de bancos residentes; derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.42.VTA.Z.MMUSD.CLPUSD.Z.Z.0.M
+    name: "Derivados Bancos · USD-CLP · vs. AFP · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente vendedor; derivados de monedas montos vigentes de bancos residentes USD-CLP; posición; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.42.VTA.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Bancos · ME-CLP · vs. AFP · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente vendedor; derivados de monedas montos vigentes de bancos residentes; posición; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.42.VTA.Z.MUF.MLML.Z.Z.0.M
+    name: "Derivados Bancos · UF-CLP · vs. AFP · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "Venta UF; fondos de pensiones, monto vigente total, total, derivados de UF-CLP montos vigentes por contraparte de bancos residentes; derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.44.COM.Z.MMUSD.CLPUSD.Z.Z.0.M
+    name: "Derivados Bancos · USD-CLP · vs. seguros · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente comprador; derivados de monedas montos vigentes de bancos residentes USD-CLP; posición; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.44.COM.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Bancos · ME-CLP · vs. seguros · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente comprador; derivados de monedas montos vigentes de bancos residentes; posición; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.44.COM.Z.MUF.MLML.Z.Z.0.M
+    name: "Derivados Bancos · UF-CLP · vs. seguros · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "Compra UF; compañías de seguros, monto vigente total, total, derivados de UF-CLP montos vigentes por contraparte de bancos residentes; derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.44.NET.Z.MMUSD.CLPUSD.Z.Z.0.M
+    name: "Derivados Bancos · USD-CLP · vs. seguros · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente neto; derivados de monedas montos vigentes de bancos residentes USD-CLP; posición; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.44.NET.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Bancos · ME-CLP · vs. seguros · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente neto; derivados de monedas montos vigentes de bancos residentes; posición; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.44.NET.Z.MUF.MLML.Z.Z.0.M
+    name: "Derivados Bancos · UF-CLP · vs. seguros · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "Neto; compañías de seguros, monto vigente total, total, derivados de UF-CLP montos vigentes por contraparte de bancos residentes; derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.44.TOT.Z.MMUSD.CLPUSD.Z.Z.0.M
+    name: "Derivados Bancos · USD-CLP · vs. seguros · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Compañías de seguros; derivados de monedas montos vigentes de bancos residentes USD-CLP; posición; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.44.TOT.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Bancos · ME-CLP · vs. seguros · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Compañías de seguros; derivados de monedas montos vigentes de bancos residentes; posición; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.44.TOT.Z.MUF.MLML.Z.Z.0.M
+    name: "Derivados Bancos · UF-CLP · vs. seguros · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "Compañías de seguros; monto vigente total, total, derivados de UF-CLP montos vigentes por contraparte de bancos residentes; derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.44.VTA.Z.MMUSD.CLPUSD.Z.Z.0.M
+    name: "Derivados Bancos · USD-CLP · vs. seguros · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente vendedor; derivados de monedas montos vigentes de bancos residentes USD-CLP; posición; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.44.VTA.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Bancos · ME-CLP · vs. seguros · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente vendedor; derivados de monedas montos vigentes de bancos residentes; posición; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.44.VTA.Z.MUF.MLML.Z.Z.0.M
+    name: "Derivados Bancos · UF-CLP · vs. seguros · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "Venta UF; compañías de seguros, monto vigente total, total, derivados de UF-CLP montos vigentes por contraparte de bancos residentes; derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.50.COM.Z.MMUSD.CLPUSD.Z.Z.0.M
+    name: "Derivados Bancos · USD-CLP · vs. otros sectores · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente comprador; derivados de monedas montos vigentes de bancos residentes USD-CLP; posición; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.50.COM.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Bancos · ME-CLP · vs. otros sectores · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente comprador; derivados de monedas montos vigentes de bancos residentes; posición; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.50.COM.Z.MUF.MLML.Z.Z.0.M
+    name: "Derivados Bancos · UF-CLP · vs. otros sectores · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "Compra UF; otros sectores, monto vigente total, total, derivados de UF-CLP montos vigentes por contraparte de bancos residentes; derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.50.NET.Z.MMUSD.CLPUSD.Z.Z.0.M
+    name: "Derivados Bancos · USD-CLP · vs. otros sectores · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente neto; derivados de monedas montos vigentes de bancos residentes USD-CLP; posición; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.50.NET.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Bancos · ME-CLP · vs. otros sectores · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente neto; derivados de monedas montos vigentes de bancos residentes; posición; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.50.NET.Z.MUF.MLML.Z.Z.0.M
+    name: "Derivados Bancos · UF-CLP · vs. otros sectores · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "Neto; otros sectores, monto vigente total, total, derivados de UF-CLP montos vigentes por contraparte de bancos residentes; derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.50.TOT.Z.MMUSD.CLPUSD.Z.Z.0.M
+    name: "Derivados Bancos · USD-CLP · vs. otros sectores · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Otros sectores; derivados de monedas montos vigentes de bancos residentes USD-CLP; posición; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.50.TOT.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Bancos · ME-CLP · vs. otros sectores · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Otros sectores; derivados de monedas montos vigentes de bancos residentes; posición; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.50.TOT.Z.MUF.MLML.Z.Z.0.M
+    name: "Derivados Bancos · UF-CLP · vs. otros sectores · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "Otros Sectores; monto vigente total, total, derivados de UF-CLP montos vigentes por contraparte de bancos residentes; derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.50.VTA.Z.MMUSD.CLPUSD.Z.Z.0.M
+    name: "Derivados Bancos · USD-CLP · vs. otros sectores · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente vendedor; derivados de monedas montos vigentes de bancos residentes USD-CLP; posición; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.50.VTA.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Bancos · ME-CLP · vs. otros sectores · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente vendedor; derivados de monedas montos vigentes de bancos residentes; posición; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.50.VTA.Z.MUF.MLML.Z.Z.0.M
+    name: "Derivados Bancos · UF-CLP · vs. otros sectores · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "Venta UF; otros sectores, monto vigente total, total, derivados de UF-CLP montos vigentes por contraparte de bancos residentes; derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.55A.COM.Z.MMUSD.CLPUSD.Z.Z.0.M
+    name: "Derivados Bancos · USD-CLP · vs. empresas · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente comprador; derivados de monedas montos vigentes de bancos residentes USD-CLP; posición; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.55A.COM.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Bancos · ME-CLP · vs. empresas · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente comprador; derivados de monedas montos vigentes de bancos residentes; posición; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.55A.COM.Z.MUF.MLML.Z.Z.0.M
+    name: "Derivados Bancos · UF-CLP · vs. empresas · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "Compra UF; empresas sector real, monto vigente total, total, derivados de UF-CLP montos vigentes por contraparte de bancos residentes; derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.55A.NET.Z.MMUSD.CLPUSD.Z.Z.0.M
+    name: "Derivados Bancos · USD-CLP · vs. empresas · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente neto; derivados de monedas montos vigentes de bancos residentes USD-CLP; posición; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.55A.NET.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Bancos · ME-CLP · vs. empresas · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente neto; derivados de monedas montos vigentes de bancos residentes; posición; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.55A.NET.Z.MUF.MLML.Z.Z.0.M
+    name: "Derivados Bancos · UF-CLP · vs. empresas · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "Neto; empresas sector real, monto vigente total, total, derivados de UF-CLP montos vigentes por contraparte de bancos residentes; derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.55A.TOT.Z.MMUSD.CLPUSD.Z.Z.0.M
+    name: "Derivados Bancos · USD-CLP · vs. empresas · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Empresas sector real; derivados de monedas montos vigentes de bancos residentes USD-CLP; posición; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.55A.TOT.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Bancos · ME-CLP · vs. empresas · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Empresas sector real; derivados de monedas montos vigentes de bancos residentes; posición; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.55A.TOT.Z.MUF.MLML.Z.Z.0.M
+    name: "Derivados Bancos · UF-CLP · vs. empresas · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "Empresas Sector Real; monto vigente total, total, derivados de UF-CLP montos vigentes por contraparte de bancos residentes; derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.55A.VTA.Z.MMUSD.CLPUSD.Z.Z.0.M
+    name: "Derivados Bancos · USD-CLP · vs. empresas · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente vendedor; derivados de monedas montos vigentes de bancos residentes USD-CLP; posición; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.55A.VTA.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Bancos · ME-CLP · vs. empresas · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente vendedor; derivados de monedas montos vigentes de bancos residentes; posición; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.55A.VTA.Z.MUF.MLML.Z.Z.0.M
+    name: "Derivados Bancos · UF-CLP · vs. empresas · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "Venta UF; empresas sector real, monto vigente total, total, derivados de UF-CLP montos vigentes por contraparte de bancos residentes; derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.63.COM.CCS.MUF.MLML.Z.Z.0.M
+    name: "Derivados Bancos · UF-CLP · cross currency swap · vs. residentes no bancos · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "Compras UF; residentes no bancos, interbancario, swap, total, monto vigente, total, montos vigentes por instrumento y sector de bancos residentes; derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.63.COM.FWD.MUF.MLML.Z.Z.0.M
+    name: "Derivados Bancos · UF-CLP · forward · vs. residentes no bancos · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "Compras UF; residentes no bancos, forward, monto vigente, total, montos vigentes por instrumento y sector de bancos residentes; derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.63.COM.Z.MMUSD.CLPUSD.Z.Z.0.M
+    name: "Derivados Bancos · USD-CLP · vs. residentes no bancos · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente comprador; derivados de monedas montos vigentes de bancos residentes USD-CLP; posición; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.63.COM.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Bancos · ME-CLP · vs. residentes no bancos · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente comprador; derivados de monedas montos vigentes de bancos residentes; posición; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.63.NET.CCS.MUF.MLML.Z.Z.0.M
+    name: "Derivados Bancos · UF-CLP · cross currency swap · vs. residentes no bancos · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "Neto; residentes no bancos, interbancario, swap, total, monto vigente, total, montos vigentes por instrumento y sector de bancos residentes; derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.63.NET.FWD.MUF.MLML.Z.Z.0.M
+    name: "Derivados Bancos · UF-CLP · forward · vs. residentes no bancos · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "Neto; residentes no bancos, forward, monto vigente, total, montos vigentes por instrumento y sector de bancos residentes; derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.63.NET.SWP.MMMCLP.SPC.R.Z.0.M
+    name: "Derivados Bancos · cámara · swap · vs. residentes no bancos · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Residentes no bancos"
+
+  - id: F099.DER.STO.Z.40.R.63.NET.Z.MMUSD.CLPUSD.Z.Z.0.M
+    name: "Derivados Bancos · USD-CLP · vs. residentes no bancos · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente neto; derivados de monedas montos vigentes de bancos residentes USD-CLP; posición; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.63.NET.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Bancos · ME-CLP · vs. residentes no bancos · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente neto; derivados de monedas montos vigentes de bancos residentes; posición; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.63.TOT.CCS.MUF.MLML.Z.Z.0.M
+    name: "Derivados Bancos · UF-CLP · cross currency swap · vs. residentes no bancos · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "Residentes no bancos; interbancario, swap, total, monto vigente, total, montos vigentes por instrumento y sector de bancos residentes; derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.63.TOT.FWD.MUF.MLML.Z.Z.0.M
+    name: "Derivados Bancos · UF-CLP · forward · vs. residentes no bancos · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "Residentes no bancos; forward, monto vigente, total, montos vigentes por instrumento y sector de bancos residentes; derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.63.TOT.SWP.MMMCLP.SPC.R.Z.0.M
+    name: "Derivados Bancos · cámara · swap · vs. residentes no bancos · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Residentes no bancos; posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.63.TOT.Z.MMUSD.CLFOME.Z.Z.0.M
+    name: "Derivados Bancos · otras ME-UF · vs. residentes no bancos · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Residentes no bancos; derivados de monedas montos vigentes de bancos residentes, total, total, ME-CLF; derivados; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.63.TOT.Z.MMUSD.CLFUSD.Z.Z.0.M
+    name: "Derivados Bancos · USD-UF · vs. residentes no bancos · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Residentes no bancos; derivados de monedas montos vigentes de bancos residentes, total, total, USD-CLF; derivados; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.63.TOT.Z.MMUSD.CLPOME.Z.Z.0.M
+    name: "Derivados Bancos · otras ME-CLP · vs. residentes no bancos · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Residentes no bancos; derivados de monedas montos vigentes de bancos residentes, total, total, ME-CLP; derivados; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.63.TOT.Z.MMUSD.CLPUSD.Z.Z.0.M
+    name: "Derivados Bancos · USD-CLP · vs. residentes no bancos · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Residentes no bancos, CLP-USD; derivados de monedas montos vigentes de bancos residentes, total, total, USD-CLP; derivados; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.63.TOT.Z.MMUSD.MEME.Z.Z.0.M
+    name: "Derivados Bancos · ME-ME · vs. residentes no bancos · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Residentes no bancos; derivados de monedas montos vigentes de bancos residentes, total, total, ME-ME; derivados; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.63.TOT.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Bancos · ME-CLP · vs. residentes no bancos · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Residentes no bancos; derivados de monedas montos vigentes de bancos residentes; derivados; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.63.TOT.Z.MUF.MLML.R.Z.0.M
+    name: "Derivados Bancos · UF-CLP · vs. residentes no bancos · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "ResidenteS no bancos; derivados de UF-CLP montos vigentes por plazo residual de bancos residentes; derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.63.VTA.CCS.MUF.MLML.Z.Z.0.M
+    name: "Derivados Bancos · UF-CLP · cross currency swap · vs. residentes no bancos · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "Ventas UF; residentes no bancos, interbancario, swap, total, monto vigente, total, montos vigentes por instrumento y sector de bancos residentes; derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.63.VTA.FWD.MUF.MLML.Z.Z.0.M
+    name: "Derivados Bancos · UF-CLP · forward · vs. residentes no bancos · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "Ventas UF; residentes no bancos, forward, monto vigente, total, montos vigentes por instrumento y sector de bancos residentes; derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.63.VTA.Z.MMUSD.CLPUSD.Z.Z.0.M
+    name: "Derivados Bancos · USD-CLP · vs. residentes no bancos · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente vendedor; derivados de monedas montos vigentes de bancos residentes USD-CLP; posición; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.63.VTA.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Bancos · ME-CLP · vs. residentes no bancos · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente vendedor; derivados de monedas montos vigentes de bancos residentes; posición; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.Z.TOT.CCS.MMUSD.CLPUSD.Z.Z.0.M
+    name: "Derivados Bancos · USD-CLP · cross currency swap · residentes · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Derivados de monedas; monto vigente de bancos residentes; millones de dólares; USD-CLP; cross-currency swap; total"
+
+  - id: F099.DER.STO.Z.40.R.Z.TOT.CCS.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Bancos · ME-CLP · cross currency swap · residentes · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Derivados de monedas; monto vigente de bancos residentes; millones de dólares; ME-ML; cross-currency swap; total"
+
+  - id: F099.DER.STO.Z.40.R.Z.TOT.FWD.MMUSD.CLPUSD.Z.Z.0.M
+    name: "Derivados Bancos · USD-CLP · forward · residentes · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Derivados de monedas; monto vigente de bancos residentes; millones de dólares; USD-CLP; forward y FX swap; total"
+
+  - id: F099.DER.STO.Z.40.R.Z.TOT.FWD.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Bancos · ME-CLP · forward · residentes · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Derivados de monedas; monto vigente de bancos residentes; millones de dólares; ME-ML; forward y FX swap; total"
+
+  - id: F099.DER.STO.Z.40.R.Z.TOT.OTR.MMUSD.CLPUSD.Z.Z.0.M
+    name: "Derivados Bancos · USD-CLP · otros · residentes · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Derivados de monedas; monto vigente de bancos residentes; millones de dólares; USD-CLP; opciones y otros; total"
+
+  - id: F099.DER.STO.Z.40.R.Z.TOT.OTR.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Bancos · ME-CLP · otros · residentes · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Derivados de monedas; monto vigente de bancos residentes; millones de dólares; ME-ML; opciones y otros; total"
+
+  - id: F099.DER.STO.Z.40.Z.Z.COM.CCS.MUF.MLML.Z.Z.0.M
+    name: "Derivados Bancos · UF-CLP · cross currency swap · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "Compras UF a terceros; Montos vigentes de bancos residentes sobre derivados de Unidad de Fomento - Peso Chileno (UF-CLP) por instrumento, datos diarios (miles de UF); derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.COM.FWD.MUF.MLML.Z.Z.0.M
+    name: "Derivados Bancos · UF-CLP · forward · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "Compras UF a terceros; Montos vigentes de bancos residentes sobre derivados de Unidad de Fomento - Peso Chileno (UF-CLP) por instrumento, datos diarios (miles de UF); derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.COM.SWP.MMMCLP.SPC.R.AN02.0.M
+    name: "Derivados Bancos · cámara · swap · plazo AN02 · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Compras tasa variable; 2 años, posiciones totales, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.COM.SWP.MMMCLP.SPC.R.AN05.0.M
+    name: "Derivados Bancos · cámara · swap · plazo AN05 · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Compras tasa variable; 5 años, posiciones totales, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.COM.SWP.MMMCLP.SPC.R.HA02.0.M
+    name: "Derivados Bancos · cámara · swap · plazo HA02 · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Compras tasa variable"
+
+  - id: F099.DER.STO.Z.40.Z.Z.COM.SWP.MMMCLP.SPC.R.MA02.0.M
+    name: "Derivados Bancos · cámara · swap · plazo MA02 · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Compras tasa variable"
+
+  - id: F099.DER.STO.Z.40.Z.Z.COM.SWP.MMMCLP.SPC.R.MA10.0.M
+    name: "Derivados Bancos · cámara · swap · plazo MA10 · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Compras tasa variable; 10 y más años, posiciones totales, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.COM.SWP.MMMCLP.SPC.R.ME03.0.M
+    name: "Derivados Bancos · cámara · swap · plazo ME03 · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Compras tasa variable; 3 meses, posiciones totales, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.COM.SWP.MMMCLP.SPC.R.ME06.0.M
+    name: "Derivados Bancos · cámara · swap · plazo ME06 · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Compras tasa variable; 6 meses, posiciones totales, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.COM.SWP.MMMCLP.SPC.R.ME09.0.M
+    name: "Derivados Bancos · cámara · swap · plazo ME09 · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Compras tasa variable; 9 meses, posiciones totales, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.COM.SWP.MMMCLP.SPC.R.ME12.0.M
+    name: "Derivados Bancos · cámara · swap · plazo ME12 · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Compras tasa variable; 12 meses, posiciones totales, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.COM.SWP.MMMCLP.SPC.R.ME18.0.M
+    name: "Derivados Bancos · cámara · swap · plazo ME18 · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Compras tasa variable; 18 meses, posiciones totales, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.COM.SWP.MMUSD.EFV.Z.Z.0.M
+    name: "Derivados Bancos · tasas ext. fijo-variable · swap · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Compra tasa variable; monto vigente total, total, swap fijo-variable sobre tasas extranjeras montos vigentes de bancos residentes, datos mensuales (millones de USD); derivados; mensual; millones de USD; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.COM.SWP.MMUSD.EOIS.Z.Z.0.M
+    name: "Derivados Bancos · OIS tasas ext. · swap · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Compra tasa variable; monto vigente total, total, derivados de OIS (overnight index swap) sobre tasas extranjeras montos vigentes de bancos residentes; derivados; mensual; millones de USD; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.COM.Z.MMUSD.CLPUSD.Z.Z.0.M
+    name: "Derivados Bancos · USD-CLP · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente comprador; derivados de monedas montos vigentes de bancos residentes USD-CLP; posición; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.COM.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Bancos · ME-CLP · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente comprador; derivados de monedas montos vigentes de bancos residentes; posición; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.COM.Z.MUF.MLML.Z.Z.0.M
+    name: "Derivados Bancos · UF-CLP · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "Compra UF; monto vigente total, total, derivados de UF-CLP montos vigentes por contraparte de bancos residentes; derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.NET.CCS.MUF.MLML.Z.Z.0.M
+    name: "Derivados Bancos · UF-CLP · cross currency swap · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "Neto; Montos vigentes de bancos residentes sobre derivados de Unidad de Fomento - Peso Chileno (UF-CLP) por instrumento, datos diarios (miles de UF); derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.NET.FWD.MUF.MLML.Z.Z.0.M
+    name: "Derivados Bancos · UF-CLP · forward · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "Neto; Montos vigentes de bancos residentes sobre derivados de Unidad de Fomento - Peso Chileno (UF-CLP) por instrumento, datos diarios (miles de UF); derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.NET.SWP.MMMCLP.SPC.R.AN02.0.M
+    name: "Derivados Bancos · cámara · swap · plazo AN02 · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Neto tasa variable; 2 años, posiciones totales, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.NET.SWP.MMMCLP.SPC.R.AN05.0.M
+    name: "Derivados Bancos · cámara · swap · plazo AN05 · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Neto tasa variable; 5 años, posiciones totales, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.NET.SWP.MMMCLP.SPC.R.HA02.0.M
+    name: "Derivados Bancos · cámara · swap · plazo HA02 · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Neto tasa variable"
+
+  - id: F099.DER.STO.Z.40.Z.Z.NET.SWP.MMMCLP.SPC.R.MA02.0.M
+    name: "Derivados Bancos · cámara · swap · plazo MA02 · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Neto tasa variable"
+
+  - id: F099.DER.STO.Z.40.Z.Z.NET.SWP.MMMCLP.SPC.R.MA10.0.M
+    name: "Derivados Bancos · cámara · swap · plazo MA10 · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Neto tasa variable; 10 y más años, posiciones totales, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.NET.SWP.MMMCLP.SPC.R.ME03.0.M
+    name: "Derivados Bancos · cámara · swap · plazo ME03 · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Neto tasa variable; 3 meses, posiciones totales, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.NET.SWP.MMMCLP.SPC.R.ME06.0.M
+    name: "Derivados Bancos · cámara · swap · plazo ME06 · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Neto tasa variable; 6 meses, posiciones totales, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.NET.SWP.MMMCLP.SPC.R.ME09.0.M
+    name: "Derivados Bancos · cámara · swap · plazo ME09 · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Neto tasa variable; 9 meses, posiciones totales, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.NET.SWP.MMMCLP.SPC.R.ME12.0.M
+    name: "Derivados Bancos · cámara · swap · plazo ME12 · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Neto tasa variable; 12 meses, posiciones totales, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.NET.SWP.MMMCLP.SPC.R.ME18.0.M
+    name: "Derivados Bancos · cámara · swap · plazo ME18 · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Neto tasa variable; 18 meses, posiciones totales, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.NET.SWP.MMMCLP.SPC.R.Z.0.M
+    name: "Derivados Bancos · cámara · swap · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Posición neta, total"
+
+  - id: F099.DER.STO.Z.40.Z.Z.NET.SWP.MMUSD.EFV.Z.Z.0.M
+    name: "Derivados Bancos · tasas ext. fijo-variable · swap · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Neto; monto vigente total, total, swap fijo-variable sobre tasas extranjeras montos vigentes de bancos residentes, datos mensuales (millones de USD); derivados; mensual; millones de USD; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.NET.SWP.MMUSD.EOIS.Z.Z.0.M
+    name: "Derivados Bancos · OIS tasas ext. · swap · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Neto; monto vigente total, total, derivados de OIS (overnight index swap) sobre tasas extranjeras montos vigentes de bancos residentes; derivados; mensual; millones de USD; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.NET.Z.MMUSD.CLPUSD.Z.Z.0.M
+    name: "Derivados Bancos · USD-CLP · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente neto; derivados de monedas montos vigentes de bancos residentes USD-CLP; posición; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.NET.Z.MMUSD.MLME.R.A2A5.0.M
+    name: "Derivados Bancos · ME-CLP · plazo A2A5 · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "mayor que 2 y hasta 5 años; derivados de monedas montos vigentes de bancos residentes, neto; derivados; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.NET.Z.MMUSD.MLME.R.A5A10.0.M
+    name: "Derivados Bancos · ME-CLP · plazo A5A10 · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "mayor a 5 y hasta 10 años; derivados de monedas montos vigentes de bancos residentes, neto; derivados; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.NET.Z.MMUSD.MLME.R.MA10.0.M
+    name: "Derivados Bancos · ME-CLP · plazo MA10 · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "mayor a 10 años; derivados de monedas montos vigentes de bancos residentes, neto; derivados; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.NET.Z.MMUSD.MLME.R.P17.0.M
+    name: "Derivados Bancos · ME-CLP · plazo P17 · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Hasta 7 días; derivados de monedas montos vigentes de bancos residentes, neto; derivados; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.NET.Z.MMUSD.MLME.R.P181360.0.M
+    name: "Derivados Bancos · ME-CLP · plazo P181360 · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "181 a 360 días; derivados de monedas montos vigentes de bancos residentes, neto; derivados; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.NET.Z.MMUSD.MLME.R.P3190.0.M
+    name: "Derivados Bancos · ME-CLP · plazo P3190 · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "31 a 90 días; derivados de monedas montos vigentes de bancos residentes, neto; derivados; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.NET.Z.MMUSD.MLME.R.P361720.0.M
+    name: "Derivados Bancos · ME-CLP · plazo P361720 · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "361 a 720 días; derivados de monedas montos vigentes de bancos residentes, neto; derivados; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.NET.Z.MMUSD.MLME.R.P830.0.M
+    name: "Derivados Bancos · ME-CLP · plazo P830 · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "8 a 30 días; derivados de monedas montos vigentes de bancos residentes, neto; derivados; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.NET.Z.MMUSD.MLME.R.P91180.0.M
+    name: "Derivados Bancos · ME-CLP · plazo P91180 · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "91 a 180 días; derivados de monedas montos vigentes de bancos residentes, neto; derivados; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.NET.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Bancos · ME-CLP · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente neto; derivados de monedas montos vigentes de bancos residentes; ; ; ; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.NET.Z.MUF.MLML.R.A2A5.0.M
+    name: "Derivados Bancos · UF-CLP · plazo A2A5 · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "Mayor que 2 y hasta 5 años; monto vigente neto, total, derivados de UF-CLP montos vigentes por plazo residual de bancos residentes; derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.NET.Z.MUF.MLML.R.HD90.0.M
+    name: "Derivados Bancos · UF-CLP · plazo HD90 · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "Hasta 90 días; monto vigente neto, total, derivados de UF-CLP montos vigentes por plazo residual de bancos residentes; derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.NET.Z.MUF.MLML.R.MA05.0.M
+    name: "Derivados Bancos · UF-CLP · plazo MA05 · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "Mayor a 5 años; monto vigente neto, total, derivados de UF-CLP montos vigentes por plazo residual de bancos residentes; derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.NET.Z.MUF.MLML.R.P181360.0.M
+    name: "Derivados Bancos · UF-CLP · plazo P181360 · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "181 a 360 días; monto vigente neto, total, derivados de UF-CLP montos vigentes por plazo residual de bancos residentes; derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.NET.Z.MUF.MLML.R.P361720.0.M
+    name: "Derivados Bancos · UF-CLP · plazo P361720 · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "361 a 720 días; monto vigente neto, total, derivados de UF-CLP montos vigentes por plazo residual de bancos residentes; derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.NET.Z.MUF.MLML.R.P91180.0.M
+    name: "Derivados Bancos · UF-CLP · plazo P91180 · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "91 a 180 días; monto vigente neto, total, derivados de UF-CLP montos vigentes por plazo residual de bancos residentes; derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.NET.Z.MUF.MLML.R.Z.0.M
+    name: "Derivados Bancos · UF-CLP · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "Monto vigente neto, total; derivados de UF-CLP montos vigentes por plazo residual de bancos residentes; derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.NET.Z.MUF.MLML.Z.Z.0.M
+    name: "Derivados Bancos · UF-CLP · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "Neto; monto vigente total, total, derivados de UF-CLP montos vigentes por contraparte de bancos residentes; derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.TOT.CCS.MUF.MLML.Z.Z.0.M
+    name: "Derivados Bancos · UF-CLP · cross currency swap · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "Swap; Montos vigentes de bancos residentes sobre derivados de Unidad de Fomento - Peso Chileno (UF-CLP) por instrumento, datos diarios (miles de UF); derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.TOT.FWD.MUF.MLML.Z.Z.0.M
+    name: "Derivados Bancos · UF-CLP · forward · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "Forward; Montos vigentes de bancos residentes sobre derivados de Unidad de Fomento - Peso Chileno (UF-CLP) por instrumento, datos diarios (miles de UF); derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.TOT.SWP.MMMCLP.SPC.R.AN02.0.M
+    name: "Derivados Bancos · cámara · swap · plazo AN02 · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "2 años; posiciones totales, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.TOT.SWP.MMMCLP.SPC.R.AN05.0.M
+    name: "Derivados Bancos · cámara · swap · plazo AN05 · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "5 años; posiciones totales, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.TOT.SWP.MMMCLP.SPC.R.HA02.0.M
+    name: "Derivados Bancos · cámara · swap · plazo HA02 · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Hasta 2 años"
+
+  - id: F099.DER.STO.Z.40.Z.Z.TOT.SWP.MMMCLP.SPC.R.MA02.0.M
+    name: "Derivados Bancos · cámara · swap · plazo MA02 · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Mayor 2 años"
+
+  - id: F099.DER.STO.Z.40.Z.Z.TOT.SWP.MMMCLP.SPC.R.MA10.0.M
+    name: "Derivados Bancos · cámara · swap · plazo MA10 · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "10 y más años; posiciones totales, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.TOT.SWP.MMMCLP.SPC.R.ME03.0.M
+    name: "Derivados Bancos · cámara · swap · plazo ME03 · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "3 meses; posiciones totales, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.TOT.SWP.MMMCLP.SPC.R.ME06.0.M
+    name: "Derivados Bancos · cámara · swap · plazo ME06 · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "6 meses; posiciones totales, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.TOT.SWP.MMMCLP.SPC.R.ME09.0.M
+    name: "Derivados Bancos · cámara · swap · plazo ME09 · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "9 meses; posiciones totales, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.TOT.SWP.MMMCLP.SPC.R.ME12.0.M
+    name: "Derivados Bancos · cámara · swap · plazo ME12 · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "12 meses; posiciones totales, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.TOT.SWP.MMMCLP.SPC.R.ME18.0.M
+    name: "Derivados Bancos · cámara · swap · plazo ME18 · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "18 meses; posiciones totales, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.TOT.SWP.MMMCLP.SPC.R.Z.0.M
+    name: "Derivados Bancos · cámara · swap · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Posiciones, Total; posiciones totales, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.TOT.SWP.MMUSD.EBS.Z.Z.0.M
+    name: "Derivados Bancos · basis tasas ext. · swap · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente total, total; basis swap sobre tasas extranjeras montos vigentes de bancos residentes; derivados; mensual; millones de USD; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.TOT.SWP.MMUSD.EFV.Z.Z.0.M
+    name: "Derivados Bancos · tasas ext. fijo-variable · swap · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente total, total; swap fijo-variable sobre tasas extranjeras montos vigentes de bancos residentes, datos mensuales (millones de USD); derivados; mensual; millones de USD; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.TOT.SWP.MMUSD.EOIS.Z.Z.0.M
+    name: "Derivados Bancos · OIS tasas ext. · swap · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente total, total; derivados de OIS (overnight index swap) sobre tasas extranjeras montos vigentes de bancos residentes; derivados; mensual; millones de USD; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.TOT.SWP.MMUSD.SPC.Z.Z.0.M
+    name: "Derivados Bancos · cámara · swap · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "SPC CLP, Tasas de interés, Monto vigente, Total; resumen derivados montos vigentes; posición; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.TOT.SWP.MMUSD.SPCR.Z.Z.0.M
+    name: "Derivados Bancos · cámara UF · swap · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "SPC CLF, Tasas de interés, Monto vigente, Total; resumen derivados montos vigentes; posición; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.TOT.Z.MMUSD.CLFOME.Z.Z.0.M
+    name: "Derivados Bancos · otras ME-UF · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "ME-CLF; derivados de monedas montos vigentes de bancos residentes, total, total; derivados; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.TOT.Z.MMUSD.CLFUSD.Z.Z.0.M
+    name: "Derivados Bancos · USD-UF · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "USD-CLF; derivados de monedas montos vigentes de bancos residentes, total, total; derivados; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.TOT.Z.MMUSD.CLPOME.Z.Z.0.M
+    name: "Derivados Bancos · otras ME-CLP · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "ME-CLP; derivados de monedas montos vigentes de bancos residentes, total, total; derivados; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.TOT.Z.MMUSD.CLPUSD.Z.Z.0.M
+    name: "Derivados Bancos · USD-CLP · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Derivados de monedas; monto vigente de bancos residentes; millones de dólares; USD-CLP; total; total"
+
+  - id: F099.DER.STO.Z.40.Z.Z.TOT.Z.MMUSD.FXT.Z.Z.0.M
+    name: "Derivados Bancos · monedas (total) · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente total, total, total; derivados de monedas montos vigentes de bancos residentes; derivados; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.TOT.Z.MMUSD.IRT.Z.Z.0.M
+    name: "Derivados Bancos · tasas (total) · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Tasas de interés, Monto vigente, Total; resumen derivados montos vigentes; posición; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.TOT.Z.MMUSD.MEME.Z.Z.0.M
+    name: "Derivados Bancos · ME-ME · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "ME-ME; derivados de monedas montos vigentes de bancos residentes, total, total; derivados; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.TOT.Z.MMUSD.MLME.R.A2A5.0.M
+    name: "Derivados Bancos · ME-CLP · plazo A2A5 · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "mayor que 2 y hasta 5 años; derivados de monedas montos vigentes de bancos residentes, total, ML-ME; derivados; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.TOT.Z.MMUSD.MLME.R.A5A10.0.M
+    name: "Derivados Bancos · ME-CLP · plazo A5A10 · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "mayor a 5 y hasta 10 años; derivados de monedas montos vigentes de bancos residentes, total, ML-ME; derivados; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.TOT.Z.MMUSD.MLME.R.MA10.0.M
+    name: "Derivados Bancos · ME-CLP · plazo MA10 · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Mayor a 10 años; derivados de monedas montos vigentes de bancos residentes, total, ML-ME; derivados; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.TOT.Z.MMUSD.MLME.R.P17.0.M
+    name: "Derivados Bancos · ME-CLP · plazo P17 · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Hasta 7 días; derivados de monedas montos vigentes de bancos residentes, total, ML-ME; derivados; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.TOT.Z.MMUSD.MLME.R.P181360.0.M
+    name: "Derivados Bancos · ME-CLP · plazo P181360 · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "181 a 360 días; derivados de monedas montos vigentes de bancos residentes, total, ML-ME; derivados; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.TOT.Z.MMUSD.MLME.R.P3190.0.M
+    name: "Derivados Bancos · ME-CLP · plazo P3190 · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "31 a 90 días; derivados de monedas montos vigentes de bancos residentes, total, ML-ME; derivados; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.TOT.Z.MMUSD.MLME.R.P361720.0.M
+    name: "Derivados Bancos · ME-CLP · plazo P361720 · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "361 a 720 días; derivados de monedas montos vigentes de bancos residentes, total, ML-ME; derivados; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.TOT.Z.MMUSD.MLME.R.P830.0.M
+    name: "Derivados Bancos · ME-CLP · plazo P830 · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "8 a 30 días; derivados de monedas montos vigentes de bancos residentes, total, ML-ME; derivados; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.TOT.Z.MMUSD.MLME.R.P91180.0.M
+    name: "Derivados Bancos · ME-CLP · plazo P91180 · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "91 a 180 días; derivados de monedas montos vigentes de bancos residentes, total, ML-ME; derivados; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.TOT.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Bancos · ME-CLP · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Derivados de monedas; monto vigente de bancos residentes; millones de dólares; ME-ML; total; total"
+
+  - id: F099.DER.STO.Z.40.Z.Z.TOT.Z.MMUSD.MLML.R.Z.0.M
+    name: "Derivados Bancos · UF-CLP · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Inflación CLF-CLP, Monto vigente, Total; resumen derivados montos vigentes; posición; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.TOT.Z.MMUSD.Z.Z.Z.0.M
+    name: "Derivados Bancos · todos · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente, Total; resumen derivados montos vigentes; posición; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.TOT.Z.MUF.MLML.R.A2A5.0.M
+    name: "Derivados Bancos · UF-CLP · plazo A2A5 · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "Mayor que 2 y hasta 5 años; monto vigente total, total, derivados de UF-CLP montos vigentes por plazo residual de bancos residentes; derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.TOT.Z.MUF.MLML.R.HD90.0.M
+    name: "Derivados Bancos · UF-CLP · plazo HD90 · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "Hasta 90 días; monto vigente total, total, derivados de UF-CLP montos vigentes por plazo residual de bancos residentes; derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.TOT.Z.MUF.MLML.R.MA05.0.M
+    name: "Derivados Bancos · UF-CLP · plazo MA05 · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "Mayor a 5 años; monto vigente total, total, derivados de UF-CLP montos vigentes por plazo residual de bancos residentes; derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.TOT.Z.MUF.MLML.R.P181360.0.M
+    name: "Derivados Bancos · UF-CLP · plazo P181360 · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "181 a 360 días; monto vigente total, total, derivados de UF-CLP montos vigentes por plazo residual de bancos residentes; derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.TOT.Z.MUF.MLML.R.P361720.0.M
+    name: "Derivados Bancos · UF-CLP · plazo P361720 · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "361 a 720 días; monto vigente total, total, derivados de UF-CLP montos vigentes por plazo residual de bancos residentes; derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.TOT.Z.MUF.MLML.R.P91180.0.M
+    name: "Derivados Bancos · UF-CLP · plazo P91180 · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "91 a 180 días; monto vigente total, total, derivados de UF-CLP montos vigentes por plazo residual de bancos residentes; derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.TOT.Z.MUF.MLML.R.Z.0.M
+    name: "Derivados Bancos · UF-CLP · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "Monto vigente total, total; derivados de UF-CLP montos vigentes por plazo residual de bancos residentes; derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.TOT.Z.MUF.MLML.Z.Z.0.M
+    name: "Derivados Bancos · UF-CLP · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "Monto vigente total, total; derivados de UF-CLP montos vigentes por contraparte de bancos residentes; derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.VTA.CCS.MUF.MLML.Z.Z.0.M
+    name: "Derivados Bancos · UF-CLP · cross currency swap · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "Ventas UF a terceros; Montos vigentes de bancos residentes sobre derivados de Unidad de Fomento - Peso Chileno (UF-CLP) por instrumento, datos diarios (miles de UF); derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.VTA.FWD.MUF.MLML.Z.Z.0.M
+    name: "Derivados Bancos · UF-CLP · forward · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "Ventas UF a terceros; Montos vigentes de bancos residentes sobre derivados de Unidad de Fomento - Peso Chileno (UF-CLP) por instrumento, datos diarios (miles de UF); derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.VTA.SWP.MMMCLP.SPC.R.AN02.0.M
+    name: "Derivados Bancos · cámara · swap · plazo AN02 · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Ventas tasa variable; 2 años, posiciones totales, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.VTA.SWP.MMMCLP.SPC.R.AN05.0.M
+    name: "Derivados Bancos · cámara · swap · plazo AN05 · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Ventas tasa variable; 5 años, posiciones totales, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.VTA.SWP.MMMCLP.SPC.R.HA02.0.M
+    name: "Derivados Bancos · cámara · swap · plazo HA02 · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Ventas tasa variable"
+
+  - id: F099.DER.STO.Z.40.Z.Z.VTA.SWP.MMMCLP.SPC.R.MA02.0.M
+    name: "Derivados Bancos · cámara · swap · plazo MA02 · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Ventas tasa variable"
+
+  - id: F099.DER.STO.Z.40.Z.Z.VTA.SWP.MMMCLP.SPC.R.MA10.0.M
+    name: "Derivados Bancos · cámara · swap · plazo MA10 · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Ventas tasa variable; 10 y más años, posiciones totales, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.VTA.SWP.MMMCLP.SPC.R.ME03.0.M
+    name: "Derivados Bancos · cámara · swap · plazo ME03 · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Ventas tasa variable; 3 meses, posiciones totales, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.VTA.SWP.MMMCLP.SPC.R.ME06.0.M
+    name: "Derivados Bancos · cámara · swap · plazo ME06 · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Ventas tasa variable; 6 meses, posiciones totales, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.VTA.SWP.MMMCLP.SPC.R.ME09.0.M
+    name: "Derivados Bancos · cámara · swap · plazo ME09 · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Ventas tasa variable; 9 meses, posiciones totales, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.VTA.SWP.MMMCLP.SPC.R.ME12.0.M
+    name: "Derivados Bancos · cámara · swap · plazo ME12 · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Ventas tasa variable; 12 meses, posiciones totales, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.VTA.SWP.MMMCLP.SPC.R.ME18.0.M
+    name: "Derivados Bancos · cámara · swap · plazo ME18 · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Ventas tasa variable; 18 meses, posiciones totales, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.VTA.SWP.MMUSD.EFV.Z.Z.0.M
+    name: "Derivados Bancos · tasas ext. fijo-variable · swap · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Venta tasa variable; monto vigente total, total, swap fijo-variable sobre tasas extranjeras montos vigentes de bancos residentes, datos mensuales (millones de USD); derivados; mensual; millones de USD; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.VTA.SWP.MMUSD.EOIS.Z.Z.0.M
+    name: "Derivados Bancos · OIS tasas ext. · swap · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Venta tasa variable; monto vigente total, total, derivados de OIS (overnight index swap) sobre tasas extranjeras montos vigentes de bancos residentes; derivados; mensual; millones de USD; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.VTA.Z.MMUSD.CLPUSD.Z.Z.0.M
+    name: "Derivados Bancos · USD-CLP · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente vendedor; derivados de monedas montos vigentes de bancos residentes USD-CLP; posición; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.VTA.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Bancos · ME-CLP · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente vendedor; derivados de monedas montos vigentes de bancos residentes; posición; mensual; millones de dólares; BCCh"
+
+  - id: F099.DER.STO.Z.40.Z.Z.VTA.Z.MUF.MLML.Z.Z.0.M
+    name: "Derivados Bancos · UF-CLP · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_UF
+    publish_lag_days: 60
+    description: "Venta UF; monto vigente total, total, derivados de UF-CLP montos vigentes por contraparte de bancos residentes; derivados; mensual; miles de UF; BCCh"
+
+  - id: F099.DER.STO.Z.44.N.NR.COM.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Seguros · ME-CLP · vs. no residentes · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente comprador | Derivados de monedas montos vigentes de Compañías de seguros, datos mensuales (moneda nacional contra moneda extranjera) (millones de dólares)"
+
+  - id: F099.DER.STO.Z.44.N.NR.NET.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Seguros · ME-CLP · vs. no residentes · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente neto | Derivados de monedas montos vigentes de Compañías de seguros, datos mensuales (moneda nacional contra moneda extranjera) (millones de dólares)"
+
+  - id: F099.DER.STO.Z.44.N.NR.TOT.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Seguros · ME-CLP · vs. no residentes · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente total con no residentes, ME-ML | Derivados de monedas montos vigentes de Compañías de seguros, datos mensuales (moneda nacional contra moneda extranjera) (millones de dólares)"
+
+  - id: F099.DER.STO.Z.44.N.NR.VTA.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Seguros · ME-CLP · vs. no residentes · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente vendedor | Derivados de monedas montos vigentes de Compañías de seguros, datos mensuales (moneda nacional contra moneda extranjera) (millones de dólares)"
+
+  - id: F099.DER.STO.Z.44.R.40.NET.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Seguros · ME-CLP · vs. bancos · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente neto | Derivados de monedas montos vigentes de Compañías de seguros, datos mensuales (moneda nacional contra moneda extranjera) (millones de dólares)"
+
+  - id: F099.DER.STO.Z.50.N.NR.COM.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Otros sectores · ME-CLP · vs. no residentes · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente comprador | Derivados de monedas montos vigentes de Otros sectores, datos mensuales (moneda nacional contra moneda extranjera)"
+
+  - id: F099.DER.STO.Z.50.N.NR.NET.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Otros sectores · ME-CLP · vs. no residentes · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente neto | Derivados de monedas montos vigentes de Otros sectores, datos mensuales (moneda nacional contra moneda extranjera)"
+
+  - id: F099.DER.STO.Z.50.N.NR.TOT.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Otros sectores · ME-CLP · vs. no residentes · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente total con no residentes, ME-ML | Derivados de monedas montos vigentes de Otros sectores, datos mensuales (moneda nacional contra moneda extranjera)"
+
+  - id: F099.DER.STO.Z.50.N.NR.VTA.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Otros sectores · ME-CLP · vs. no residentes · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente vendedor | Derivados de monedas montos vigentes de Otros sectores, datos mensuales (moneda nacional contra moneda extranjera)"
+
+  - id: F099.DER.STO.Z.50.R.40.NET.Z.MMUSD.CLPUSD.Z.Z.0.M
+    name: "Derivados Otros sectores · USD-CLP · vs. bancos · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente neto | Derivados de monedas montos vigentes de Otros sectores, datos mensuales (USD-CLP)"
+
+  - id: F099.DER.STO.Z.50.R.40.NET.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Otros sectores · ME-CLP · vs. bancos · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente neto | Derivados de monedas montos vigentes de Otros sectores, datos mensuales (moneda nacional contra moneda extranjera)"
+
+  - id: F099.DER.STO.Z.55A.N.NR.COM.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Empresas · ME-CLP · vs. no residentes · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente comprador | Derivados de monedas montos vigentes de Empresas sector real, datos mensuales (moneda nacional contra moneda extranjera) (millones de dólares)"
+
+  - id: F099.DER.STO.Z.55A.N.NR.NET.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Empresas · ME-CLP · vs. no residentes · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente neto | Derivados de monedas montos vigentes de Empresas sector real, datos mensuales (moneda nacional contra moneda extranjera) (millones de dólares)"
+
+  - id: F099.DER.STO.Z.55A.N.NR.TOT.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Empresas · ME-CLP · vs. no residentes · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente total con no residentes, ME-ML | Derivados de monedas montos vigentes de Empresas sector real, datos mensuales (moneda nacional contra moneda extranjera) (millones de dólares)"
+
+  - id: F099.DER.STO.Z.55A.N.NR.VTA.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Empresas · ME-CLP · vs. no residentes · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente vendedor | Derivados de monedas montos vigentes de Empresas sector real, datos mensuales (moneda nacional contra moneda extranjera) (millones de dólares)"
+
+  - id: F099.DER.STO.Z.55A.R.40.NET.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados Empresas · ME-CLP · vs. bancos · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente neto | Derivados de monedas montos vigentes de Empresas sector real, datos mensuales (moneda nacional contra moneda extranjera) (millones de dólares)"
+
+  - id: F099.DER.STO.Z.63.N.NR.COM.SWP.MMUSD.EFV.Z.Z.0.M
+    name: "Derivados Residentes no bancos · tasas ext. fijo-variable · swap · vs. no residentes · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Compra tasa variable; monto vigente total, total, swap fijo-variable sobre tasas extranjeras montos vigentes de residentes no bancos con no residentes; derivados; mensual; millones de USD; BCCh"
+
+  - id: F099.DER.STO.Z.63.N.NR.COM.SWP.MMUSD.EOIS.Z.Z.0.M
+    name: "Derivados Residentes no bancos · OIS tasas ext. · swap · vs. no residentes · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Compra tasa variable; monto vigente total, total, derivados de OIS (overnight index swap) sobre tasas extranjeras montos vigentes de residentes no bancos con no residentes; derivados; mensual; millones de USD; BCCh"
+
+  - id: F099.DER.STO.Z.63.N.NR.NET.SWP.MMUSD.EFV.Z.Z.0.M
+    name: "Derivados Residentes no bancos · tasas ext. fijo-variable · swap · vs. no residentes · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Neto; monto vigente total, total, swap fijo-variable sobre tasas extranjeras montos vigentes de residentes no bancos con no residentes; derivados; mensual; millones de USD; BCCh"
+
+  - id: F099.DER.STO.Z.63.N.NR.NET.SWP.MMUSD.EOIS.Z.Z.0.M
+    name: "Derivados Residentes no bancos · OIS tasas ext. · swap · vs. no residentes · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Neto; monto vigente total, total, derivados de OIS (overnight index swap) sobre tasas extranjeras montos vigentes de residentes no bancos con no residentes; derivados; mensual; millones de USD; BCCh"
+
+  - id: F099.DER.STO.Z.63.N.NR.TOT.SWP.MMUSD.EBS.Z.Z.0.M
+    name: "Derivados Residentes no bancos · basis tasas ext. · swap · vs. no residentes · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente total, total; basis swap sobre tasas extranjeras montos vigentes de residentes no bancos con no residentes; derivados; mensual; millones de USD; BCCh"
+
+  - id: F099.DER.STO.Z.63.N.NR.TOT.SWP.MMUSD.EFV.Z.Z.0.M
+    name: "Derivados Residentes no bancos · tasas ext. fijo-variable · swap · vs. no residentes · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente total, total; swap fijo-variable sobre tasas extranjeras montos vigentes de residentes no bancos con no residentes; derivados; mensual; millones de USD; BCCh"
+
+  - id: F099.DER.STO.Z.63.N.NR.TOT.SWP.MMUSD.EOIS.Z.Z.0.M
+    name: "Derivados Residentes no bancos · OIS tasas ext. · swap · vs. no residentes · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente total, total; derivados de OIS (overnight index swap) sobre tasas extranjeras montos vigentes de residentes no bancos con no residentes; derivados; mensual; millones de USD; BCCh"
+
+  - id: F099.DER.STO.Z.63.N.NR.VTA.SWP.MMUSD.EFV.Z.Z.0.M
+    name: "Derivados Residentes no bancos · tasas ext. fijo-variable · swap · vs. no residentes · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Venta tasa variable; monto vigente total, total, swap fijo-variable sobre tasas extranjeras montos vigentes de residentes no bancos con no residentes; derivados; mensual; millones de USD; BCCh"
+
+  - id: F099.DER.STO.Z.63.N.NR.VTA.SWP.MMUSD.EOIS.Z.Z.0.M
+    name: "Derivados Residentes no bancos · OIS tasas ext. · swap · vs. no residentes · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Venta tasa variable; monto vigente total, total, derivados de OIS (overnight index swap) sobre tasas extranjeras montos vigentes de residentes no bancos con no residentes; derivados; mensual; millones de USD; BCCh"
+
+  - id: F099.DER.STO.Z.NR.R.40.NET.Z.MMUSD.MLME.Z.Z.0.M
+    name: "Derivados No residentes · ME-CLP · vs. bancos · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: millones_USD
+    publish_lag_days: 60
+    description: "Monto vigente neto con bancos residentes, ME-ML| Derivados de monedas montos vigentes de No residentes, datos mensuales (moneda nacional contra moneda extranjera) (millones de dólares)"
+
+  # --- Derivados globales (BCCh, F099.DER), parte 2: swap cámara por plazo original de
+  # los bancos frente a residentes no bancos (R.63) y no residentes (N.NR). 18-nov-2026.
+
+  - id: F099.DER.STO.Z.40.N.NR.COM.SWP.MMMCLP.SPC.R.AN02.0.M
+    name: "Derivados Bancos · cámara · swap · vs. no residentes · plazo AN02 · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Compras tasa variable; 2 años, contraparte no residente, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.N.NR.COM.SWP.MMMCLP.SPC.R.AN05.0.M
+    name: "Derivados Bancos · cámara · swap · vs. no residentes · plazo AN05 · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Compras tasa variable; 5 años, contraparte no residente, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.N.NR.COM.SWP.MMMCLP.SPC.R.HA02.0.M
+    name: "Derivados Bancos · cámara · swap · vs. no residentes · plazo HA02 · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Compras tasa variable"
+
+  - id: F099.DER.STO.Z.40.N.NR.COM.SWP.MMMCLP.SPC.R.MA02.0.M
+    name: "Derivados Bancos · cámara · swap · vs. no residentes · plazo MA02 · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Compras tasa variable"
+
+  - id: F099.DER.STO.Z.40.N.NR.COM.SWP.MMMCLP.SPC.R.MA10.0.M
+    name: "Derivados Bancos · cámara · swap · vs. no residentes · plazo MA10 · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Compras tasa variable; 10 y más años, contraparte no residente, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.N.NR.COM.SWP.MMMCLP.SPC.R.ME03.0.M
+    name: "Derivados Bancos · cámara · swap · vs. no residentes · plazo ME03 · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Compras tasa variable; 3 meses, contraparte no residente, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.N.NR.COM.SWP.MMMCLP.SPC.R.ME06.0.M
+    name: "Derivados Bancos · cámara · swap · vs. no residentes · plazo ME06 · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Compras tasa variable; 6 meses, contraparte no residente, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.N.NR.COM.SWP.MMMCLP.SPC.R.ME09.0.M
+    name: "Derivados Bancos · cámara · swap · vs. no residentes · plazo ME09 · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Compras tasa variable; 9 meses, contraparte no residente, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.N.NR.COM.SWP.MMMCLP.SPC.R.ME12.0.M
+    name: "Derivados Bancos · cámara · swap · vs. no residentes · plazo ME12 · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Compras tasa variable; 12 meses, contraparte no residente, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.N.NR.COM.SWP.MMMCLP.SPC.R.ME18.0.M
+    name: "Derivados Bancos · cámara · swap · vs. no residentes · plazo ME18 · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Compras tasa variable; 18 meses, contraparte no residente, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.N.NR.NET.SWP.MMMCLP.SPC.R.AN02.0.M
+    name: "Derivados Bancos · cámara · swap · vs. no residentes · plazo AN02 · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Neto tasa variable; 2 años, contraparte no residente, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.N.NR.NET.SWP.MMMCLP.SPC.R.AN05.0.M
+    name: "Derivados Bancos · cámara · swap · vs. no residentes · plazo AN05 · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Neto tasa variable; 5 años, contraparte no residente, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.N.NR.NET.SWP.MMMCLP.SPC.R.HA02.0.M
+    name: "Derivados Bancos · cámara · swap · vs. no residentes · plazo HA02 · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Neto tasa variable"
+
+  - id: F099.DER.STO.Z.40.N.NR.NET.SWP.MMMCLP.SPC.R.MA02.0.M
+    name: "Derivados Bancos · cámara · swap · vs. no residentes · plazo MA02 · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Neto tasa variable"
+
+  - id: F099.DER.STO.Z.40.N.NR.NET.SWP.MMMCLP.SPC.R.MA10.0.M
+    name: "Derivados Bancos · cámara · swap · vs. no residentes · plazo MA10 · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Neto tasa variable; 10 y más años, contraparte no residente, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.N.NR.NET.SWP.MMMCLP.SPC.R.ME03.0.M
+    name: "Derivados Bancos · cámara · swap · vs. no residentes · plazo ME03 · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Neto tasa variable; 3 meses, contraparte no residente, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.N.NR.NET.SWP.MMMCLP.SPC.R.ME06.0.M
+    name: "Derivados Bancos · cámara · swap · vs. no residentes · plazo ME06 · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Neto tasa variable; 6 meses, contraparte no residente, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.N.NR.NET.SWP.MMMCLP.SPC.R.ME09.0.M
+    name: "Derivados Bancos · cámara · swap · vs. no residentes · plazo ME09 · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Neto tasa variable; 9 meses, contraparte no residente, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.N.NR.NET.SWP.MMMCLP.SPC.R.ME12.0.M
+    name: "Derivados Bancos · cámara · swap · vs. no residentes · plazo ME12 · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Neto tasa variable; 12 meses, contraparte no residente, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.N.NR.NET.SWP.MMMCLP.SPC.R.ME18.0.M
+    name: "Derivados Bancos · cámara · swap · vs. no residentes · plazo ME18 · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Neto tasa variable; 18 meses, contraparte no residente, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.N.NR.TOT.SWP.MMMCLP.SPC.R.AN02.0.M
+    name: "Derivados Bancos · cámara · swap · vs. no residentes · plazo AN02 · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "2 años; contraparte no residente, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.N.NR.TOT.SWP.MMMCLP.SPC.R.AN05.0.M
+    name: "Derivados Bancos · cámara · swap · vs. no residentes · plazo AN05 · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "5 años; contraparte no residente, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.N.NR.TOT.SWP.MMMCLP.SPC.R.HA02.0.M
+    name: "Derivados Bancos · cámara · swap · vs. no residentes · plazo HA02 · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Hasta 2 años"
+
+  - id: F099.DER.STO.Z.40.N.NR.TOT.SWP.MMMCLP.SPC.R.MA02.0.M
+    name: "Derivados Bancos · cámara · swap · vs. no residentes · plazo MA02 · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Mayor 2 años"
+
+  - id: F099.DER.STO.Z.40.N.NR.TOT.SWP.MMMCLP.SPC.R.MA10.0.M
+    name: "Derivados Bancos · cámara · swap · vs. no residentes · plazo MA10 · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "10 y más años; contraparte no residente, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.N.NR.TOT.SWP.MMMCLP.SPC.R.ME03.0.M
+    name: "Derivados Bancos · cámara · swap · vs. no residentes · plazo ME03 · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "3 meses; contraparte no residente, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.N.NR.TOT.SWP.MMMCLP.SPC.R.ME06.0.M
+    name: "Derivados Bancos · cámara · swap · vs. no residentes · plazo ME06 · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "6 meses; contraparte no residente, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.N.NR.TOT.SWP.MMMCLP.SPC.R.ME09.0.M
+    name: "Derivados Bancos · cámara · swap · vs. no residentes · plazo ME09 · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "9 meses; contraparte no residente, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.N.NR.TOT.SWP.MMMCLP.SPC.R.ME12.0.M
+    name: "Derivados Bancos · cámara · swap · vs. no residentes · plazo ME12 · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "12 meses; contraparte no residente, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.N.NR.TOT.SWP.MMMCLP.SPC.R.ME18.0.M
+    name: "Derivados Bancos · cámara · swap · vs. no residentes · plazo ME18 · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "18 meses; contraparte no residente, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.N.NR.VTA.SWP.MMMCLP.SPC.R.AN02.0.M
+    name: "Derivados Bancos · cámara · swap · vs. no residentes · plazo AN02 · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Ventas tasa variable; 2 años, contraparte no residente, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.N.NR.VTA.SWP.MMMCLP.SPC.R.AN05.0.M
+    name: "Derivados Bancos · cámara · swap · vs. no residentes · plazo AN05 · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Ventas tasa variable; 5 años, contraparte no residente, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.N.NR.VTA.SWP.MMMCLP.SPC.R.HA02.0.M
+    name: "Derivados Bancos · cámara · swap · vs. no residentes · plazo HA02 · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Ventas tasa variable"
+
+  - id: F099.DER.STO.Z.40.N.NR.VTA.SWP.MMMCLP.SPC.R.MA02.0.M
+    name: "Derivados Bancos · cámara · swap · vs. no residentes · plazo MA02 · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Ventas tasa variable"
+
+  - id: F099.DER.STO.Z.40.N.NR.VTA.SWP.MMMCLP.SPC.R.MA10.0.M
+    name: "Derivados Bancos · cámara · swap · vs. no residentes · plazo MA10 · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Ventas tasa variable; 10 y más años, contraparte no residente, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.N.NR.VTA.SWP.MMMCLP.SPC.R.ME03.0.M
+    name: "Derivados Bancos · cámara · swap · vs. no residentes · plazo ME03 · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Ventas tasa variable; 3 meses, contraparte no residente, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.N.NR.VTA.SWP.MMMCLP.SPC.R.ME06.0.M
+    name: "Derivados Bancos · cámara · swap · vs. no residentes · plazo ME06 · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Ventas tasa variable; 6 meses, contraparte no residente, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.N.NR.VTA.SWP.MMMCLP.SPC.R.ME09.0.M
+    name: "Derivados Bancos · cámara · swap · vs. no residentes · plazo ME09 · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Ventas tasa variable; 9 meses, contraparte no residente, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.N.NR.VTA.SWP.MMMCLP.SPC.R.ME12.0.M
+    name: "Derivados Bancos · cámara · swap · vs. no residentes · plazo ME12 · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Ventas tasa variable; 12 meses, contraparte no residente, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.N.NR.VTA.SWP.MMMCLP.SPC.R.ME18.0.M
+    name: "Derivados Bancos · cámara · swap · vs. no residentes · plazo ME18 · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Ventas tasa variable; 18 meses, contraparte no residente, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.63.COM.SWP.MMMCLP.SPC.R.AN02.0.M
+    name: "Derivados Bancos · cámara · swap · vs. residentes no bancos · plazo AN02 · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Compras tasa variable; 2 años, contraparte residente no banco, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.63.COM.SWP.MMMCLP.SPC.R.AN05.0.M
+    name: "Derivados Bancos · cámara · swap · vs. residentes no bancos · plazo AN05 · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Compras tasa variable; 5 años, contraparte residente no banco, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.63.COM.SWP.MMMCLP.SPC.R.HA02.0.M
+    name: "Derivados Bancos · cámara · swap · vs. residentes no bancos · plazo HA02 · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Compras tasa variable"
+
+  - id: F099.DER.STO.Z.40.R.63.COM.SWP.MMMCLP.SPC.R.MA02.0.M
+    name: "Derivados Bancos · cámara · swap · vs. residentes no bancos · plazo MA02 · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Compras tasa variable"
+
+  - id: F099.DER.STO.Z.40.R.63.COM.SWP.MMMCLP.SPC.R.MA10.0.M
+    name: "Derivados Bancos · cámara · swap · vs. residentes no bancos · plazo MA10 · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Compras tasa variable; 10 y más años, contraparte residente no banco, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.63.COM.SWP.MMMCLP.SPC.R.ME03.0.M
+    name: "Derivados Bancos · cámara · swap · vs. residentes no bancos · plazo ME03 · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Compras tasa variable; 3 meses, contraparte residente no banco, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.63.COM.SWP.MMMCLP.SPC.R.ME06.0.M
+    name: "Derivados Bancos · cámara · swap · vs. residentes no bancos · plazo ME06 · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Compras tasa variable; 6 meses, contraparte residente no banco, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.63.COM.SWP.MMMCLP.SPC.R.ME09.0.M
+    name: "Derivados Bancos · cámara · swap · vs. residentes no bancos · plazo ME09 · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Compras tasa variable; 9 meses, contraparte residente no banco, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.63.COM.SWP.MMMCLP.SPC.R.ME12.0.M
+    name: "Derivados Bancos · cámara · swap · vs. residentes no bancos · plazo ME12 · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Compras tasa variable; 12 meses, contraparte residente no banco, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.63.COM.SWP.MMMCLP.SPC.R.ME18.0.M
+    name: "Derivados Bancos · cámara · swap · vs. residentes no bancos · plazo ME18 · comprador · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Compras tasa variable; 18 meses, contraparte residente no banco, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.63.NET.SWP.MMMCLP.SPC.R.AN02.0.M
+    name: "Derivados Bancos · cámara · swap · vs. residentes no bancos · plazo AN02 · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Neto tasa variable; 2 años, contraparte residente no banco, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.63.NET.SWP.MMMCLP.SPC.R.AN05.0.M
+    name: "Derivados Bancos · cámara · swap · vs. residentes no bancos · plazo AN05 · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Neto tasa variable; 5 años, contraparte residente no banco, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.63.NET.SWP.MMMCLP.SPC.R.HA02.0.M
+    name: "Derivados Bancos · cámara · swap · vs. residentes no bancos · plazo HA02 · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Neto tasa variable"
+
+  - id: F099.DER.STO.Z.40.R.63.NET.SWP.MMMCLP.SPC.R.MA02.0.M
+    name: "Derivados Bancos · cámara · swap · vs. residentes no bancos · plazo MA02 · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Neto tasa variable"
+
+  - id: F099.DER.STO.Z.40.R.63.NET.SWP.MMMCLP.SPC.R.MA10.0.M
+    name: "Derivados Bancos · cámara · swap · vs. residentes no bancos · plazo MA10 · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Neto tasa variable; 10 y más años, contraparte residente no banco, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.63.NET.SWP.MMMCLP.SPC.R.ME03.0.M
+    name: "Derivados Bancos · cámara · swap · vs. residentes no bancos · plazo ME03 · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Neto tasa variable; 3 meses, contraparte residente no banco, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.63.NET.SWP.MMMCLP.SPC.R.ME06.0.M
+    name: "Derivados Bancos · cámara · swap · vs. residentes no bancos · plazo ME06 · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Neto tasa variable; 6 meses, contraparte residente no banco, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.63.NET.SWP.MMMCLP.SPC.R.ME09.0.M
+    name: "Derivados Bancos · cámara · swap · vs. residentes no bancos · plazo ME09 · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Neto tasa variable; 9 meses, contraparte residente no banco, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.63.NET.SWP.MMMCLP.SPC.R.ME12.0.M
+    name: "Derivados Bancos · cámara · swap · vs. residentes no bancos · plazo ME12 · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Neto tasa variable; 12 meses, contraparte residente no banco, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.63.NET.SWP.MMMCLP.SPC.R.ME18.0.M
+    name: "Derivados Bancos · cámara · swap · vs. residentes no bancos · plazo ME18 · neto · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Neto tasa variable; 18 meses, contraparte residente no banco, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.63.TOT.SWP.MMMCLP.SPC.R.AN02.0.M
+    name: "Derivados Bancos · cámara · swap · vs. residentes no bancos · plazo AN02 · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "2 años; contraparte residente no banco, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.63.TOT.SWP.MMMCLP.SPC.R.AN05.0.M
+    name: "Derivados Bancos · cámara · swap · vs. residentes no bancos · plazo AN05 · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "5 años; contraparte residente no banco, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.63.TOT.SWP.MMMCLP.SPC.R.HA02.0.M
+    name: "Derivados Bancos · cámara · swap · vs. residentes no bancos · plazo HA02 · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Hasta 2 años"
+
+  - id: F099.DER.STO.Z.40.R.63.TOT.SWP.MMMCLP.SPC.R.MA02.0.M
+    name: "Derivados Bancos · cámara · swap · vs. residentes no bancos · plazo MA02 · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Mayor 2 años"
+
+  - id: F099.DER.STO.Z.40.R.63.TOT.SWP.MMMCLP.SPC.R.MA10.0.M
+    name: "Derivados Bancos · cámara · swap · vs. residentes no bancos · plazo MA10 · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "10 y más años; contraparte residente no banco, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.63.TOT.SWP.MMMCLP.SPC.R.ME03.0.M
+    name: "Derivados Bancos · cámara · swap · vs. residentes no bancos · plazo ME03 · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "3 meses; contraparte residente no banco, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.63.TOT.SWP.MMMCLP.SPC.R.ME06.0.M
+    name: "Derivados Bancos · cámara · swap · vs. residentes no bancos · plazo ME06 · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "6 meses; contraparte residente no banco, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.63.TOT.SWP.MMMCLP.SPC.R.ME09.0.M
+    name: "Derivados Bancos · cámara · swap · vs. residentes no bancos · plazo ME09 · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "9 meses; contraparte residente no banco, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.63.TOT.SWP.MMMCLP.SPC.R.ME12.0.M
+    name: "Derivados Bancos · cámara · swap · vs. residentes no bancos · plazo ME12 · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "12 meses; contraparte residente no banco, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.63.TOT.SWP.MMMCLP.SPC.R.ME18.0.M
+    name: "Derivados Bancos · cámara · swap · vs. residentes no bancos · plazo ME18 · total · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "18 meses; contraparte residente no banco, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.63.VTA.SWP.MMMCLP.SPC.R.AN02.0.M
+    name: "Derivados Bancos · cámara · swap · vs. residentes no bancos · plazo AN02 · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Ventas tasa variable; 2 años, contraparte residente no banco, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.63.VTA.SWP.MMMCLP.SPC.R.AN05.0.M
+    name: "Derivados Bancos · cámara · swap · vs. residentes no bancos · plazo AN05 · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Ventas tasa variable; 5 años, contraparte residente no banco, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.63.VTA.SWP.MMMCLP.SPC.R.HA02.0.M
+    name: "Derivados Bancos · cámara · swap · vs. residentes no bancos · plazo HA02 · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Ventas tasa variable"
+
+  - id: F099.DER.STO.Z.40.R.63.VTA.SWP.MMMCLP.SPC.R.MA02.0.M
+    name: "Derivados Bancos · cámara · swap · vs. residentes no bancos · plazo MA02 · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Ventas tasa variable"
+
+  - id: F099.DER.STO.Z.40.R.63.VTA.SWP.MMMCLP.SPC.R.MA10.0.M
+    name: "Derivados Bancos · cámara · swap · vs. residentes no bancos · plazo MA10 · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Ventas tasa variable; 10 y más años, contraparte residente no banco, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.63.VTA.SWP.MMMCLP.SPC.R.ME03.0.M
+    name: "Derivados Bancos · cámara · swap · vs. residentes no bancos · plazo ME03 · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Ventas tasa variable; 3 meses, contraparte residente no banco, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.63.VTA.SWP.MMMCLP.SPC.R.ME06.0.M
+    name: "Derivados Bancos · cámara · swap · vs. residentes no bancos · plazo ME06 · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Ventas tasa variable; 6 meses, contraparte residente no banco, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.63.VTA.SWP.MMMCLP.SPC.R.ME09.0.M
+    name: "Derivados Bancos · cámara · swap · vs. residentes no bancos · plazo ME09 · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Ventas tasa variable; 9 meses, contraparte residente no banco, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.63.VTA.SWP.MMMCLP.SPC.R.ME12.0.M
+    name: "Derivados Bancos · cámara · swap · vs. residentes no bancos · plazo ME12 · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Ventas tasa variable; 12 meses, contraparte residente no banco, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
+  - id: F099.DER.STO.Z.40.R.63.VTA.SWP.MMMCLP.SPC.R.ME18.0.M
+    name: "Derivados Bancos · cámara · swap · vs. residentes no bancos · plazo ME18 · vendedor · saldo"
+    category: derivados_sector
+    frequency: monthly
+    unit: miles_millones_CLP
+    publish_lag_days: 60
+    description: "Ventas tasa variable; 18 meses, contraparte residente no banco, posiciones de Swap Promedio Cámara nominal de bancos residentes por plazo original; stock; mensual; miles de millones de peso chilenos; BCCh"
+
   # --- Contexto del monitor de derivados: tasas de EE.UU. ---
   - id: F019.TBG.TAS.10.M
     name: Bono de gobierno EE.UU. 10 años (mensual)
