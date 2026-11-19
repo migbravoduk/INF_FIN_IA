@@ -474,6 +474,15 @@ form.htmx-request { background-image: linear-gradient(90deg, transparent, var(--
 :is(.bank-table, .evol-table, .cmp-ratios) th.acct { text-align: left; }
 .tbl td.ent, :is(.eeff-table, .bank-table, .evol-table, .cmp-ratios) td.acct { color: var(--ink); font-weight: 500; }
 .tbl .sub { display: block; font-size: var(--fs-xs); color: var(--muted); font-weight: 400; margin-top: 2px; }
+/* Filas de emisor que se abren para mostrar quién lo tiene (concentración por emisor de seguros). */
+.emisor-det > summary { cursor: pointer; list-style: none; }
+.emisor-det > summary::-webkit-details-marker { display: none; }
+.emisor-det > summary::before { content: "▸"; display: inline-block; margin-right: 0.4rem; color: var(--muted); transition: transform 0.15s; }
+.emisor-det[open] > summary::before { transform: rotate(90deg); }
+.emisor-det-cuerpo { margin: var(--sp-2) 0 var(--sp-1) 1rem; font-weight: 400; }
+tr:has(> td > .emisor-det) > td { vertical-align: top; }
+.tbl--compacta { font-size: var(--fs-xs); }
+.tbl tfoot td { font-weight: 700; color: var(--ink); background: var(--s2); border-top: 1px solid var(--line-strong); }
 .tbl tr.total td, .total-row td { font-weight: 700; color: var(--ink); background: var(--s2); border-top: 1px solid var(--line-strong); }
 .tbl tr.grupo td, .section-head td { color: var(--accent); font-size: var(--fs-xs); font-weight: 700; letter-spacing: 0.06em;
     text-transform: uppercase; background: var(--bg); padding-top: var(--sp-4); border-bottom: 1px solid var(--accent); }

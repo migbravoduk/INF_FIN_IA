@@ -47,6 +47,43 @@ def _fx_cte(periods_sql: str) -> str:
 
 
 # ---------------------------------------------------------------------------------------
+# Monto de la renta fija de seguros (B.1): valor PAR en pesos. Una sola definición para todas
+# las vistas (concentración por emisor, tenencias por emisor, emisores en común).
+#
+#   nominal = saldo vigente (`valor_nominal_vig`) si es > 0; si no, el monto de origen
+#             (`valor_nominal`). En leasing, letras hipotecarias y gran parte de los bonos la
+#             CMF informa el vigente en 0, así que ahí se usa el monto de origen, que SOBRESTIMA
+#             lo expuesto porque el instrumento ya amortizó. No es valor de mercado.
+#   pesos   = UF × UF del cierre · $$ × 1 · PROM (dólar) × dólar observado del cierre.
+#             Otras monedas (euro…) dan NULL: se cuentan como posiciones, no se suman.
+#   Se expresa en MM$ (÷ 1e6). Requiere el CTE `fx(period, uf, usd)` de `_fx_cte` unido por período.
+# ---------------------------------------------------------------------------------------
+def nominal_sql(alias: str = "fi") -> str:
+    """Nominal que se usa: el vigente si existe, si no el monto de origen (unidad del instrumento)."""
+    return (f"CASE WHEN coalesce({alias}.valor_nominal_vig, 0) > 0 THEN {alias}.valor_nominal_vig "
+            f"ELSE {alias}.valor_nominal END")
+
+
+def vigente_sql(alias: str = "fi") -> str:
+    """TRUE si el nominal viene del saldo vigente; FALSE si se usó el monto de origen."""
+    return f"(coalesce({alias}.valor_nominal_vig, 0) > 0)"
+
+
+def convertir_sql(nominal_expr: str, moneda_expr: str, fx: str = "fx") -> str:
+    """Pasa un nominal a MM$ con la UF y el dólar del cierre (`fx`)."""
+    return (f"(CASE {moneda_expr} WHEN 'UF' THEN {nominal_expr} * {fx}.uf WHEN '$$' THEN {nominal_expr} "
+            f"WHEN 'PROM' THEN {nominal_expr} * {fx}.usd END) / 1e6")
+
+
+def monto_par_sql(alias: str = "fi", fx: str = "fx") -> str:
+    """Valor par de una posición de B.1 en MM$ (ver el bloque de arriba)."""
+    return convertir_sql(f"({nominal_sql(alias)})", f"{alias}.unidad_monetaria", fx)
+
+
+MONEDAS_CON_FX = ("UF", "$$", "PROM")
+
+
+# ---------------------------------------------------------------------------------------
 # Emisor canónico por nemotécnico (B.1).
 #
 # Las compañías no siempre informan el mismo RUT de emisor para un mismo instrumento: en
@@ -260,16 +297,13 @@ def issuer_holdings(db, rut: str, n_periods: int = 13) -> dict:
                    fi.unidad_monetaria AS mon, upper(trim(fi.nemotecnico)) AS nemo,
                    ltrim(fi.rut_emisor, '0') AS inf, {fusion_sql("ltrim(fi.rut_emisor, '0')")} AS fus,
                    {emisor_efectivo()} AS efe,
-                   CASE WHEN coalesce(fi.valor_nominal_vig, 0) > 0 THEN fi.valor_nominal_vig
-                        ELSE fi.valor_nominal END AS nominal
+                   {nominal_sql()} AS nominal
             FROM cmf_insurer_portfolio_fixed_income fi
             {canon_join()}
             WHERE fi.period IN ({lista})
               AND (ltrim(fi.rut_emisor, '0') IN ({eq_sql}) OR canon.rut_canon IN ({eq_sql})))
         SELECT b.period, b.tenedor, b.ramo, b.mon, b.nemo, b.inf, b.fus, b.efe,
-               CASE b.mon WHEN 'UF' THEN b.nominal * fx.uf
-                          WHEN '$$' THEN b.nominal
-                          WHEN 'PROM' THEN b.nominal * fx.usd END / 1e6 AS mm
+               {convertir_sql("b.nominal", "b.mon")} AS mm
         FROM b JOIN fx USING (period)
     """).fetchdf()
     seg_efe = seg_all[seg_all.efe == rut]
@@ -420,11 +454,8 @@ def common_issuers(db, limit: int = 40) -> dict:
         seg AS (
             SELECT upper(trim(fi.nemotecnico)) nemo, {emisor_efectivo()} rut,
                    COUNT(*) pos_seg, COUNT(DISTINCT fi.rut) cias,
-                   SUM(CASE fi.unidad_monetaria WHEN 'UF' THEN nom * fx.uf WHEN '$$' THEN nom
-                                                WHEN 'PROM' THEN nom * fx.usd END) / 1e6 AS mm_seg
-            FROM (SELECT *, CASE WHEN coalesce(valor_nominal_vig, 0) > 0 THEN valor_nominal_vig
-                                 ELSE valor_nominal END AS nom
-                  FROM cmf_insurer_portfolio_fixed_income) fi
+                   SUM({monto_par_sql()}) AS mm_seg
+            FROM cmf_insurer_portfolio_fixed_income fi
             JOIN fx ON fx.period = fi.period
             {canon_join()}
             WHERE fi.period = ? AND fi.nemotecnico IS NOT NULL AND trim(fi.nemotecnico) <> ''

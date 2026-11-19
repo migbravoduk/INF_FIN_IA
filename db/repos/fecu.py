@@ -464,40 +464,47 @@ class FecuRepo:
     def get_insurer_issuer_exposure(self, period: int, insurance_type: str = "vida",
                                     rut: Optional[str] = None, limit: int = 20):
         """
-        Concentración por emisor del detalle de renta fija (archivo B.1).
+        Concentración por emisor de la renta fija (archivo B.1), ordenada por MONTO EXPUESTO.
 
-        CUIDADO CON LAS UNIDADES: `valor_nominal` viene en la unidad del instrumento (UF, $$,
-        USD…), así que NO es sumable entre monedas — se devuelve abierto por
-        `unidad_monetaria`. Además es valor NOMINAL, no de mercado (los montos de valorización
-        del archivo B.1 no están reconciliados), por lo que sirve para ver concentración de
-        emisores, no para ponderar la cartera.
+        Una fila por emisor: `mm` (MM$ a valor par, ver `db/cross.monto_par_sql`), `total_mm`
+        (renta fija del alcance, para el %), `posiciones`, `companias` (tenedoras distintas),
+        `tipo_principal` (el de mayor monto), `pct_origen` (% del monto que salió del monto de
+        origen porque la compañía no informó saldo vigente), `sin_fx` (posiciones en monedas sin
+        tipo de cambio cargado, que no se suman) y `n_propio` (posiciones cuyo emisor es la
+        propia compañía tenedora: leasing inmobiliario propio).
 
-        El nombre del emisor se resuelve, cuando se puede, contra los RUT que ya conocemos en
-        otras tablas (EEFF corporativos, seguros, corredoras). Que falte NO es un hueco de
-        datos: los que encabezan el ranking son agentes administradores de mutuos hipotecarios
-        y originadores de leasing, que no son emisores inscritos y por eso no aparecen en
-        ninguna tabla de EEFF. Por eso se devuelve también `tipo_principal`, sin el cual una
-        fila sin nombre es ilegible. Cobertura medida (vida, 202606): 183 de 321 emisores.
+        Es valor PAR, no de mercado: en leasing y letras el monto de origen sobrestima lo expuesto.
+        El desglose por moneda y por compañía está en `get_insurer_issuer_detail`.
+
+        El nombre se resuelve contra los RUT conocidos (dim_entidad y las tablas de EEFF). Los
+        originadores de mutuos y leasing no son emisores inscritos: por eso se devuelve también
+        `tipo_principal`, sin el cual una fila sin nombre es ilegible.
 
         El emisor es el CANÓNICO del nemotécnico (db/cross.emisor_canonico_cte): corrige los
         RUT de emisor que cada compañía informa distinto para un mismo instrumento.
         """
-        from db.cross import canon_join, emisor_canonico_cte, emisor_efectivo
+        from db.cross import (_fx_cte, canon_join, emisor_canonico_cte, emisor_efectivo,
+                              monto_par_sql, vigente_sql)
         where = "WHERE fi.period = ? AND fi.insurance_type = ? AND fi.rut_emisor IS NOT NULL"
         params: list = [int(period), str(insurance_type)]
         if rut:
             where += " AND fi.rut = ?"
             params.append(str(rut))
+        per = f"SELECT {int(period)} AS period"
         return self.conn.execute(f"""
-            -- dim_entidad primero (trae además los bancos, curados por bank_code → RUT);
-            -- las tablas de EEFF quedan de respaldo si la maestra aún no se construyó.
-            WITH {emisor_canonico_cte(f"SELECT {int(period)} AS period")},
+            WITH {_fx_cte(per)},
+            {emisor_canonico_cte(per)},
             b AS (
-                SELECT fi.* REPLACE ({emisor_efectivo()} AS rut_emisor)
+                SELECT fi.rut AS tenedor, fi.tipo_instrumento, fi.unidad_monetaria,
+                       {emisor_efectivo()} AS rut_emisor,
+                       {vigente_sql()} AS vigente, {monto_par_sql()} AS mm
                 FROM cmf_insurer_portfolio_fixed_income fi
+                JOIN fx ON fx.period = fi.period
                 {canon_join()}
                 {where}
             ),
+            -- dim_entidad primero (trae además los bancos, curados por bank_code → RUT);
+            -- las tablas de EEFF quedan de respaldo si la maestra aún no se construyó.
             directorio AS (
                 SELECT rut, arg_min(nombre, prioridad) AS nombre FROM (
                     SELECT rut, nombre_canonico AS nombre, 0 AS prioridad FROM dim_entidad
@@ -507,42 +514,83 @@ class FecuRepo:
                 ) WHERE nombre IS NOT NULL AND TRIM(nombre) <> ''
                 GROUP BY rut
             ),
-            agg AS (
-                SELECT fi.rut_emisor,
-                       fi.unidad_monetaria,
-                       COUNT(*)                AS n_instrumentos,
-                       SUM(fi.valor_nominal)   AS nominal
-                FROM b fi
-                GROUP BY fi.rut_emisor, fi.unidad_monetaria
-            ),
-            ranked AS (
-                SELECT rut_emisor, SUM(n_instrumentos) AS total_instr
-                FROM agg GROUP BY rut_emisor
-                ORDER BY total_instr DESC LIMIT ?
-            ),
-            -- Tipo de instrumento dominante de cada emisor: es lo que vuelve legible una
-            -- fila sin razón social (un MHA no tiene "emisor" en sentido corporativo).
-            tipos AS (
-                SELECT rut_emisor, tipo_instrumento AS tipo_principal, n_tipo, n_tipos_distintos
-                FROM (
-                    SELECT fi.rut_emisor, fi.tipo_instrumento,
-                           COUNT(*) AS n_tipo,
-                           COUNT(*) OVER (PARTITION BY fi.rut_emisor) AS n_tipos_distintos,
-                           ROW_NUMBER() OVER (PARTITION BY fi.rut_emisor
-                                              ORDER BY COUNT(*) DESC) AS rn
-                    FROM b fi
-                    GROUP BY fi.rut_emisor, fi.tipo_instrumento
+            tipos AS (   -- tipo de instrumento de mayor monto de cada emisor
+                SELECT rut_emisor, tipo_instrumento AS tipo_principal, n_tipos FROM (
+                    SELECT rut_emisor, tipo_instrumento,
+                           COUNT(*) OVER (PARTITION BY rut_emisor) AS n_tipos,
+                           ROW_NUMBER() OVER (PARTITION BY rut_emisor
+                                              ORDER BY SUM(coalesce(mm, 0)) DESC, COUNT(*) DESC) AS rn
+                    FROM b GROUP BY rut_emisor, tipo_instrumento
                 ) WHERE rn = 1
+            ),
+            agg AS (
+                SELECT rut_emisor, COUNT(*) AS posiciones, COUNT(DISTINCT tenedor) AS companias,
+                       SUM(mm) AS mm,
+                       SUM(mm) FILTER (WHERE NOT vigente) AS mm_origen,
+                       COUNT(*) FILTER (WHERE mm IS NULL) AS sin_fx,
+                       COUNT(*) FILTER (WHERE tenedor = rut_emisor) AS n_propio
+                FROM b GROUP BY rut_emisor
             )
-            SELECT a.rut_emisor, d.nombre, a.unidad_monetaria,
-                   a.n_instrumentos, a.nominal, r.total_instr,
-                   t.tipo_principal, t.n_tipo, t.n_tipos_distintos
+            SELECT a.rut_emisor, d.nombre, a.mm, SUM(a.mm) OVER () AS total_mm,
+                   a.posiciones, a.companias, t.tipo_principal, t.n_tipos,
+                   CASE WHEN a.mm > 0 THEN coalesce(a.mm_origen, 0) / a.mm * 100 END AS pct_origen,
+                   a.sin_fx, a.n_propio
             FROM agg a
-            JOIN ranked r ON r.rut_emisor = a.rut_emisor
             LEFT JOIN directorio d ON d.rut = a.rut_emisor
             LEFT JOIN tipos t ON t.rut_emisor = a.rut_emisor
-            ORDER BY r.total_instr DESC, a.n_instrumentos DESC
+            ORDER BY a.mm DESC NULLS LAST, a.posiciones DESC
+            LIMIT ?
         """, params + [int(limit)]).fetchdf()
+
+    def get_insurer_issuer_detail(self, period: int, insurance_type: str, emisor: str,
+                                  rut: Optional[str] = None):
+        """
+        Detalle de la exposición a UN emisor (RUT canónico `emisor`, solo dígitos):
+        - sin `rut` (mercado): una fila por compañía tenedora (`tenedor`, `mm`, `posiciones`,
+          `tipo_principal`, `pct_origen`, `sin_fx`, `n_propio`), de mayor a menor monto;
+        - con `rut` (una compañía): una fila por nemotécnico (`nemotecnico`, `tipo_instrumento`,
+          `unidad_monetaria`, `nominal` en la unidad del instrumento, `mm`, `posiciones`,
+          `pct_origen`).
+        Mismas reglas de monto y de emisor que `get_insurer_issuer_exposure`.
+        """
+        from db.cross import (_fx_cte, canon_join, emisor_canonico_cte, emisor_efectivo,
+                              monto_par_sql, nominal_sql, vigente_sql)
+        emisor = str(emisor).strip().lstrip("0")
+        if not emisor.isdigit():
+            return self.conn.execute("SELECT 1 WHERE FALSE").fetchdf()
+        per = f"SELECT {int(period)} AS period"
+        # Orden de los `?` en el SQL: período, ramo, [compañía], emisor.
+        params: list = [int(period), str(insurance_type)] + ([str(rut)] if rut else []) + [emisor]
+        base = f"""
+            WITH {_fx_cte(per)},
+            {emisor_canonico_cte(per, rut=emisor)},
+            b AS (
+                SELECT fi.rut AS tenedor, fi.tipo_instrumento, fi.unidad_monetaria,
+                       upper(trim(fi.nemotecnico)) AS nemotecnico,
+                       {emisor_efectivo()} AS rut_emisor, ({nominal_sql()}) AS nominal,
+                       {vigente_sql()} AS vigente, {monto_par_sql()} AS mm
+                FROM cmf_insurer_portfolio_fixed_income fi
+                JOIN fx ON fx.period = fi.period
+                {canon_join()}
+                WHERE fi.period = ? AND fi.insurance_type = ? AND fi.rut_emisor IS NOT NULL
+                      {"AND fi.rut = ?" if rut else ""}
+            ),
+            e AS (SELECT * FROM b WHERE rut_emisor = ?)"""
+        if rut:
+            return self.conn.execute(base + """
+                SELECT nemotecnico, tipo_instrumento, unidad_monetaria, SUM(nominal) AS nominal,
+                       SUM(mm) AS mm, COUNT(*) AS posiciones,
+                       CASE WHEN SUM(mm) > 0 THEN coalesce(SUM(mm) FILTER (WHERE NOT vigente), 0)
+                                                  / SUM(mm) * 100 END AS pct_origen
+                FROM e GROUP BY 1, 2, 3 ORDER BY mm DESC NULLS LAST, posiciones DESC""", params).fetchdf()
+        return self.conn.execute(base + """
+            SELECT tenedor, SUM(mm) AS mm, COUNT(*) AS posiciones,
+                   arg_max(tipo_instrumento, coalesce(mm, 0)) AS tipo_principal,
+                   CASE WHEN SUM(mm) > 0 THEN coalesce(SUM(mm) FILTER (WHERE NOT vigente), 0)
+                                              / SUM(mm) * 100 END AS pct_origen,
+                   COUNT(*) FILTER (WHERE mm IS NULL) AS sin_fx,
+                   COUNT(*) FILTER (WHERE tenedor = rut_emisor) AS n_propio
+            FROM e GROUP BY tenedor ORDER BY mm DESC NULLS LAST, posiciones DESC""", params).fetchdf()
 
     def count_insurer_issuers(self, period: int, insurance_type: str = "vida",
                               rut: Optional[str] = None) -> int:

@@ -1,0 +1,54 @@
+{#
+  partials/seguros_cartera_emisor_detalle.html — Quién tiene la renta fija de un emisor.
+  por_compania=True  (mercado): filas = [{nombre, tenedor, mm, pct_emisor, posiciones, tipo, pct_origen, propio, sin_fx}]
+  por_compania=False (una compañía): filas = [{nemotecnico, tipo, tipo_code, unidad, nominal, mm, posiciones, pct_origen}]
+#}
+{% import "partials/_ui.html" as ui %}
+{% if not filas %}
+{{ ui.vacio("Sin posiciones de ese emisor en el período.") }}
+{% elif por_compania %}
+<table class="tbl tbl--compacta" aria-label="Compañías con renta fija de este emisor">
+    <thead><tr>
+        <th>Compañía</th><th>Tipo principal</th>
+        <th class="num">MM$ (valor par)</th><th class="num">% del emisor</th><th class="num">Posiciones</th>
+    </tr></thead>
+    <tbody>
+    {% for f in filas %}
+    <tr>
+        <td class="ent">{{ f.nombre if f.nombre.startswith("RUT ") else f.nombre|nombre }}{% if f.propio %}<span class="sub">Leasing propio: la compañía es la arrendadora</span>{% endif %}</td>
+        <td>{{ f.tipo }}</td>
+        <td class="num">{{ f.mm|es(0) if f.mm is not none else "—" }}{% if f.pct_origen is not none and f.pct_origen > 50 %}
+            <span class="muted" tabindex="0" title="{{ f.pct_origen|es(0) }}% es monto de origen, no saldo vigente"
+                  aria-label="{{ f.pct_origen|es(0) }}% es monto de origen">ⓘ</span>{% endif %}</td>
+        <td class="num">{{ (f.pct_emisor|es(1) ~ "%") if f.pct_emisor is not none else "—" }}</td>
+        <td class="num">{{ f.posiciones|es(0) }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+    <tfoot><tr class="total"><td colspan="2">Total</td><td class="num">{{ total|es(0) }}</td><td class="num">100,0%</td>
+        <td class="num">{{ filas|sum(attribute='posiciones')|es(0) }}</td></tr></tfoot>
+</table>
+{% else %}
+<table class="tbl tbl--compacta" aria-label="Instrumentos de este emisor en la cartera de la compañía">
+    <thead><tr>
+        <th>Nemotécnico</th><th>Tipo</th><th>Moneda</th>
+        <th class="num">Nominal (en su moneda)</th><th class="num">MM$ (valor par)</th><th class="num">Posiciones</th>
+    </tr></thead>
+    <tbody>
+    {% for f in filas %}
+    <tr>
+        <td class="ent">{{ f.nemotecnico or "—" }}</td>
+        <td>{{ f.tipo }}</td>
+        <td>{{ f.unidad }}</td>
+        <td class="num">{{ f.nominal|es(0) if f.nominal is not none else "—" }}</td>
+        <td class="num">{{ f.mm|es(0) if f.mm is not none else "—" }}{% if f.pct_origen is not none and f.pct_origen > 50 %}
+            <span class="muted" tabindex="0" title="Monto de origen, no saldo vigente: sobrestima lo expuesto"
+                  aria-label="Monto de origen, no saldo vigente">ⓘ</span>{% endif %}</td>
+        <td class="num">{{ f.posiciones|es(0) }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+    <tfoot><tr class="total"><td colspan="4">Total</td><td class="num">{{ total|es(0) }}</td>
+        <td class="num">{{ filas|sum(attribute='posiciones')|es(0) }}</td></tr></tfoot>
+</table>
+{% endif %}

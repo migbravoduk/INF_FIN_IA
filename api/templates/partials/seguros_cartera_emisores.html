@@ -1,8 +1,9 @@
 {#
-  partials/seguros_cartera_emisores.html — Concentración por emisor (renta fija, archivo B.1).
-  rows = [{rut, name, total, tipo, tipo_code, solo_un_tipo, sin_emisor_inscrito, monedas:[...]}]
-  El nominal va ABIERTO POR MONEDA a propósito: viene en la unidad del instrumento y no es
-  sumable entre monedas. Tampoco es valor de mercado.
+  partials/seguros_cartera_emisores.html — Concentración por emisor (renta fija, archivo B.1), por MONTO.
+  rows = [{rut, name, mm, pct, posiciones, companias, tipo, tipo_code, solo_un_tipo,
+           sin_emisor_inscrito, pct_origen, sin_fx, leasing_propio}]
+  El monto es valor PAR en pesos (saldo vigente si existe; si no, monto de origen). No es valor de
+  mercado. Cada emisor se abre para ver quién lo tiene (seguros_cartera_emisor_detalle.html).
 #}
 {% import "partials/_ui.html" as ui %}
 {% if rows %}
@@ -17,71 +18,93 @@
         {{ ramo_label | lower }}
     {% endif %}
     · {{ period|mes_es }} ·
-    top {{ rows|length }} de {{ total_emisores|es(0) }} emisores, por número de posiciones
+    top {{ rows|length }} de {{ total_emisores|es(0) }} emisores, por monto expuesto
+    {%- if total_mm %} · renta fija total: {{ total_mm|es(0) }} MM${% endif %}
+    {%- if rows|length < total_emisores %} ·
+    <a href="/seguros/cartera/emisores?ramo={{ ramo }}&period={{ period }}&rut={{ sel_rut }}&limit={{ [total_emisores, 500]|min }}"
+       hx-get="/seguros/cartera/emisores?ramo={{ ramo }}&period={{ period }}&rut={{ sel_rut }}&limit={{ [total_emisores, 500]|min }}"
+       hx-target="#cartera-emisores" hx-swap="innerHTML">ver los {{ [total_emisores, 500]|min }} emisores</a>
+    {%- endif %}
 </p>
 
 <div class="tbl-wrap tbl-wrap--alto">
 <table class="tbl" aria-label="Concentración por emisor de renta fija">
     <thead>
         <tr>
-            <th>Emisor</th>
-            <th>Tipo de instrumento</th>
+            <th>Emisor (ábrelo para ver quién lo tiene)</th>
+            <th>Tipo principal</th>
+            <th class="num">MM$ (valor par)</th>
+            <th class="num">% de la renta fija</th>
             <th class="num">Posiciones</th>
-            <th>Nominal por moneda</th>
+            {% if not sel_rut %}<th class="num">Compañías</th>{% endif %}
         </tr>
     </thead>
     <tbody>
         {% for r in rows %}
         <tr>
             <td class="ent">
-                {% if r.name %}
-                    {{ r.name|nombre }}<span class="sub">RUT {{ r.rut }}</span>
-                {% else %}
-                    {# Sin razón social no es un hueco de datos cuando el instrumento es un
-                       mutuo o un leasing: el originador no es un emisor inscrito. #}
-                    <span class="muted">RUT {{ r.rut }}</span>
-                    <span class="sub">
-                        {%- if r.sin_emisor_inscrito %}originador no inscrito
-                        {%- else %}sin razón social en el registro{% endif -%}
-                    </span>
-                {% endif %}
+                {# El detalle se pide al abrir (evento toggle del propio <details>), una sola vez. #}
+                <details class="emisor-det"
+                         hx-get="/seguros/cartera/emisores/detalle?ramo={{ ramo }}&period={{ period }}&rut={{ sel_rut }}&emisor={{ r.rut }}"
+                         hx-trigger="toggle once" hx-target="find .emisor-det-cuerpo" hx-swap="innerHTML">
+                    <summary>
+                        {% if r.name %}
+                            {{ r.name|nombre }}<span class="sub">RUT {{ r.rut }}</span>
+                        {% else %}
+                            {# Sin razón social no es un hueco de datos cuando el instrumento es un
+                               mutuo o un leasing: el originador no es un emisor inscrito. #}
+                            <span class="muted">RUT {{ r.rut }}</span>
+                            <span class="sub">
+                                {%- if r.sin_emisor_inscrito %}originador no inscrito
+                                {%- else %}sin razón social en el registro{% endif -%}
+                            </span>
+                        {% endif %}
+                        {% if r.leasing_propio %}<span class="sub">Leasing inmobiliario propio (la compañía es la arrendadora)</span>{% endif %}
+                    </summary>
+                    <div class="emisor-det-cuerpo"><p class="loading">Cargando…</p></div>
+                </details>
             </td>
             <td>
                 {{ r.tipo }}
                 {% if not r.solo_un_tipo %}<span class="muted">(y otros)</span>{% endif %}
             </td>
-            <td class="num">{{ r.total|es(0) }}</td>
-            <td>
-                {% for m in r.monedas %}
-                <span class="moneda-item">
-                    <b>{{ m.unidad }}</b> {{ m.nominal|es(0) }}
-                    <span class="muted">({{ m.n|es(0) }})</span>
-                </span>
-                {% endfor %}
+            <td class="num fuerte">
+                {{ r.mm|es(0) if r.mm is not none else "—" }}
+                {% if r.pct_origen is not none and r.pct_origen > 50 %}<span class="muted" tabindex="0"
+                    title="{{ r.pct_origen|es(0) }}% de este monto es monto de origen, no saldo vigente: sobrestima lo expuesto en instrumentos que amortizan (leasing, letras)."
+                    aria-label="{{ r.pct_origen|es(0) }}% del monto es monto de origen y sobrestima lo expuesto">ⓘ</span>{% endif %}
+                {% if r.sin_fx %}<span class="sub">{{ r.sin_fx|es(0) }} sin tipo de cambio (no suman)</span>{% endif %}
             </td>
+            <td class="num">{{ (r.pct|es(1) ~ "%") if r.pct is not none else "—" }}{% if r.pct is not none %}{{ ui.barra(r.pct, rows[0].pct, '') }}{% endif %}</td>
+            <td class="num">{{ r.posiciones|es(0) }}</td>
+            {% if not sel_rut %}<td class="num">{{ r.companias|es(0) }}</td>{% endif %}
         </tr>
         {% endfor %}
     </tbody>
 </table>
 </div>
 
-{% call ui.metodo("Por qué muchas filas no traen nombre") %}
+<p class="nota">Valor par: saldo vigente cuando la compañía lo informa; si no, monto de origen, que sobrestima lo
+    expuesto en leasing y letras hipotecarias porque ya amortizaron. No es valor de mercado.</p>
+
+{% call ui.metodo("Cómo se mide y por qué muchas filas no traen nombre") %}
 <p>
-    <strong>Por qué muchas filas no traen nombre.</strong> El archivo B.1 identifica al emisor
-    solo por RUT, y el nombre se resuelve contra los RUT conocidos en las tablas de EEFF
-    (corporativos, seguros, corredoras). Los que encabezan este ranking son agentes
-    administradores de mutuos hipotecarios y originadores de leasing: <em>no son emisores
-    inscritos</em>, así que no figuran en ninguna de esas tablas. El anexo de la Circular 1.835
-    además fija que el nemotécnico se mantiene «independiente de las fusiones, compra o cambio
-    de nombre de las compañías», o sea que la identidad de estos instrumentos es un código y no
-    una razón social. Por eso la columna de tipo es la que da contexto a esas filas.
+    <strong>Monto.</strong> Es el valor par de cada posición del archivo B.1 pasado a pesos con la UF y el
+    dólar del cierre del mes (otras monedas, como el euro, se cuentan como posiciones pero no se suman).
+    Usa el saldo vigente cuando la compañía lo informa; para leasing, letras hipotecarias y muchos
+    bonos lo informa en cero, y entonces se usa el monto de origen. El emisor es el que informa la
+    mayoría de las compañías para ese nemotécnico, y así se corrigen RUT mal digitados o de bancos
+    absorbidos.
 </p>
 <p>
-    Nominal en la unidad de cada instrumento (UF, $, EUR…), <strong>no sumable entre monedas</strong>
-    y <strong>no es valor de mercado</strong>: los montos de valorización del archivo B.1 aún no
-    están reconciliados. Sirve para leer concentración de emisores, no para ponderar la cartera.
-    Las glosas de tipo de instrumento provienen de los Anexos Técnicos de la circular; los
-    códigos que el anexo no define se muestran tal cual.
+    <strong>Nombres.</strong> El archivo B.1 identifica al emisor solo por RUT, y el nombre se resuelve
+    contra los RUT conocidos en las tablas de EEFF (corporativos, seguros, corredoras) y en la maestra de
+    entidades. Los originadores de mutuos hipotecarios y de leasing no son emisores inscritos, así que no
+    figuran en las tablas de EEFF; por eso la columna de tipo es la que da contexto a esas filas. En el
+    leasing propio, el emisor es la misma aseguradora. El anexo de la Circular 1.835 además fija que el
+    nemotécnico se mantiene «independiente de las fusiones, compra o cambio de nombre de las compañías».
+    Las glosas de tipo de instrumento provienen de los Anexos Técnicos de la circular; los códigos que
+    el anexo no define se muestran tal cual.
 </p>
 {% endcall %}
 {% else %}

@@ -257,17 +257,27 @@ def seguros_cartera_companias(request: Request, ramo: str = Query("vida"),
     })
 
 
+def _fnum(v):
+    """float o None (el DataFrame trae NaN donde no hay dato)."""
+    try:
+        v = float(v)
+    except (TypeError, ValueError):
+        return None
+    return None if v != v else v
+
+
 @router.get("/seguros/cartera/emisores")
 def seguros_cartera_emisores(request: Request, ramo: str = Query("vida"),
                              period: Optional[int] = Query(None),
-                             rut: str = Query(""), db: Database = Depends(get_db)):
+                             rut: str = Query(""), limit: int = Query(20, ge=1, le=500),
+                             db: Database = Depends(get_db)):
     """
-    Fragmento HTMX: concentración por emisor de la renta fija (archivo B.1).
+    Fragmento HTMX: concentración por emisor de la renta fija (archivo B.1), por MONTO expuesto.
 
-    Se muestra el NÚMERO de instrumentos y el nominal ABIERTO POR MONEDA: el valor nominal
-    viene en la unidad de cada instrumento (UF, $, USD…) y sumarlo entre monedas no
-    significaría nada. Tampoco es valor de mercado — sirve para ver concentración de emisores,
-    no para ponderar la cartera.
+    El monto es valor PAR en pesos (db/cross.monto_par_sql): saldo vigente cuando la compañía lo
+    informa; si no, monto de origen, que sobrestima lo expuesto en leasing y letras hipotecarias.
+    No es valor de mercado. Cada emisor se abre (`/seguros/cartera/emisores/detalle`) para ver
+    quién lo tiene y por cuánto.
     """
     from api.insurer_glossary import (clean_company_name, tipo_instrumento_label,
                                       TIPOS_SIN_EMISOR_INSCRITO)
@@ -290,34 +300,77 @@ def seguros_cartera_emisores(request: Request, ramo: str = Query("vida"),
     if rut and sel is None:
         rut = ""   # RUT que no existe en el período: se cae al mercado en vez de mostrar vacío
 
-    df = db.get_insurer_issuer_exposure(period, ramo, rut or None, limit=15)
-    agrupado: dict[str, dict] = {}
+    df = db.get_insurer_issuer_exposure(period, ramo, rut or None, limit=limit)
+    rows = []
     for r in df.itertuples():
-        key = str(r.rut_emisor)
-        e = agrupado.setdefault(key, {
-            "rut": key,
+        tipo_code = (r.tipo_principal or "")
+        total = _fnum(r.total_mm)
+        mm = _fnum(r.mm)
+        rows.append({
+            "rut": str(r.rut_emisor),
             "name": (r.nombre if isinstance(r.nombre, str) and r.nombre.strip() else ""),
-            "total": int(r.total_instr or 0), "monedas": [],
-            "tipo": tipo_instrumento_label(r.tipo_principal),
-            "tipo_code": (r.tipo_principal or ""),
-            "solo_un_tipo": int(r.n_tipos_distintos or 0) <= 1,
-            "sin_emisor_inscrito": (r.tipo_principal or "") in TIPOS_SIN_EMISOR_INSCRITO,
+            "mm": mm, "pct": (mm / total * 100) if (mm is not None and total) else None,
+            "posiciones": int(r.posiciones or 0), "companias": int(r.companias or 0),
+            "tipo": tipo_instrumento_label(tipo_code), "tipo_code": tipo_code,
+            "solo_un_tipo": int(r.n_tipos or 0) <= 1,
+            "sin_emisor_inscrito": tipo_code in TIPOS_SIN_EMISOR_INSCRITO,
+            "pct_origen": _fnum(r.pct_origen), "sin_fx": int(r.sin_fx or 0),
+            "leasing_propio": tipo_code == "CLEAS" and int(r.n_propio or 0) > 0,
         })
-        try:
-            nominal = float(r.nominal)
-        except (TypeError, ValueError):
-            nominal = 0.0
-        e["monedas"].append({"unidad": str(r.unidad_monetaria or "—"),
-                             "n": int(r.n_instrumentos or 0),
-                             "nominal": 0.0 if nominal != nominal else nominal})
-    rows = sorted(agrupado.values(), key=lambda x: x["total"], reverse=True)
-    for e in rows:
-        e["monedas"].sort(key=lambda m: m["n"], reverse=True)
-
+    total_emisores = db.count_insurer_issuers(period, ramo, rut or None)
     return templates.TemplateResponse(request, "partials/seguros_cartera_emisores.html", {
         "rows": rows, "period": period, "ramo_label": _RAMOS[ramo], "ramo": ramo,
         "opciones": opciones, "sel_rut": rut,
         "sel_nombre": sel["name"] if sel else None,
-        "total_emisores": db.count_insurer_issuers(period, ramo, rut or None),
+        "total_emisores": total_emisores, "limit": limit,
+        "total_mm": _fnum(df.total_mm.iloc[0]) if len(df) else None,
         "n_companias": len(opciones),
+    })
+
+
+@router.get("/seguros/cartera/emisores/detalle")
+def seguros_cartera_emisor_detalle(request: Request, ramo: str = Query("vida"),
+                                   period: Optional[int] = Query(None),
+                                   rut: str = Query(""), emisor: str = Query(...),
+                                   db: Database = Depends(get_db)):
+    """
+    Fragmento HTMX: quién tiene la renta fija de un emisor y por cuánto.
+    Sin `rut` (mercado): las compañías tenedoras. Con `rut`: sus instrumentos de ese emisor.
+    """
+    from api.insurer_glossary import clean_company_name, tipo_instrumento_label
+
+    ramo = ramo if ramo in _RAMOS else "vida"
+    periods = db.get_insurer_portfolio_periods(insurance_type=ramo)
+    period = period if period in periods else (periods[0] if periods else None)
+    rut = (rut or "").strip()
+    emisor = emisor.strip().lstrip("0")
+    if period is None or not emisor.isdigit():
+        return templates.TemplateResponse(request, "partials/seguros_cartera_emisor_detalle.html",
+                                          {"filas": [], "por_compania": not rut})
+    df = db.get_insurer_issuer_detail(period, ramo, emisor, rut or None)
+    # Nombre de la compañía: el del control del período; si no figura (p. ej. una compañía que dejó
+    # de informar el control), el de la maestra de entidades.
+    nombres = dict(db.conn.execute(
+        "SELECT rut, coalesce(nombre_corto, nombre_canonico) FROM dim_entidad").fetchall())
+    for c in db.get_insurer_portfolio_companies(period, ramo).itertuples():
+        if (c.company_name or "").strip():       # con el nombre en blanco manda la maestra
+            nombres[str(c.rut)] = clean_company_name(c.company_name, str(c.rut))
+    total = float(df.mm.sum()) if len(df) and df.mm.notna().any() else 0.0
+    filas = []
+    for r in df.itertuples():
+        mm = _fnum(r.mm)
+        f = {"mm": mm, "posiciones": int(r.posiciones or 0), "pct_origen": _fnum(r.pct_origen),
+             "pct_emisor": (mm / total * 100) if (mm is not None and total) else None}
+        if rut:
+            f.update(nemotecnico=r.nemotecnico, tipo=tipo_instrumento_label(r.tipo_instrumento),
+                     tipo_code=r.tipo_instrumento, unidad=r.unidad_monetaria or "—",
+                     nominal=_fnum(r.nominal))
+        else:
+            f.update(nombre=nombres.get(str(r.tenedor)) or f"RUT {r.tenedor}", tenedor=str(r.tenedor),
+                     tipo=tipo_instrumento_label(r.tipo_principal),
+                     propio=int(r.n_propio or 0) > 0, sin_fx=int(r.sin_fx or 0))
+        filas.append(f)
+    return templates.TemplateResponse(request, "partials/seguros_cartera_emisor_detalle.html", {
+        "filas": filas, "por_compania": not rut, "total": total, "period": period,
+        "emisor": emisor, "ramo": ramo,
     })

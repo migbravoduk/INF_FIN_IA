@@ -142,3 +142,61 @@ def test_tenencias_emisor(db):
         ult = [s for s in b["serie"] if s["period"] == b["ult"]][0]
         assert ult["mm"] > 0 and ult["tenedores"] > 0
         assert abs(sum(f["peso"] for f in b["tenedores"]) - 100) < 1e-6
+
+
+# --- Concentración por emisor de seguros: monto expuesto y detalle (plan 19-nov, F4) ----------
+
+def _ultimo_b1(db, ramo="vida"):
+    per = db.conn.execute("SELECT MAX(period) FROM cmf_insurer_portfolio_fixed_income "
+                          "WHERE insurance_type = ?", [ramo]).fetchone()[0]
+    if per is None:
+        pytest.skip("sin B.1")
+    return int(per)
+
+
+def test_exposicion_suma_el_monto_par_del_alcance(db):
+    """La suma de las filas (todos los emisores) = suma directa del valor par del alcance."""
+    from db.cross import _fx_cte, monto_par_sql
+    per = _ultimo_b1(db)
+    df = db.get_insurer_issuer_exposure(per, "vida", None, limit=500)
+    directo = db.conn.execute(f"""
+        WITH {_fx_cte(f"SELECT {per} AS period")}
+        SELECT SUM({monto_par_sql()}) FROM cmf_insurer_portfolio_fixed_income fi JOIN fx USING (period)
+        WHERE fi.period = ? AND fi.insurance_type = 'vida' AND fi.rut_emisor IS NOT NULL""", [per]).fetchone()[0]
+    assert len(df) == db.count_insurer_issuers(per, "vida")        # limit=500 cubre a todos
+    assert abs(df.mm.sum() - directo) / directo < 0.005
+    assert df.mm.is_monotonic_decreasing                           # ordenado por monto, no por conteo
+
+
+def test_detalle_de_emisor_suma_la_fila_madre(db):
+    per = _ultimo_b1(db)
+    top = db.get_insurer_issuer_exposure(per, "vida", None, limit=5)
+    for r in top.itertuples():
+        det = db.get_insurer_issuer_detail(per, "vida", r.rut_emisor)
+        assert abs(det.mm.sum() - r.mm) <= max(1.0, r.mm * 1e-6)
+        assert int(det.posiciones.sum()) == r.posiciones and len(det) == r.companias
+        # y el de una compañía suma lo mismo que su fila en el detalle de mercado
+        cia = det.tenedor.iloc[0]
+        por_nemo = db.get_insurer_issuer_detail(per, "vida", r.rut_emisor, cia)
+        assert abs(por_nemo.mm.sum() - det.mm.iloc[0]) <= max(1.0, det.mm.iloc[0] * 1e-6)
+
+
+def test_detalle_rechaza_emisor_no_numerico(db):
+    assert db.get_insurer_issuer_detail(202609, "vida", "1' OR '1'='1").empty
+
+
+def test_endpoints_de_concentracion_por_emisor(real_db_readonly):
+    from fastapi.testclient import TestClient
+    from api.main import app
+    c = TestClient(app)
+    per = _ultimo_b1(real_db_readonly)
+    top = real_db_readonly.get_insurer_issuer_exposure(per, "vida", None, limit=1).rut_emisor.iloc[0]
+    cia = real_db_readonly.get_insurer_issuer_detail(per, "vida", top).tenedor.iloc[0]
+    for url in ("/seguros/cartera/emisores?ramo=vida", f"/seguros/cartera/emisores?ramo=vida&rut={cia}",
+                "/seguros/cartera/emisores?ramo=vida&limit=500",
+                f"/seguros/cartera/emisores/detalle?ramo=vida&emisor={top}",
+                f"/seguros/cartera/emisores/detalle?ramo=vida&rut={cia}&emisor={top}"):
+        r = c.get(url)
+        assert r.status_code == 200, url
+    assert 'class="emisor-det"' in c.get("/seguros/cartera/emisores?ramo=vida").text
+    assert c.get("/seguros/cartera/emisores?limit=9999").status_code == 422     # tope de 500
