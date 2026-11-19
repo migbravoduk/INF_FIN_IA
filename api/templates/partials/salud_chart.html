@@ -17,6 +17,7 @@
         if (el) el.id = cid;
 
         var rawData = {{ data | tojson }};
+        rawData.forEach(function (d) { d.name = INF.nombre(d.name); });
 
         var xData = rawData.map(d => d.deuda);
         var yData = rawData.map(d => d.roe);

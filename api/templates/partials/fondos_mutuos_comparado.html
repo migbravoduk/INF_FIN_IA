@@ -20,13 +20,14 @@
     fondo subió; contra la mediana dice si le fue mejor o peor que a su categoría.
     {% if excluidas %}<br><strong>Fuera del ranking por dato inconsistente</strong>
     (el valor cuota cae más de 90% o se multiplica por 10 en un mes, típicamente un corte en
-    cero o un cambio de base): {{ excluidas[:6]|join(', ') }}{% if excluidas|length > 6 %} y
+    cero o un cambio de base): {{ excluidas[:6]|map('nombre')|join(', ') }}{% if excluidas|length > 6 %} y
     {{ excluidas|length - 6 }} más{% endif %}.{% endif %}
 </p>
 
 <script>
 (function () {
     var paths = {{ paths | tojson }};
+    paths.forEach(function (s) { s.name = s.name.split(" · ").map(INF.nombre).join(" · "); });
     var mediana = {{ mediana | tojson }};
     // Mejores en tonos fríos, peores en cálidos: el color ya dice de qué lado está cada fondo.
     var palette = ["#38bdf8", "#60a5fa", "#a78bfa", "#fbbf24", "#fb923c", "#f87171"];

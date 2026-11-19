@@ -17,6 +17,16 @@ from db.common import (is_total_account, AGF_SQL_PREDICATE, _agf_where, is_agf_n
 
 logger = logging.getLogger("db.database")
 
+# En 2022 la CMF cambió el plan de cuentas bancario: el antiguo (códigos de 7 dígitos, hasta
+# 202112) reporta en MILLONES de pesos; el vigente (9 dígitos, desde 202201) en PESOS.
+NUEVO_PLAN = 202201
+UNIDAD_PLAN_ANTIGUO = 1e6
+
+
+def _en_pesos(col: str) -> str:
+    """Expresión SQL que lleva una columna monetaria del plan antiguo a pesos."""
+    return f"(CASE WHEN period < {NUEVO_PLAN} THEN {col} * {UNIDAD_PLAN_ANTIGUO:.0f} ELSE {col} END)"
+
 
 class BancosRepo:
 
@@ -165,14 +175,19 @@ class BancosRepo:
         periods: Optional[list[int]] = None,
         account_code: Optional[str] = None,
         report_type: Optional[str] = None,
-        limit: int = 50
+        limit: int = 50,
+        en_pesos: bool = False,
     ):
-        """Recupera estados financieros mensuales de bancos con filtros flexibles como DataFrame."""
-        query = """
-            SELECT year, month, period, bank_code, bank_name, report_type, 
-                   account_code, account_name, val_clp_no_reaj, val_clp_reaj_ipc, 
-                   val_clp_reaj_tc, val_extranjera, val_total 
-            FROM cmf_bank_statements 
+        """Recupera estados financieros mensuales de bancos con filtros flexibles como DataFrame.
+
+        en_pesos=True homologa el plan de cuentas anterior a 2022 (en MILLONES de pesos) a pesos,
+        como el plan vigente; por defecto se devuelven las cifras tal como las publica la CMF."""
+        cols = ["val_clp_no_reaj", "val_clp_reaj_ipc", "val_clp_reaj_tc", "val_extranjera", "val_total"]
+        vals = ", ".join((_en_pesos(c) + " AS " + c) if en_pesos else c for c in cols)
+        query = f"""
+            SELECT year, month, period, bank_code, bank_name, report_type,
+                   account_code, account_name, {vals}
+            FROM cmf_bank_statements
             WHERE 1=1
         """
         params = []
@@ -292,16 +307,20 @@ class BancosRepo:
         return [str(r[0]) for r in rows]
 
     def get_bank_account_series(self, bank_code: str, account_name: str, report_type: str):
-        """Evolución de una cuenta bancaria (val_total) por período, como DataFrame."""
+        """Evolución de una cuenta bancaria (val_total) por período, como DataFrame, en PESOS.
+
+        Una cuenta puede llamarse igual en los dos planes de cuentas (121 nombres lo hacen); el
+        plan anterior a 2022 viene en millones, así que se homologa a pesos para que la serie no
+        salte ×1.000.000 en enero de 2022."""
         clean = str(bank_code).strip().zfill(3)
-        return self.conn.execute("""
+        return self.conn.execute(f"""
             SELECT
                 period,
-                SUM(val_total) AS value,
-                SUM(val_clp_no_reaj) AS clp_no_reaj,
-                SUM(val_clp_reaj_ipc) AS clp_reaj_ipc,
-                SUM(val_clp_reaj_tc) AS clp_reaj_tc,
-                SUM(val_extranjera) AS extranjera
+                SUM({_en_pesos("val_total")}) AS value,
+                SUM({_en_pesos("val_clp_no_reaj")}) AS clp_no_reaj,
+                SUM({_en_pesos("val_clp_reaj_ipc")}) AS clp_reaj_ipc,
+                SUM({_en_pesos("val_clp_reaj_tc")}) AS clp_reaj_tc,
+                SUM({_en_pesos("val_extranjera")}) AS extranjera
             FROM cmf_bank_statements
             WHERE bank_code = ? AND account_name = ? AND report_type = ?
             GROUP BY period

@@ -4,10 +4,10 @@
 #}
 {% import "partials/_ui.html" as ui %}
 {% if rows %}
-{{ ui.viz("afp-cartera-chart", "Cartera del Fondo " ~ fund, sub=("% del fondo · sistema total · por categoría · período " ~ period), alto="lg") }}
+{{ ui.viz("afp-cartera-chart", "Cartera del Fondo " ~ fund, sub=("% del fondo · sistema total · por categoría · período " ~ period), fuente="Superintendencia de Pensiones", alto="lg") }}
 
 {% if foreign_rows %}
-{{ ui.viz("afp-foreign-chart", "Desglose de la cartera extranjera", sub="% del fondo total; la suma de las barras es el peso extranjero", alto="lg") }}
+{{ ui.viz("afp-foreign-chart", "Desglose de la cartera extranjera", sub="% del fondo total; la suma de las barras es el peso extranjero", fuente="Superintendencia de Pensiones", alto="lg") }}
 {% endif %}
 
 <script>

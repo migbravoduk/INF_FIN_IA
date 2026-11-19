@@ -55,7 +55,7 @@ def banca_table(
                 
     df = db.query_bank_statements(
         bank_code=bank, periods=periods if periods else None,
-        report_type=report_type, limit=50000,
+        report_type=report_type, limit=50000, en_pesos=True,
     )
     meta, rows, graph_accounts = None, [], []
     history_periods = []

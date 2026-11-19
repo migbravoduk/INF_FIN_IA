@@ -5,8 +5,9 @@
 
 {% block content %}
 {{ ui.page_head("Emisores en común: aseguradoras y fondos mutuos",
-    ("Instrumentos que están a la vez en la renta fija de las compañías de seguros (período " ~ (per_seg or '—') ~ ") y en la cartera de los fondos mutuos (período " ~ (per_ffm or '—') ~ "), cruzados por nemotécnico y agrupados por emisor."),
+    "Instrumentos que están a la vez en la renta fija de las compañías de seguros y en la cartera de los fondos mutuos, cruzados por nemotécnico y agrupados por emisor.",
     migas=[("Inversión institucional", "/inversion-institucional")]) }}
+<p class="nota mt-0">Períodos: seguros {{ per_seg or '—' }}; fondos mutuos {{ per_ffm or '—' }}.</p>
 
 {% call ui.metodo("Cómo leer los montos") %}
 <p>Los montos son MM$ expuestos al emisor en esos instrumentos en común.

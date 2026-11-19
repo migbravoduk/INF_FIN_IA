@@ -60,10 +60,10 @@
         var ref = INF.refH(0);
         Plotly.newPlot("fondos-ret-chart",
             ret.afps.map(function (a) {
-                return { x: ret.horizons, y: a.values, name: a.afp.charAt(0) + a.afp.slice(1).toLowerCase(),
+                return { x: ret.horizons, y: a.values, name: INF.nombre(a.afp),
                          type: "scatter", mode: "markers",
                          marker: { size: 11, color: INF.colorAFP(a.afp), line: { color: "#111a2c", width: 1.5 } },
-                         hovertemplate: "%{x}: %{y:.2f}%<extra>" + a.afp.charAt(0) + a.afp.slice(1).toLowerCase() + "</extra>" };
+                         hovertemplate: "%{x}: %{y:.2f}%<extra>" + INF.nombre(a.afp) + "</extra>" };
             }), {
             margin: { t: 10, r: 10, b: 40, l: 50 },
             yaxis: { ticksuffix: "%" }, xaxis: { showgrid: true },
@@ -72,7 +72,7 @@
 
         // 2) Composición: barras horizontales apiladas, y = AFP, un trace por sección (color fijo por orden)
         if (comp.afps.length > 0) {
-            var afps = comp.afps.map(function (a) { return a.afp.charAt(0) + a.afp.slice(1).toLowerCase(); });
+            var afps = comp.afps.map(function (a) { return INF.nombre(a.afp); });
             Plotly.newPlot("fondos-comp-chart",
                 comp.sections.map(function (s, i) {
                     return {

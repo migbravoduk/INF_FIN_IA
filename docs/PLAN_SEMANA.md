@@ -414,6 +414,13 @@ pares pero empeora h3).
   enlaces de `base.html`; con el menú generado desde `NAV` bajó de 76 a 64 casos recolectados (todos
   pasan; la cobertura de las 12 URLs del menú quedó sin test propio); `ui_guard.py` ahora reconoce ids
   pasados a macros.
+- 2026-11-18 · **revisión del rediseño (Opus)**: detalle en `docs/PLAN_ESTETICA.md` (fila «Rev»).
+  Datos: bancos en pesos en ambos planes de cuentas en el gráfico por cuenta y en el detalle
+  (`en_pesos=True`; la API pública sigue con las cifras tal como las publica la CMF). Nombres FECU
+  legibles al leer (`config/fecu_cuentas.yaml`; la base guarda el texto original), y ahora
+  «Total activo» se reconoce como fila de total. Tests: 76 → 100 (menú desde `NAV`, página
+  activa, filtros `nombre`/`fecha_es`, sincronía de `INF.nombre`, bancos en pesos, FECU legibles).
+  Línea base completa antes/después: desborde 8 → 0 capturas; textos < 12 px 2.448 → 0.
 
 ---
 

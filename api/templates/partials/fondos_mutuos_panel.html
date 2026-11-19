@@ -103,7 +103,7 @@
 <section class="sec">
     {{ ui.sec_head("Rentabilidad oficial CMF", fecha=oficial.fecha, fuente="CMF", arriba=none) }}
     <p class="nota mt-0">serie {{ oficial.series }} · {{ oficial.familia }} · {{ oficial.clase_inversionista }}</p>
-    <div class="tbl-wrap" style="max-width:640px">
+    <div class="tbl-wrap tbl-wrap--angosta">
     <table class="tbl" aria-label="Rentabilidad oficial publicada por la CMF">
         <thead>
             <tr>
@@ -182,7 +182,7 @@
     Sin cartera cargada para este fondo en el período {{ period_label }}.
 {% endcall %}
 {% else %}
-{{ ui.viz("fm-tipo-chart", "Composición por tipo de instrumento", sub="% de posiciones", alto="md", clase="mt-5") }}
+{{ ui.viz("fm-tipo-chart", "Composición por tipo de instrumento", sub="% de posiciones", fuente="CMF", alto="md", clase="mt-5") }}
 
 <div class="grid-viz mt-5">
     <section class="panel">

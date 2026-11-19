@@ -5,7 +5,7 @@
 #}
 {% import "partials/_ui.html" as ui %}
 {% if note %}
-<p class="loading">{{ note }}</p>
+{{ ui.vacio(note) }}
 {% elif multi %}
 {% if latest %}
 <div class="stats stats--compactas">
@@ -14,10 +14,11 @@
 </div>
 {% endif %}
 
-{{ ui.viz("afp-chart", title, sub=("base 100 = inicio" if normalized else metric_label), alto="lg") }}
+{{ ui.viz("afp-chart", title.split(" · ")|map("nombre")|join(" · "), sub=("base 100 = inicio" if normalized else metric_label), fuente="Superintendencia de Pensiones", alto="lg") }}
 <script>
 (function () {
     var multi = {{ multi | tojson }};
+    function legible(n) { return String(n).split(" · ").map(INF.nombre).join(" · "); }
     function color(name, i) {
         // Fondos: A→E de cálido (riesgoso) a frío (conservador); AFP: un color fijo por administradora.
         var f = /^Fondo ([A-E])$/.exec(name);
@@ -30,7 +31,7 @@
         var traces = multi.map(function (s, i) {
             return { x: s.points.map(function (p) { return p.date; }),
                      y: s.points.map(function (p) { return p.value; }),
-                     type: "scatter", mode: "lines", name: s.name,
+                     type: "scatter", mode: "lines", name: legible(s.name),
                      line: { color: color(s.name, i), width: 2 } };
         });
         var layout = { margin: { t: 10, r: directas ? 90 : 10, b: 30, l: 60 }, hovermode: "x unified",

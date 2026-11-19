@@ -4,7 +4,7 @@
 #}
 {% import "partials/_ui.html" as ui %}
 {{ ui.viz("afp-rent-chart", "Rentabilidad a 12 meses por fondo: nominal y real",
-          sub=("% · IPC a 12 meses: " ~ (ipc|es(2)) ~ "%" if ipc is not none else "%"), alto="md") }}
+          sub=("% · IPC a 12 meses: " ~ (ipc|es(2)) ~ "%" if ipc is not none else "%"), fuente="Superintendencia de Pensiones", alto="md") }}
 <script>
 (function () {
     var rows = {{ rows | tojson }};

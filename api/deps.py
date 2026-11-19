@@ -78,8 +78,13 @@ def _agf_corto(s) -> str:
     t = re.sub(r"\bS\.\s?A\.?(?=\s|$)|\s+SA$", "", t.strip(), flags=re.I)
     t = " ".join(t.split())
     siglas = {"AGF", "BCI", "BICE", "BTG", "SURA", "ITAU", "BBVA", "HSBC", "LV", "UBS"}
-    return " ".join(w if w.upper() in siglas or len(w) <= 2 and w.isupper() else w.capitalize()
-                    for w in t.split()).replace("Itau", "Itaú").replace("ITAU", "Itaú")
+
+    def palabra(w):
+        # Marcas con mayúscula interior (LarrainVial, BancoEstado…): la tabla de _nombre.
+        if w.upper() in _ESPECIALES and w.upper().isalpha():
+            return _ESPECIALES[w.upper()]
+        return w if w.upper() in siglas or len(w) <= 2 and w.isupper() else w.capitalize()
+    return " ".join(palabra(w) for w in t.split()).replace("Itau", "Itaú").replace("ITAU", "Itaú")
 
 
 _MESES_ES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"]
@@ -114,7 +119,7 @@ templates.env.filters["es"] = _es
 _SIGLAS = {"AFP", "AGF", "BCI", "BICE", "BTG", "CMF", "SP", "CLP", "USD", "UF", "ETF", "ESG", "EEUU",
            "EE.UU.", "FM", "FI", "FIP", "APV", "LP", "CP", "USA", "II", "III", "IV", "VI", "BCH", "CCS",
            "HSBC", "BBVA", "BNP", "JP", "IFRS", "ECC", "NDF", "OIS", "CGE", "ENAP", "LATAM", "SQM", "CMPC",
-           "CAP", "SMU", "CCU", "AES", "IPC", "TPM", "PIB", "ADR", "REIT", "RV", "RF", "MM", "MMM"}
+           "CAP", "SMU", "CCU", "AES", "IPC", "TPM", "PIB", "ADR", "REIT", "RV", "RF", "MM", "MMM", "MBI", "CMB"}
 _ESPECIALES = {"PLANVITAL": "PlanVital", "ITAU": "Itaú", "ITAÚ": "Itaú", "LARRAINVIAL": "LarrainVial",
                "BANCOESTADO": "BancoEstado", "METLIFE": "MetLife", "4LIFE": "4Life", "SCOTIABANK": "Scotiabank",
                "S.A.": "S.A.", "S.A": "S.A.", "SA": "S.A.", "SPA": "SpA", "LTDA": "Ltda.", "LTDA.": "Ltda.",
@@ -138,7 +143,7 @@ def _nombre(s) -> str:
         elif i and lw in _MENORES:
             out.append(lw)
         else:
-            out.append("-".join(p[:1].upper() + p[1:].lower() for p in w.split("-")))
+            out.append("-".join(p if p.upper() in _SIGLAS else p[:1].upper() + p[1:].lower() for p in w.split("-")))
     return " ".join(out)
 
 

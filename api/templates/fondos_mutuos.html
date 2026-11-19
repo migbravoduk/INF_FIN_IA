@@ -13,9 +13,13 @@
 {% else %}
 
 {{ ui.page_head("Fondos mutuos",
-    "Dos fuentes de la CMF. La estadística por corte mensual (" ~ (fechas|length) ~ " cortes, " ~ (fechas[-1]|fecha_es) ~ " → " ~ (fechas[0]|fecha_es) ~ ") trae valor cuota, patrimonio y partícipes, y enlaza cada fondo con su administradora y su tipo. La cartera (período " ~ period_label ~ ", " ~ n_fondos ~ " fondos) dice en qué está invertido cada uno.") }}
-<p class="nota">La CMF publica la estadística a diario; se guarda un corte por mes
-(último día hábil con publicación) para no inflar la base.</p>
+    "Dos fuentes de la CMF: la estadística por corte mensual, con valor cuota, patrimonio y partícipes, y la cartera, que dice en qué está invertido cada fondo.") }}
+<p class="nota mt-0">
+    <strong>Estadística:</strong> {{ fechas|length }} cortes, {{ fechas[-1]|fecha_es }} → {{ fechas[0]|fecha_es }};
+    enlaza cada fondo con su administradora y su tipo. La CMF la publica a diario; se guarda un corte por mes
+    (último día hábil con publicación) para no inflar la base.
+    <strong>Cartera:</strong> período {{ period_label }}, {{ n_fondos }} fondos.
+</p>
 
 <!-- ── Rendimientos ────────────────────────────────────────────────────── -->
 <section class="sec">

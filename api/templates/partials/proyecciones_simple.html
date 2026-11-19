@@ -38,7 +38,7 @@
 {% endcall %}
 
 {% for r in results %}
-{{ ui.viz("proys-chart-" ~ loop.index, r.account, sub=(r.unit_note ~ " · " ~ r.spec ~ " · " ~ r.n_obs ~ " obs."), alto="lg", clase="mt-5") }}
+{{ ui.viz("proys-chart-" ~ loop.index, r.account, sub=(r.unit_note ~ " · " ~ r.spec ~ " · " ~ r.n_obs ~ " obs."), fuente="CMF (historia) · proyección propia", alto="lg", clase="mt-5") }}
 {% if r.uf_note %}<p class="nota">{{ r.uf_note }}</p>{% endif %}
 {% if r.atipicos %}<p class="nota">
     {{ r.atipicos | length }} dato(s) atípico(s) en la historia

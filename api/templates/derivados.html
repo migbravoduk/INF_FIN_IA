@@ -14,8 +14,11 @@
 {% block content %}
 {% set mer, ind, tas, afp, seg, ffm = d.mer, d.ind, d.tas, d.afp, d.seg, d.ffm %}
 {{ ui.page_head("Derivados en Chile: exposición y riesgo",
-    "Quién está posicionado en derivados, en qué riesgo, en qué dirección y con qué tamaño: el mercado completo según los bancos (Banco Central), cada industria frente a ellos, y bajando a cada AFP y fondo, compañía de seguros y fondo mutuo. Las preguntas: ¿cubren o apuestan?, ¿qué pierden si se mueve el dólar, la inflación o las tasas?, ¿dónde se concentra?",
+    "Quién está posicionado en derivados, en qué riesgo, en qué dirección y con qué tamaño: ¿cubren o apuestan?",
     id_titulo="der-top") }}
+<p class="nota mt-0">El mercado completo según los bancos (Banco Central), cada industria frente a ellos, y bajando
+a cada AFP y fondo, compañía de seguros y fondo mutuo. Las otras preguntas: ¿qué pierden si se mueve el dólar,
+la inflación o las tasas?, ¿dónde se concentra?</p>
 
 <nav class="toc" aria-label="Secciones">
     <span class="toc-label">Ir a</span>
@@ -412,7 +415,7 @@
                     var r = AFP.filas.filter(function (x) { return x.afp === a && x.fondo === fd; })[0];
                     return r && r[campo] !== null ? r[campo] : null; }); });
             }
-            var nombres = afps.map(function (a) { return a.charAt(0) + a.slice(1).toLowerCase(); });
+            var nombres = afps.map(function (a) { return INF.nombre(a); });
             var cols = fondos.map(function (x) { return "Fondo " + x; });
             var zc = z("cobertura");
             Plotly.newPlot("der-afp-cob", [{type: "heatmap", z: zc, x: cols, y: nombres, zmin: 0, zmax: 100,

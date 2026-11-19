@@ -20,11 +20,20 @@
 <p class="vacio">Sin curvas ajustadas. Ejecuta <code>main.py build-productos</code> después de cargar las series del Banco Central.</p>
 {% else %}
 
+<nav class="toc" aria-label="Secciones">
+    <span class="toc-label">Ir a</span>
+    <a href="#cu-cero">Curva cero cupón</a>
+    <a href="#cu-bei">Inflación implícita</a>
+    {% if tpm %}<a href="#cu-tpm">TPM: mercado y encuestas</a>{% endif %}
+    {% if spread %}<a href="#cu-spread">Depósitos frente al swap</a>{% endif %}
+    <a href="#cu-historia">Historia</a>
+</nav>
+
 <section class="sec mt-0">
     {{ ui.sec_head("Curva cero cupón por plazo", id="cu-cero", fecha=(curvas.swap_clp.fecha if curvas.swap_clp else none), fuente="Banco Central", arriba=none) }}
     {{ ui.viz("ch-curvas", "Curva cero cupón por plazo",
               sub="% efectivo anual · plazo en años, escala logarítmica · línea = curva ajustada (continua: swap; segmentos: bonos) · puntos = tasas observadas ese día",
-              alto="lg") }}
+              fuente="Banco Central", alto="lg") }}
     <div class="tbl-wrap">
     <table class="tbl" aria-label="Curvas ajustadas y tasas por plazo">
         <thead><tr><th>Curva</th><th>Fecha</th><th>Modelo</th><th class="num">Error de ajuste</th><th class="num">1 año</th><th class="num">2 años</th><th class="num">5 años</th><th class="num">10 años</th></tr></thead>
@@ -72,7 +81,7 @@
     {{ ui.sec_head("Tasa de política monetaria: mercado frente a encuestas", id="cu-tpm", fuente="Banco Central", arriba=none) }}
     {{ ui.viz("ch-tpm", "TPM implícita en los swaps frente a las encuestas",
               sub="% · línea = TPM que descuentan los swaps (forward a 1 mes, base 360) · puntos = mediana de las encuestas del Banco Central",
-              alto="md") }}
+              fuente="Banco Central", alto="md") }}
     <p class="nota">La TPM implícita incluye premio por plazo, por lo que tiende a quedar sobre las encuestas en horizontes largos.</p>
 </section>
 {% endif %}
@@ -99,7 +108,7 @@
 
 <section class="sec">
     {{ ui.sec_head("Historia: tasas swap a 2 y 10 años", id="cu-historia", fuente="Banco Central", arriba=none) }}
-    {{ ui.viz("ch-hist", "Tasas swap a 2 y 10 años", sub="cierre semanal, cero cupón, % efectivo anual · azul = pesos (nominal), naranjo = UF (real)", alto="md") }}
+    {{ ui.viz("ch-hist", "Tasas swap a 2 y 10 años", sub="cierre semanal, cero cupón, % efectivo anual · azul = pesos (nominal), naranjo = UF (real)", fuente="Banco Central", alto="md") }}
 </section>
 
 <script>

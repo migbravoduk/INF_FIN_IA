@@ -6,7 +6,7 @@
 {% macro pct(v) %}{% if v is none %}—{% else %}{{ v|es(1) }}%{% endif %}{% endmacro %}
 
 {% if series %}
-{{ ui.viz("cartera-evol-chart", "Peso por clase de activo", sub=("% de la cartera · " ~ (desde|mes_es) ~ " → " ~ (hasta|mes_es)), fuente="CMF", alto="lg") }}
+{{ ui.viz("cartera-evol-chart", "Peso por clase de activo", sub=("% de la cartera · " ~ (desde|mes_es) ~ " → " ~ (hasta|mes_es) ~ " · las 6 clases de mayor peso en color; el resto, sumado en «Otras clases»"), fuente="CMF", alto="lg") }}
 
 {% if deriva %}
 <h3 class="sub-head">Mayores movimientos <span class="chip">puntos porcentuales entre {{ desde|mes_es }} y {{ hasta|mes_es }}</span></h3>
@@ -44,18 +44,35 @@
     var series  = {{ series | tojson }};
     function draw() {
         if (!window.Plotly) { return setTimeout(draw, 100); }
-        // 14 clases de activo: un área apilada necesita tonos separados entre sí
-        // (base Tableau 10 + 4); ninguno repite familia de color.
-        var PAL = ["#4e79a7", "#f28e2b", "#e15759", "#76b7b2", "#59a14f", "#edc948", "#b07aa1",
-                   "#ff9da7", "#9c755f", "#bab0ac", "#bcbd22", "#17becf", "#7f3c8d", "#f1f5f9"];
-        var traces = series.map(function (s, i) {
+        // Foco y contexto: a lo más 7 series de color. Van en color las 6 clases de mayor peso
+        // (máximo del período) y el resto se suma en «Otras clases», en gris; el detalle de cada
+        // clase está en la tabla de mayores movimientos.
+        var peso = function (s) { return Math.max.apply(null, s.puntos.map(function (v) { return Math.abs(v || 0); })); };
+        var orden = series.slice().sort(function (a, b) { return peso(b) - peso(a); });
+        var foco = orden.slice(0, 6), resto = orden.slice(6);
+        var traces = foco.map(function (s, i) {
+            var col = INF.PALETA[i];
             return {
                 x: periods, y: s.puntos, name: s.clase,
-                line: { color: PAL[i % PAL.length], width: 1 }, fillcolor: PAL[i % PAL.length] + "b3",
+                line: { color: col, width: 1 }, fillcolor: col + "b3",
                 type: "scatter", mode: "lines", stackgroup: "one",
                 hovertemplate: "<b>%{fullData.name}</b><br>%{x} · %{y:.1f}%<extra></extra>"
             };
         });
+        if (resto.length) {
+            var suma = periods.map(function (_, j) {
+                var v = 0, hay = false;
+                resto.forEach(function (s) { if (s.puntos[j] !== null && s.puntos[j] !== undefined) { v += s.puntos[j]; hay = true; } });
+                return hay ? v : null;
+            });
+            traces.push({
+                x: periods, y: suma, name: "Otras clases (" + resto.length + ")",
+                line: { color: INF.COLOR.contexto, width: 1 }, fillcolor: INF.COLOR.contexto + "b3",
+                type: "scatter", mode: "lines", stackgroup: "one",
+                hovertemplate: "<b>Otras clases</b><br>%{x} · %{y:.1f}%<br>" +
+                               resto.map(function (s) { return s.clase; }).join(", ") + "<extra></extra>"
+            });
+        }
         Plotly.newPlot("cartera-evol-chart", traces, {
             margin: { t: 70, r: 20, b: 60, l: 50 }, hovermode: "x unified",
             legend: { orientation: "h", x: 0, y: 1.02, yanchor: "bottom", font: { size: 11 }, traceorder: "reversed" },

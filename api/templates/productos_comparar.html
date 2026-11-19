@@ -39,12 +39,14 @@ Alto Patrimonio o APV tienen requisitos de entrada y costos distintos a las Reta
 </div>
 
 <section class="sec">
-    {{ ui.viz("cmp-chart", "Valor cuota en pesos de los productos elegidos", sub="base 100 en el primer mes común", alto="lg") }}
+    {% set tipos = prods|map(attribute="tipo")|unique|list %}
+    {{ ui.viz("cmp-chart", "Valor cuota en pesos de los productos elegidos", sub="base 100 en el primer mes común",
+              fuente=("CMF y Superintendencia de Pensiones" if tipos|length > 1 else ("CMF" if tipos[0] == "ffmm" else "Superintendencia de Pensiones")), alto="lg") }}
 </section>
 <script>
 (function () {
   const series = {{ series | tojson }};
-  const nombres = {{ prods | map(attribute='nombre') | list | tojson }};
+  const nombres = {{ prods | map(attribute='nombre') | list | tojson }}.map(INF.nombre);
   const ids = {{ prods | map(attribute='producto_id') | list | tojson }};
   // Rebasar todas al primer mes común para que sean comparables en el mismo eje.
   const comunes = ids.map(i => new Set(series[i].map(r => r.mes)));

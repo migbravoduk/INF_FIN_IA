@@ -4,7 +4,7 @@
 #}
 {% import "partials/_ui.html" as ui %}
 <section class="sec">
-    {{ ui.sec_head(st.label, arriba=none) }}
+    {{ ui.sec_head(st.label, id=("est-" ~ st.code|replace(" ", "-")|replace("/", "-")), arriba=none) }}
     <span class="chip mb-3">{{ st.code }}</span>
     {% if st.ev.note %}{% call ui.aviso("warn") %}⚠ {{ st.ev.note }}{% endcall %}{% endif %}
     {% if st.ev.accounts %}

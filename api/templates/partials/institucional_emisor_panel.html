@@ -13,7 +13,7 @@
   {%- else %}—{% endif -%}
 {%- endmacro %}
 
-{% macro bloque(b, titulo, unidad, chart_id, tenedor_label) %}
+{% macro bloque(b, titulo, unidad, chart_id, tenedor_label, fuente) %}
 {% set s = b.serie %}
 {% set ult = (s|selectattr('period', 'equalto', b.ult)|first) %}
 {% set prev = (s|selectattr('period', 'equalto', b.prev)|first) if b.prev else none %}
@@ -31,7 +31,7 @@
         {{ ui.stat(tenedor_label, ult.tenedores) }}
         {{ ui.stat("posiciones", ult.pos|es(0)) }}
     </div>
-    {{ ui.viz(chart_id, titulo, sub="MMM$ por mes · el último mes en color", alto="sm") }}
+    {{ ui.viz(chart_id, titulo, sub="MMM$ por mes · el último mes en color", fuente=fuente, alto="sm") }}
 </section>
 {% endmacro %}
 
@@ -79,9 +79,9 @@
 </header>
 
 <div class="grid-viz">
-    {% if h.seguros %}{{ bloque(h.seguros, "Compañías de seguros · renta fija", "MMM$ valor par", "em-seg-chart", "compañías") }}{% endif %}
-    {% if h.ffmm %}{{ bloque(h.ffmm, "Fondos mutuos · cartera nacional", "MMM$ valor de mercado", "em-ffm-chart", "fondos") }}{% endif %}
-    {% if h.afp %}{{ bloque(h.afp, "Fondos de pensiones · AFP", "MMM$ valor de mercado", "em-afp-chart", "AFP") }}{% endif %}
+    {% if h.seguros %}{{ bloque(h.seguros, "Compañías de seguros · renta fija", "MMM$ valor par", "em-seg-chart", "compañías", "CMF, archivo B.1") }}{% endif %}
+    {% if h.ffmm %}{{ bloque(h.ffmm, "Fondos mutuos · cartera nacional", "MMM$ valor de mercado", "em-ffm-chart", "fondos", "CMF, cartera de fondos mutuos") }}{% endif %}
+    {% if h.afp %}{{ bloque(h.afp, "Fondos de pensiones · AFP", "MMM$ valor de mercado", "em-afp-chart", "AFP", "Superintendencia de Pensiones") }}{% endif %}
 </div>
 
 {% if h.seguros %}

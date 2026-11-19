@@ -5,7 +5,7 @@
 #}
 {% import "partials/_ui.html" as ui %}
 {% if series %}
-{{ ui.viz("serie-chart", account, sub="evolución por período", alto="md", clase="mt-3") }}
+{{ ui.viz("serie-chart", account, sub="evolución por período", fuente="CMF", alto="md", clase="mt-3") }}
 <script>
 (function () {
     var data = {{ series | tojson }};

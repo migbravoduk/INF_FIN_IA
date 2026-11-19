@@ -8,7 +8,7 @@
 <div id="compare-legend" class="cmp-legend"></div>
 {{ ui.viz("compare-chart-container", account,
           sub=("valores del período (desacumulado)" if mode == "periodo" else "evolución comparada · base 100 = primer período"),
-          alto="lg") }}
+          fuente="CMF", alto="lg") }}
 {% if mode == "periodo" %}
 <p class="nota">Partida de resultado o flujo: se muestra desacumulada (valor de cada
     período). Comparar montos absolutos entre empresas asume misma moneda y escala.</p>
@@ -20,6 +20,7 @@
     if (el) el.id = cid;
 
     var multi = {{ multi | tojson }};
+    multi.forEach(function (s) { s.name = INF.nombre(s.name); });
     var isPct = {{ 'false' if mode == "periodo" else 'true' }};
     var palette = INF.PALETA;     // un color por empresa, en orden
     // Leyenda HTML (más legible que la nativa para nombres largos de empresa).

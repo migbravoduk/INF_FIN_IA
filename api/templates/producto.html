@@ -104,7 +104,7 @@
 
 {% if serie %}
 <section class="sec">
-    {{ ui.viz("prod-chart", "Valor cuota en pesos frente a la mediana de su categoría", sub="base 100; línea punteada = mediana de su categoría", fecha=(m.fecha_corte if m else none), alto="lg") }}
+    {{ ui.viz("prod-chart", "Valor cuota en pesos frente a la mediana de su categoría", sub="base 100; línea punteada = mediana de su categoría", fuente=("CMF" if p.tipo == "ffmm" else "Superintendencia de Pensiones"), fecha=(m.fecha_corte if m else none), alto="lg") }}
 </section>
 <script>
 (function () {

@@ -8,9 +8,14 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def _nav_links():
+    """URLs del menú. Desde el rediseño el menú se arma con `api.deps.NAV` (base.html ya no
+    tiene los enlaces escritos a mano); se suman los href literales que queden en base.html."""
+    from api.deps import NAV
+    urls = [g["url"] for g in NAV if "url" in g] + [h["url"] for g in NAV for h in g.get("hijos", [])]
     base = (ROOT / "api/templates/base.html").read_text(encoding="utf-8")
-    return [h for h in re.findall(r'href="(/[^"]*)"', base)
-            if not h.startswith("/static") and h != "/docs"]
+    urls += [h for h in re.findall(r'href="(/[^"]*)"', base)
+             if not h.startswith("/static") and h != "/docs"]
+    return list(dict.fromkeys(urls))
 
 
 @pytest.fixture(scope="module")
@@ -51,3 +56,104 @@ def test_ficha_y_comparador_de_productos(client, real_db_readonly):
 def test_api_v1(client, path):
     r = client.get(path)
     assert r.status_code == 200, f"{path} → {r.status_code}: {r.text[:200]}"
+
+
+# ---------------------------------------------------------------------------------------------
+# Menú y filtros de presentación (docs/PLAN_ESTETICA.md F2-F3). No requieren base de datos.
+# ---------------------------------------------------------------------------------------------
+def _activas(path):
+    from api.deps import _nav_activo, _nav_urls
+    return [u for u, _ in _nav_urls() if _nav_activo(path, u)]
+
+
+def test_menu_marca_una_sola_pagina_activa():
+    # Cada URL del menú se marca a sí misma, y solo a sí misma.
+    from api.deps import _nav_urls
+    for url, _ in _nav_urls():
+        assert _activas(url) == [url], url
+
+
+@pytest.mark.parametrize("path, esperada", [
+    ("/inversion-institucional/derivados", "/inversion-institucional/derivados"),  # no marca al hub
+    ("/inversion-institucional/emisor?rut=1", "/inversion-institucional/emisor"),
+    ("/evolucion", "/ranking"),            # prefijo extra declarado en NAV
+    ("/producto/ffmm:1:A", "/productos"),
+    ("/eeff/corporativos", "/eeff"),
+])
+def test_menu_activo_en_subpaginas(path, esperada):
+    assert _activas(path.split("?")[0]) == [esperada]
+
+
+def test_menu_renderiza_grupos_y_aria_current(client):
+    html = client.get("/derivados").text
+    assert html.count('class="nav-pop"') == 4
+    assert html.count('aria-current="page"') == 1
+
+
+@pytest.mark.parametrize("crudo, legible", [
+    ("BANCO DE CRÉDITO E INVERSIONES", "Banco de Crédito e Inversiones"),
+    ("AFP PLANVITAL S.A.", "AFP PlanVital S.A."),
+    ("FM ACCIONES EEUU", "FM Acciones EEUU"),
+    ("Banco de Chile", "Banco de Chile"),       # si no viene en mayúsculas, no se toca
+    ("", ""),
+])
+def test_filtro_nombre(crudo, legible):
+    from api.deps import _nombre
+    assert _nombre(crudo) == legible
+
+
+def test_filtro_fecha_es():
+    from api.deps import _fecha_es
+    assert _fecha_es("2026-11-15") == "15 nov 2026"
+    assert _fecha_es("202609") == "202609"      # no es fecha completa: se devuelve tal cual
+
+
+def test_nombre_js_igual_a_python():
+    # INF.nombre (api/static/charts.js) repite las listas del filtro `nombre`; deben coincidir.
+    import json
+    from api.deps import _ESPECIALES, _MENORES, _SIGLAS
+    js = (ROOT / "api/static/charts.js").read_text(encoding="utf-8")
+
+    def lista(nombre):
+        m = re.search(r"var " + nombre + r" = (\[.*?\]|\{.*?\});", js, re.S)
+        assert m, nombre
+        return json.loads(m.group(1))
+    assert set(lista("NOMBRE_SIGLAS")) == _SIGLAS
+    assert lista("NOMBRE_ESPECIALES") == _ESPECIALES
+    assert set(lista("NOMBRE_MENORES")) == _MENORES
+
+
+def test_bancos_en_pesos_en_ambos_planes(real_db_readonly):
+    # El plan de cuentas bancario anterior a 2022 viene en millones; la web lo homologa a pesos.
+    db = real_db_readonly
+    fila = db.conn.execute("""
+        SELECT bank_code, account_name FROM cmf_bank_statements
+        WHERE report_type = 'balance' AND val_total > 0
+        GROUP BY 1, 2 HAVING MIN(period) <= 202112 AND MAX(period) >= 202201
+           AND COUNT(*) FILTER (WHERE period IN (202112, 202201)) = 2
+        ORDER BY MAX(abs(val_total)) DESC LIMIT 1""").fetchone()
+    if not fila:
+        pytest.skip("Sin cuentas bancarias presentes en ambos planes")
+    s = db.get_bank_account_series(fila[0], fila[1], "balance").set_index("period")["value"]
+    razon = s[202201] / s[202112]
+    assert 0.5 < razon < 2, f"{fila}: salto ×{razon:,.0f} entre dic-2021 y ene-2022"
+    crudo = db.query_bank_statements(bank_code=fila[0], period=202112, report_type="balance", limit=5)
+    pesos = db.query_bank_statements(bank_code=fila[0], period=202112, report_type="balance", limit=5, en_pesos=True)
+    assert (pesos["val_total"] == crudo["val_total"] * 1e6).all()
+
+
+def test_cuentas_fecu_legibles(real_db_readonly):
+    # La CMF publica los encabezados FECU sin espacios; config/fecu_cuentas.yaml debe cubrirlos todos.
+    from db.repos.fecu import nombre_cuenta_fecu
+    textos = [r[0] for t, c in [("cmf_insurer_statements", "account_name"), ("cmf_broker_statements", "account_name"),
+                                ("cmf_broker_statements", "section")]
+              for r in real_db_readonly.conn.execute(f"SELECT DISTINCT {c} FROM {t} WHERE {c} IS NOT NULL").fetchall()]
+    pegados = [t for t in textos if re.search(r"[a-záéíóúñ]{19,}", nombre_cuenta_fecu(t))]   # ninguna palabra real llega a 19 letras
+    assert not pegados, f"{len(pegados)} cuentas FECU sin glosario, p. ej. {pegados[:3]}"
+
+
+def test_nombre_siglas_con_guion():
+    from api.deps import _nombre
+    assert _nombre("CMB-PRIME ADMINISTRADORA GENERAL DE FONDOS S.A.") == "CMB-Prime Administradora General de Fondos S.A."
+    assert _nombre("SANTANDER-CHILE") == "Santander-Chile"
+    assert _nombre("MBI ADMINISTRADORA GENERAL DE FONDOS S.A.") == "MBI Administradora General de Fondos S.A."

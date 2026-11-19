@@ -19,6 +19,13 @@
     {% endif %}
 </header>
 
+<nav class="toc" aria-label="Secciones de la empresa">
+    <span class="toc-label">Ir a</span>
+    {% if ratios %}<a href="#eeff-indicadores">Indicadores</a><a href="#eeff-dupont">Dupont</a>{% endif %}
+    {% if graph_accounts %}<a href="#eeff-graficos">Gráficos</a>{% endif %}
+    {% for st in statements %}<a href="#est-{{ st.code|replace(' ', '-')|replace('/', '-') }}">{{ st.label }}</a>{% endfor %}
+</nav>
+
 {% if ratios %}
 {# Cifra con color por signo (rentabilidades y márgenes) #}
 {% macro st_pct(label, v) %}{{ ui.stat(label, (v|es(1, True) if v is not none else "—"), unidad=("%" if v is not none else none), tono=(none if v is none else ('pos' if v >= 0 else 'neg'))) }}{% endmacro %}

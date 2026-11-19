@@ -17,7 +17,10 @@
 
 {% block content %}
 {{ ui.page_head("Banco Central: series y expectativas",
-    ("Series macroeconómicas de la Base de Datos Estadísticos del BCCh: " ~ n_efectivas ~ " series de dato observado y " ~ n_expectativas ~ " de expectativas de mercado (encuestas EEE y EOF). Las expectativas se listan aparte porque no son historia efectiva: son la mediana de lo que esperan economistas y operadores, y alimentan la senda macro de proyecciones.")) }}
+    ("Series macroeconómicas de la Base de Datos Estadísticos del BCCh: " ~ n_efectivas ~ " series de dato observado y " ~ n_expectativas ~ " de expectativas de mercado (encuestas EEE y EOF).")) }}
+<p class="nota mt-0">Las expectativas se listan aparte porque <em>no son historia efectiva</em>: son la mediana
+de lo que esperan economistas y operadores, y alimentan la senda macro de
+<a href="/proyecciones">proyecciones</a>.</p>
 
 <nav class="toc" aria-label="Secciones">
     <span class="toc-label">Ir a</span>

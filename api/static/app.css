@@ -582,3 +582,5 @@ a.chip:hover { color: var(--ink); border-color: var(--line-strong); }
 }
 
 @media (max-width: 640px) { .corte, .chip { white-space: normal; max-width: 100%; } }
+
+.tbl-wrap--angosta { max-width: 640px; }

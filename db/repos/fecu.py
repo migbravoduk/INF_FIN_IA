@@ -18,6 +18,32 @@ from db.common import (is_total_account, AGF_SQL_PREDICATE, _agf_where, is_agf_n
 logger = logging.getLogger("db.database")
 
 
+def _glosario_fecu() -> dict:
+    """Texto original de la CMF → nombre legible (config/fecu_cuentas.yaml). La CMF publica los
+    encabezados FECU sin espacios ('Totalactivo'); las cifras se guardan tal cual y solo se cambia
+    el texto que se muestra. Se lee una vez por proceso."""
+    global _GLOSARIO_FECU
+    if _GLOSARIO_FECU is None:
+        try:
+            import yaml
+            from config.settings import config_path
+            _GLOSARIO_FECU = yaml.safe_load(config_path("fecu_cuentas.yaml").read_text(encoding="utf-8")) or {}
+        except Exception as e:      # sin glosario se muestran los nombres como vienen
+            logger.warning(f"Sin glosario de cuentas FECU: {e}")
+            _GLOSARIO_FECU = {}
+    return _GLOSARIO_FECU
+
+
+_GLOSARIO_FECU = None
+
+
+def nombre_cuenta_fecu(texto):
+    """Nombre legible de una cuenta o sección FECU; si no está en el glosario, el texto original."""
+    if texto is None:
+        return None
+    return _glosario_fecu().get(str(texto).strip(), texto)
+
+
 class FecuRepo:
 
     # ----------------------------------------------------------
@@ -196,7 +222,8 @@ class FecuRepo:
             if code not in pivot:
                 pivot[code] = {}
                 order.append(code)
-                meta[code] = (str(r["account_name"]), _text(r["section"]))
+                meta[code] = (nombre_cuenta_fecu(str(r["account_name"])),
+                              nombre_cuenta_fecu(_text(r["section"])))
             v = r["value"]
             if v is not None and not _pd.isna(v):
                 pivot[code][int(r["period"])] = float(v)

@@ -146,6 +146,30 @@
     INF.colorAFP = function (n) {
         return INF.AFP[String(n || "").toUpperCase().replace(/^AFP\s+/, "").trim()] || INF.COLOR.contexto;
     };
+    // Nombre propio legible en textos que arma JavaScript (leyendas, rótulos, tooltips):
+    // 'BANCO DE CRÉDITO E INVERSIONES' → 'Banco de Crédito e Inversiones'. Es el mismo criterio
+    // que el filtro `nombre` de api/deps.py; las tres listas deben ser idénticas a las de allá
+    // (lo verifica tests/test_web.py::test_nombre_js_igual_a_python).
+    var NOMBRE_SIGLAS = ["AFP", "AGF", "BCI", "BICE", "BTG", "CMF", "SP", "CLP", "USD", "UF", "ETF", "ESG", "EEUU",
+        "EE.UU.", "FM", "FI", "FIP", "APV", "LP", "CP", "USA", "II", "III", "IV", "VI", "BCH", "CCS",
+        "HSBC", "BBVA", "BNP", "JP", "IFRS", "ECC", "NDF", "OIS", "CGE", "ENAP", "LATAM", "SQM", "CMPC",
+        "CAP", "SMU", "CCU", "AES", "IPC", "TPM", "PIB", "ADR", "REIT", "RV", "RF", "MM", "MMM", "MBI", "CMB"];
+    var NOMBRE_ESPECIALES = {"PLANVITAL": "PlanVital", "ITAU": "Itaú", "ITAÚ": "Itaú", "LARRAINVIAL": "LarrainVial",
+        "BANCOESTADO": "BancoEstado", "METLIFE": "MetLife", "4LIFE": "4Life", "SCOTIABANK": "Scotiabank",
+        "S.A.": "S.A.", "S.A": "S.A.", "SA": "S.A.", "SPA": "SpA", "LTDA": "Ltda.", "LTDA.": "Ltda.",
+        "CIA": "Cía.", "CIA.": "Cía.", "CÍA": "Cía.", "CÍA.": "Cía."};
+    var NOMBRE_MENORES = ["de", "del", "la", "las", "los", "el", "y", "e", "en", "para", "por", "con", "a", "al", "o", "u"];
+    INF.nombre = function (s) {
+        var t = String(s === null || s === undefined ? "" : s).split(/\s+/).filter(Boolean).join(" ");
+        if (!t || t !== t.toUpperCase() || t === t.toLowerCase()) { return t; }   // ya legible, o sin letras
+        return t.split(" ").map(function (w, i) {
+            var uw = w.toUpperCase(), lw = w.toLowerCase();
+            if (Object.prototype.hasOwnProperty.call(NOMBRE_ESPECIALES, uw)) { return NOMBRE_ESPECIALES[uw]; }
+            if (NOMBRE_SIGLAS.indexOf(uw.replace(/^[.,()]+|[.,()]+$/g, "")) >= 0 || /\d/.test(w)) { return w; }
+            if (i && NOMBRE_MENORES.indexOf(lw) >= 0) { return lw; }
+            return w.split("-").map(function (p) { return NOMBRE_SIGLAS.indexOf(p.toUpperCase()) >= 0 ? p : p.charAt(0).toUpperCase() + p.slice(1).toLowerCase(); }).join("-");
+        }).join(" ");
+    };
     INF.esMovil = function () { return window.matchMedia("(max-width: 640px)").matches; };
     INF.fmt = function (v, d, signo) {
         if (v === null || v === undefined || isNaN(v)) { return "—"; }

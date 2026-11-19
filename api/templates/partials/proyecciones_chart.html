@@ -17,7 +17,7 @@
 </header>
 
 {% for r in results %}
-{{ ui.viz("proy-chart-" ~ loop.index, r.account, sub="trimestral (desacumulado) y proyección", alto="lg", clase="mt-5") }}
+{{ ui.viz("proy-chart-" ~ loop.index, r.account, sub="trimestral (desacumulado) y proyección", fuente="CMF (historia) · proyección propia", alto="lg", clase="mt-5") }}
 {% if r.atipicos %}<p class="nota">
     {{ r.atipicos | length }} dato(s) atípico(s) en la historia
     ({% for a in r.atipicos %}{{ a.period }}{% if not loop.last %}, {% endif %}{% endfor %}, marcados con ✕).

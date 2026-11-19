@@ -6,7 +6,7 @@
 {% import "partials/_ui.html" as ui %}
 {% if sim.rows %}
 {{ ui.viz("afp-neta-chart", "Rentabilidad neta de comisiones: Fondo " ~ fund,
-          sub=("sueldo bruto $" ~ salary|es(0) ~ " · aportes " ~ sim.window.desde ~ " → " ~ sim.window.hasta ~ " · valorizado al " ~ sim.window.valuacion), alto="md") }}
+          sub=("sueldo bruto $" ~ salary|es(0) ~ " · aportes " ~ sim.window.desde ~ " → " ~ sim.window.hasta ~ " · valorizado al " ~ sim.window.valuacion), fuente="Superintendencia de Pensiones", alto="md") }}
 
 <div class="tbl-wrap">
     <table class="tbl" aria-label="Rentabilidad neta de comisiones por AFP">
@@ -69,7 +69,7 @@
         // Gráfico de pesas: el punto gris es lo que rentó el fondo y el de color lo que le
         // quedó al afiliado; el tramo entre ambos es lo que se llevó la comisión. Así la
         // diferencia entre AFP se lee como distancia, no como dos barras paralelas.
-        var y = r.map(function (d) { return d.afp.charAt(0) + d.afp.slice(1).toLowerCase(); });
+        var y = r.map(function (d) { return INF.nombre(d.afp); });
         var seg = { x: [], y: [], mode: "lines", type: "scatter", hoverinfo: "skip",
                     line: { color: INF.COLOR.contexto, width: 3 }, showlegend: false };
         r.forEach(function (d, i) {

@@ -57,7 +57,7 @@ juntos: el Banco Central no los separa). Último dato: <strong>{{ m.ultimo }}</s
     {{ ui.viz("d-ratio", "Nocional bruto de swaps de tasa ÷ activos del sistema", sub="veces", fuente="Banco Central", fecha=m.ultimo, alto="md") }}
     {{ ui.viz("d-neto", "Posición neta en tasa variable", sub="% de los activos", fuente="Banco Central", fecha=m.ultimo, alto="md") }}
     {{ ui.viz("d-cv", "Swaps sobre tasas extranjeras: comprador y vendedor de tasa variable", sub="MMUSD", fuente="Banco Central", fecha=m.ultimo, alto="md") }}
-    {{ ui.viz("d-ust", "Bono del Tesoro de EE.UU. a 10 años", sub="%, promedio mensual", alto="md") }}
+    {{ ui.viz("d-ust", "Bono del Tesoro de EE.UU. a 10 años", sub="%, promedio mensual", fuente="Banco Central", alto="md") }}
 </div>
 <p class="nota">Lectura del saldo contra el flujo: si el neto vigente cae sin que haya ventas nuevas
 (flujo neto ≥ 0), la caída viene de patas compradoras que vencieron o se cerraron. Último mes:
@@ -66,8 +66,8 @@ juntos: el Banco Central no los separa). Último dato: <strong>{{ m.ultimo }}</s
 {% if ret.E %}
 <h3 class="sub-head">Efecto en el afiliado: retorno mensual de los fondos E y D</h3>
 <div class="grid-viz">
-    {{ ui.viz("d-ret", "Retorno mensual nominal, promedio simple de las AFP", sub="%", alto="md") }}
-    {{ ui.viz("d-disp", "Dispersión entre AFP del Fondo E", sub="desvío estándar, pp", alto="md") }}
+    {{ ui.viz("d-ret", "Retorno mensual nominal, promedio simple de las AFP", sub="%", fuente="Superintendencia de Pensiones", alto="md") }}
+    {{ ui.viz("d-disp", "Dispersión entre AFP del Fondo E", sub="desvío estándar, pp", fuente="Superintendencia de Pensiones", alto="md") }}
 </div>
 <p class="nota">Dispersión baja con caídas grandes = una posición tomada por todas las AFP, no por una.
 {% if ret.E.parcial %}El último mes es parcial (hasta el último día en que informaron todas las AFP).{% endif %}</p>
@@ -342,7 +342,7 @@ posición y su contraria (forwards a ambos lados que se compensan).</p>
         if (SW && SW.serie) {
             var afps = Object.keys(SW.serie.afp);
             line("d-swafp", SW.serie.meses, afps.map(function (a, i) {
-                return { y: SW.serie.afp[a], name: a.charAt(0) + a.slice(1).toLowerCase(), color: INF.colorAFP(a), ht: "%{y:,.0f}" }; }),
+                return { y: SW.serie.afp[a], name: INF.nombre(a), color: INF.colorAFP(a), ht: "%{y:,.0f}" }; }),
                  base({ xaxis: { range: ["2019-01", SW.serie.meses[SW.serie.meses.length - 1]] } }));
         }
         if (SEG && SEG.serie) {

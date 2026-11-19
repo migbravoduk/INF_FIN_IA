@@ -17,7 +17,25 @@ títulos y bajadas). No cambia datos, cálculos ni rutas.
 | F5b | Páginas grupo B | hecha | bb7733d |
 | F5c | Páginas grupo C | hecha | 08a77c1 |
 | F6 | Celular y accesibilidad | hecha | 484f8c6 |
-| F7 | Limpieza y registros | hecha | ver git log |
+| F7 | Limpieza y registros | hecha | 96d05dd |
+| Rev | Revisión y correcciones (Opus) | hecha | ver nota |
+
+**Revisión del 18-nov (Opus).** Se verificó todo el plan contra el repositorio y se corrigió lo
+que faltaba, incluidas las reglas que el plan prohibía tocar:
+
+- 20 gráficos sin «Fuente» al pie. Cada fuente se confirmó en el código de origen del dato.
+- Índice en `/curvas` y en el detalle de empresa de EEFF.
+- Dos mensajes de vacío que usaban el estilo de carga.
+- Bajadas de más de 2 líneas en seis vistas: el resto del texto pasa a una nota.
+- La deriva de seguros pasa de 14 colores a 6 más «Otras clases».
+- Nombres en mayúsculas también en lo que escribe JavaScript (`INF.nombre`) y `agf_corto`
+  corregido (LarrainVial, BancoEstado).
+- `tests/test_web.py` lee el menú desde `NAV`: 100 tests en total.
+- Bancos homologados a pesos también en el gráfico por cuenta y en la tabla de detalle.
+- Nombres de cuenta FECU legibles con `config/fecu_cuentas.yaml`: 306 textos de la CMF, revisados.
+- Línea base «antes» de las 26 vistas, capturada desde `da473ca` en otra copia de trabajo:
+  8 capturas con desborde y 2.448 textos de menos de 12 px antes; 0 y 0 después.
+- Barrido de errores de JavaScript en 27 páginas y 17 fragmentos HTMX: 0 errores.
 
 Si se acaba el tiempo, el orden ya prioriza lo más visible: F1–F4 mejoran todas las páginas a
 la vez (los estilos viejos quedan mapeados a los nuevos); F5 migra página por página.
