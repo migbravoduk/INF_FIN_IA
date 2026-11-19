@@ -18,7 +18,7 @@ títulos y bajadas). No cambia datos, cálculos ni rutas.
 | F5c | Páginas grupo C | hecha | 08a77c1 |
 | F6 | Celular y accesibilidad | hecha | 484f8c6 |
 | F7 | Limpieza y registros | hecha | 96d05dd |
-| Rev | Revisión y correcciones (Opus) | hecha | ver nota |
+| Rev | Revisión y correcciones (Opus) | hecha | 43d6d25 |
 
 **Revisión del 18-nov (Opus).** Se verificó todo el plan contra el repositorio y se corrigió lo
 que faltaba, incluidas las reglas que el plan prohibía tocar:
