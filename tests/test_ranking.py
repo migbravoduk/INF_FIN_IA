@@ -131,3 +131,54 @@ def test_ranking_vista_responde_y_z_no_incluye_financieras(client, universo):
     assert con and {r["rut"] for r in universo if r["excl_fin"]}.isdisjoint({r["rut"] for r in con})
     assert client.get("/ranking/table?metric=inexistente").status_code == 200      # cae a ROE, no a 500
     assert "de Altman" in client.get("/ranking").text and "salud-financiera" in client.get("/metodologia").text
+
+
+# --- Ranking ↔ inversión institucional por emisor (plan 19-nov, F9) -----------------------------
+
+def test_ruts_con_tenencia_y_monto_total(real_db_readonly):
+    from db.cross import common_issuers, ruts_con_tenencia, tenencia_total_por_emisor
+    ruts = ruts_con_tenencia(real_db_readonly)
+    if not ruts:
+        pytest.skip("sin carteras")
+    assert "97004000" in ruts                                         # Banco de Chile
+    total = tenencia_total_por_emisor(real_db_readonly)
+    assert set(total) == ruts and all(v >= 0 for v in total.values())
+    fila = next(r for r in common_issuers(real_db_readonly, limit=500)["rows"] if r["rut"] == "97004000")
+    assert total["97004000"] == pytest.approx(fila["mm_total"])      # misma cifra que «emisores en común»
+
+
+def test_ranking_enlaza_a_la_vista_por_emisor(client, universo, real_db_readonly):
+    from db.cross import ruts_con_tenencia
+    con_t = ruts_con_tenencia(real_db_readonly)
+    if not any(r["rut"] in con_t for r in universo):
+        pytest.skip("ninguna empresa del ranking tiene tenencia")
+    html = client.get("/ranking/table?metric=z_altman").text
+    assert 'href="/inversion-institucional/emisor?rut=' in html and "¿Quién tiene a" in html
+
+
+def test_selector_de_emisor_trae_listas_de_interes(client, universo, real_db_readonly):
+    r = client.get("/inversion-institucional/emisor")
+    assert r.status_code == 200
+    assert "Mayor riesgo con inversión institucional" in r.text and "Mejor salud con inversión institucional" in r.text
+    from db.cross import tenencia_total_por_emisor
+    monto = tenencia_total_por_emisor(real_db_readonly)
+    if any(x["z_altman"] is not None and x["rut"] in monto for x in universo):
+        assert r.text.count('href="?rut=') >= 4                        # atajos + al menos un enlace de las listas
+
+
+def test_panel_del_emisor_muestra_su_z(client, universo, real_db_readonly):
+    from db.cross import ruts_con_tenencia
+    con_t = ruts_con_tenencia(real_db_readonly)
+    cand = next((r for r in universo if r["z_altman"] is not None and r["rut"] in con_t), None)
+    if cand is None:
+        pytest.skip("sin empresa con Z'' y tenencia")
+    html = client.get(f"/inversion-institucional/emisor/panel?rut={cand['rut']}").text
+    assert "Salud financiera" in html and "metric=z_altman" in html
+    # Banco de Chile es del sector financiero: no tiene Z'' y la línea no aparece.
+    assert "Salud financiera" not in client.get("/inversion-institucional/emisor/panel?rut=97004000").text
+
+
+def test_ranking_preselecciona_el_indicador(client):
+    html = client.get("/ranking?metric=z_altman").text
+    assert 'value="z_altman" selected' in html
+    assert 'value="roe" selected' in client.get("/ranking?metric=inexistente").text

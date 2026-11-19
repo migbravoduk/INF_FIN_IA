@@ -105,6 +105,11 @@
                       nota_tipos="La SP informa el monto total por emisor y el % del fondo en cada tipo de instrumento, no el monto por tipo: aquí el monto se reparte en proporción a esos porcentajes.") }}{% endif %}
 </div>
 
+{% if salud %}
+<p class="nota mt-0">Salud financiera (Z'' de Altman, {{ salud.periodo|string|mes_es }}):
+    <strong>{{ salud.z|es(2) }}</strong><span class="zona zona--{{ salud.zona }}">{{ salud.zona }}</span> ·
+    <a href="/ranking?metric=z_altman">ver el ranking de salud financiera</a></p>
+{% endif %}
 {% set ra = h.reasignados %}
 {% if h.absorbidos %}
 <p class="nota">Incluye las posiciones que las carteras siguen informando con {{ 'el RUT' if h.absorbidos|length == 1 else 'los RUT' }}

@@ -24,7 +24,9 @@
         {% for r in rows %}
             <tr>
                 <td class="num muted">{{ loop.index }}</td>
-                <td class="ent">{{ r.company_name|nombre }}<span class="sub">{{ r.sector }}</span></td>
+                <td class="ent">{{ r.company_name|nombre }}{% if r.rut in con_tenencia %}<a class="enlace-ico" href="/inversion-institucional/emisor?rut={{ r.rut }}"
+                    title="¿Quién la tiene? Inversión de seguros, fondos mutuos y AFP en esta empresa"
+                    aria-label="¿Quién tiene a {{ r.company_name|nombre }}? Ver su inversión institucional"><span class="enlace-ico-i ico-search" aria-hidden="true"></span></a>{% endif %}<span class="sub">{{ r.sector }}</span></td>
                 <td class="num {{ 'neg' if r.texto or (meta.unidad in ('%', 'mon') and r.value < 0) }}">
                     {{ valor(r) }}
                     {% if r.texto is none and maximo and meta.unidad in ('%', 'mon') %}{{ ui.barra(r.value, maximo, 'pos' if r.value >= 0 else 'neg') }}{% endif %}

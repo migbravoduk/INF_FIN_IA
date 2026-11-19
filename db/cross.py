@@ -522,34 +522,20 @@ def issuer_holdings(db, rut: str, n_periods: int = 13) -> dict:
             "reasignados": reasignados, "absorbidos": eq[1:], "sucesor": fusiones().get(rut)}
 
 
-def common_issuers(db, limit: int = 40, min_fuentes: int = 2) -> dict:
+def tenencias_por_fuente(db) -> dict:
     """
-    Emisores presentes en varias fuentes institucionales, cruzados por RUT del emisor, con el monto
-    expuesto en cada una (MM$ al cierre de su último mes):
-
-    - seguros (B.1, renta fija): valor par a pesos (`monto_par_sql`) con el emisor canónico del
-      nemotécnico y las fusiones. Se excluyen los mutuos hipotecarios y el leasing (`MHA`, `MHB`,
-      `CLEAS`): sus «emisores» son originadores, no emisores de mercado;
-    - fondos mutuos (cartera nacional): valorización de mercado, los fondos en dólares a pesos con
-      el dólar del mes;
-    - AFP (cartera desagregada de la SP, por emisor): valor de mercado. La SP nombra al emisor sin
-      RUT; se cruza por nombre (`mapa_emisores_sp`).
-
-    `min_fuentes` (2 o 3): cuántas de las tres fuentes deben tener al emisor. Los tenedores se
-    cuentan DISTINTOS (compañías, fondos, AFP), no por instrumento. Cada fuente cierra en su propio
-    mes: la SP llega con ~4 meses de rezago. Los montos no son sumables en rigor (valor par frente
-    a valor de mercado); el total es referencial.
+    Tenencia institucional por RUT de emisor en cada fuente, al último mes de cada una:
+    {"seg": {rut: {pos, tenedores, mm}}, "ffm": {...}, "afp": {...}, "per_seg", "per_ffm", "per_afp",
+     "cobertura_afp"}. Reglas de cada fuente en `common_issuers`. Se calcula una vez por proceso y por
+    juego de períodos (tarda ~2 s): lo usan los emisores en común, el ranking y la vista por emisor.
     """
-    min_fuentes = 3 if int(min_fuentes) >= 3 else 2
     per_seg = db.conn.execute("SELECT MAX(period) FROM cmf_insurer_portfolio_fixed_income").fetchone()[0]
     per_ffm = db.conn.execute("SELECT MAX(period_year * 100 + period_month) FROM cmf_mutual_fund_portfolio "
                               "WHERE portfolio_type = 'NACI'").fetchone()[0]
     per_afp = db.conn.execute("SELECT MAX(period) FROM sp_cartera_detalle WHERE tabla = 'emisor_nac'").fetchone()[0]
-    base = {"rows": [], "per_seg": per_seg, "per_ffm": per_ffm, "per_afp": per_afp,
-            "min_fuentes": min_fuentes, "cobertura_afp": None, "n_emisores": 0}
-    if sum(1 for x in (per_seg, per_ffm, per_afp) if x) < 2:
-        return base
-
+    clave = (per_seg, per_ffm, per_afp)
+    if _TENENCIAS.get("clave") == clave:
+        return _TENENCIAS["datos"]
     seg, ffm, afp = {}, {}, {}
     if per_seg:
         per = f"SELECT {int(per_seg)} AS period"
@@ -605,6 +591,61 @@ def common_issuers(db, limit: int = 40, min_fuentes: int = 2) -> dict:
             d["tenedores"] = len(afps[rut])
         cobertura = {"emisores_total": len(glosas_tot), "emisores_ok": len(glosas_ok),
                      "pct_monto": (mapeado / tot_monto * 100) if tot_monto else None}
+
+    datos = {"seg": seg, "ffm": ffm, "afp": afp, "per_seg": per_seg, "per_ffm": per_ffm, "per_afp": per_afp,
+             "cobertura_afp": cobertura}
+    _TENENCIAS.update(clave=clave, datos=datos)
+    return datos
+
+
+_TENENCIAS: dict = {}
+
+
+def tenencia_total_por_emisor(db) -> dict[str, float]:
+    """{RUT: MM$ totales en las tres fuentes} (valor par en seguros; mercado en fondos mutuos y AFP)."""
+    t = tenencias_por_fuente(db)
+    out: dict[str, float] = {}
+    for fuente in ("seg", "ffm", "afp"):
+        for rut, d in t[fuente].items():
+            out[rut] = out.get(rut, 0.0) + (d.get("mm") or 0.0)
+    return out
+
+
+def ruts_con_tenencia(db) -> set[str]:
+    """RUT de emisores con posiciones en el último mes de alguna de las tres fuentes (seguros, fondos
+    mutuos o AFP): los que tienen una vista por emisor con algo que mostrar."""
+    t = tenencias_por_fuente(db)
+    return set(t["seg"]) | set(t["ffm"]) | set(t["afp"])
+
+
+
+def common_issuers(db, limit: int = 40, min_fuentes: int = 2) -> dict:
+    """
+    Emisores presentes en varias fuentes institucionales, cruzados por RUT del emisor, con el monto
+    expuesto en cada una (MM$ al cierre de su último mes):
+
+    - seguros (B.1, renta fija): valor par a pesos (`monto_par_sql`) con el emisor canónico del
+      nemotécnico y las fusiones. Se excluyen los mutuos hipotecarios y el leasing (`MHA`, `MHB`,
+      `CLEAS`): sus «emisores» son originadores, no emisores de mercado;
+    - fondos mutuos (cartera nacional): valorización de mercado, los fondos en dólares a pesos con
+      el dólar del mes;
+    - AFP (cartera desagregada de la SP, por emisor): valor de mercado. La SP nombra al emisor sin
+      RUT; se cruza por nombre (`mapa_emisores_sp`).
+
+    `min_fuentes` (2 o 3): cuántas de las tres fuentes deben tener al emisor. Los tenedores se
+    cuentan DISTINTOS (compañías, fondos, AFP), no por instrumento. Cada fuente cierra en su propio
+    mes: la SP llega con ~4 meses de rezago. Los montos no son sumables en rigor (valor par frente
+    a valor de mercado); el total es referencial.
+    """
+    min_fuentes = 3 if int(min_fuentes) >= 3 else 2
+    t = tenencias_por_fuente(db)
+    per_seg, per_ffm, per_afp = t["per_seg"], t["per_ffm"], t["per_afp"]
+    base = {"rows": [], "per_seg": per_seg, "per_ffm": per_ffm, "per_afp": per_afp,
+            "min_fuentes": min_fuentes, "cobertura_afp": None, "n_emisores": 0}
+    if sum(1 for x in (per_seg, per_ffm, per_afp) if x) < 2:
+        return base
+
+    seg, ffm, afp, cobertura = t["seg"], t["ffm"], t["afp"], t["cobertura_afp"]
 
     nombres = {r[0]: (r[1], r[2]) for r in db.conn.execute(
         "SELECT rut, coalesce(nombre_corto, nombre_canonico), tipo FROM dim_entidad").fetchall()}

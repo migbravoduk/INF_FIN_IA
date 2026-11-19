@@ -16,7 +16,7 @@
     <label>Indicador
         <select name="metric">
             {% for k, v in ratios.items() %}
-            <option value="{{ k }}">{{ v }}</option>
+            <option value="{{ k }}"{{ " selected" if k == metric_sel }}>{{ v }}</option>
             {% endfor %}
         </select>
     </label>

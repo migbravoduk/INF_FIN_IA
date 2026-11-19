@@ -237,12 +237,12 @@ def comparar_ratios(
 
 
 @router.get("/ranking")
-def ranking(request: Request, db: Database = Depends(get_db)):
-    """Vista de ranking de empresas por indicador financiero."""
+def ranking(request: Request, metric: str = Query("roe"), db: Database = Depends(get_db)):
+    """Vista de ranking de empresas por indicador financiero (`?metric=` preselecciona el indicador)."""
     from api.company_profiles import get_all_sectors
     return templates.TemplateResponse(request, "ranking.html", {
         "periods": db.get_cmf_periods(), "ratios": RANK_LABELS,
-        "sectors": get_all_sectors(),
+        "sectors": get_all_sectors(), "metric_sel": metric if metric in RATIO_META else "roe",
     })
 
 
@@ -274,7 +274,9 @@ def ranking_table(
     finitos = [abs(r["value"]) for r in con if r["texto"] is None]
     pool = [r for r in universo if not sec or r["sector"] == sec]
     meta = RATIO_META[metric]
+    from db.cross import ruts_con_tenencia
     return templates.TemplateResponse(request, "partials/ranking_table.html", {
+        "con_tenencia": ruts_con_tenencia(db),
         "mejores": mejores, "peores": peores, "meta": meta, "metric": metric,
         "metric_label": meta["label"], "period": period_int,
         "maximo": max(finitos) if finitos else None,

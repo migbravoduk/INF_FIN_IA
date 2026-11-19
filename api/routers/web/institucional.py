@@ -13,6 +13,7 @@ from api.eeff_format import (build_statement_groups, GROUP_LABELS, GROUP_ORDER,
 from api.company_profiles import get_profile
 from db.database import Database
 from api.routers.web._shared import *  # noqa: F401,F403
+from db.common import zona_z
 from api.routers.web._shared import (build_overview_context, BC_CATEGORIAS, BC_UNIDADES, BC_UNIDADES_TASA, _bc_dimension, BC_RANGOS, _bc_desde, _bc_decorar, EEFF_CLASSES, _EEFF_SCOPES, _FLOW_PARTIDAS, _deaccumulate, _select_bank_periods, _RATIO_LABELS, _select_periods, FECU_GROUPS, _FECU_UNIT, _proy_period_label, _select_quarter_periods, _FM_CARTERAS, _fm_periodo_label, _period_label, PROY_CLASSES, _PROY_SIMPLE, _PROY_HYBRID, INST_CLASSES, _RAMOS, _pct, _build_allocation)  # noqa: F401
 
 router = APIRouter()
@@ -38,6 +39,39 @@ def inversion_institucional_emisores_tabla(request: Request, min_fuentes: int = 
 _OPCIONES_EMISOR: dict = {}   # cache por proceso: el selector cuesta ~1,5 s y cambia al cargar datos
 
 
+def _emisores_de_interes(db: Database, n: int = 8) -> dict:
+    """
+    Emisores de mayor interés para mirar quién los tiene: las empresas del ranking de salud financiera
+    (Z'' de Altman, último período) que tienen inversión institucional.
+    - riesgo: hasta `n` en zona de peligro, de mayor a menor monto institucional;
+    - salud: hasta `n` con el Z'' más alto (zona segura).
+    El monto es la suma de seguros (valor par), fondos mutuos y AFP (mercado), en MM$.
+    """
+    from db.cross import tenencia_total_por_emisor
+    periodos = db.get_cmf_periods()
+    if not periodos:
+        return {"riesgo": [], "salud": [], "periodo_z": None}
+    monto = tenencia_total_por_emisor(db)
+    candidatos = [{"rut": r["rut"], "nombre": r["company_name"], "z": r["z_altman"],
+                   "zona": zona_z(r["z_altman"]), "mm": monto[r["rut"]]}
+                  for r in ranking_universo(db, periodos[0])
+                  if r.get("z_altman") is not None and monto.get(r["rut"])]
+    riesgo = sorted((c for c in candidatos if c["zona"] == "peligro"), key=lambda c: -c["mm"])[:n]
+    salud = sorted((c for c in candidatos if c["zona"] == "segura"), key=lambda c: -c["z"])[:n]
+    return {"riesgo": riesgo, "salud": salud, "periodo_z": periodos[0]}
+
+
+def _z_del_emisor(db: Database, rut: str):
+    """Z'' (último período) de un emisor si está en el ranking de salud financiera; si no, None."""
+    periodos = db.get_cmf_periods()
+    if not periodos:
+        return None
+    r = next((x for x in ranking_universo(db, periodos[0]) if x["rut"] == str(rut)), None)
+    if not r or r.get("z_altman") is None:
+        return None
+    return {"z": r["z_altman"], "zona": zona_z(r["z_altman"]), "periodo": periodos[0]}
+
+
 @router.get("/inversion-institucional/emisor")
 def inversion_institucional_emisor(request: Request, rut: str = Query(""),
                                    db: Database = Depends(get_db)):
@@ -48,6 +82,7 @@ def inversion_institucional_emisor(request: Request, rut: str = Query(""),
         _OPCIONES_EMISOR.update(clave=clave, opciones=issuer_options(db))
     return templates.TemplateResponse(request, "institucional_emisor.html", {
         "opciones": _OPCIONES_EMISOR["opciones"], "rut": rut.strip(),
+        **_emisores_de_interes(db),
     })
 
 
@@ -69,7 +104,7 @@ def inversion_institucional_emisor_panel(request: Request, rut: str = Query(""),
                                           {"h": None, "q": rut})
     h = issuer_holdings(db, m[-1])
     return templates.TemplateResponse(request, "partials/institucional_emisor_panel.html",
-                                      {"h": h, "q": rut})
+                                      {"h": h, "q": rut, "salud": _z_del_emisor(db, h["rut"])})
 
 
 @router.get("/inversion-institucional/derivados")

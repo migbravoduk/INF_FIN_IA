@@ -25,10 +25,17 @@ con ~4 meses de rezago y nombra al emisor sin RUT (se cruza por nombre).</p>
         {{ opciones|length }} emisores con posiciones en el último mes, los con nombre primero. Atajos:
         <a href="?rut=60805000">Fisco</a> ·
         <a href="?rut=97029000">Banco Central</a> ·
-        <a href="?rut=85741000">Bicecorp</a> ·
-        <a href="?rut=79619200">Consorcio Financiero</a> ·
         <a href="?rut=97004000">Banco de Chile</a>
     </p>
+    {% if riesgo or salud %}
+    <div class="ayuda">
+        <p><strong>Mayor riesgo con inversión institucional</strong> (Z'' en zona de peligro, {{ periodo_z|mes_es }}; de mayor a menor monto):
+        {% for c in riesgo %}<a href="?rut={{ c.rut }}" title="Z'' {{ c.z|es(2) }} · {{ c.mm|es(0) }} MM$ de inversión institucional">{{ c.nombre|nombre }}</a>{{ " · " if not loop.last }}{% else %}<span class="muted">ninguna</span>{% endfor %}</p>
+        <p><strong>Mejor salud con inversión institucional</strong> (Z'' más alto, zona segura):
+        {% for c in salud %}<a href="?rut={{ c.rut }}" title="Z'' {{ c.z|es(2) }} · {{ c.mm|es(0) }} MM$ de inversión institucional">{{ c.nombre|nombre }}</a>{{ " · " if not loop.last }}{% else %}<span class="muted">ninguna</span>{% endfor %}</p>
+        <p class="nota">Z'' de Altman del <a href="/ranking?metric=z_altman">ranking de salud financiera</a>: una señal de alerta, no una clasificación de riesgo.</p>
+    </div>
+    {% endif %}
 </form>
 
 <div id="emisor-panel">
