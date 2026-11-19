@@ -20,7 +20,44 @@ vuelvas a investigar desde cero**: confírmalo con las consultas de control indi
 | F9 | Vincular ranking y exposición por emisor | hecha | 00c6385 |
 | F10 | Panel de portada: indicadores de mercado | hecha | 5a5dac4 |
 | F11 | Investigación: valor de mercado de B.1 (con tope de tiempo) | hecha: valor final reconciliado | 99883ab |
-| F12 | Cierre: documentación y registros | pendiente | — |
+| F12 | Cierre: documentación y registros | hecha | F12_HASH |
+
+## Nota de cierre (Sonnet, 19-nov-2026)
+
+Todas las fases están hechas. Pasan 143 tests; `ui_guard.py check` dice «Contrato intacto»; las capturas de todas las
+vistas salen sin desbordes ni letra de menos de 12 px; el barrido de errores de JavaScript no encontró errores.
+
+**Cifras para recordar.**
+
+- **Cobertura cambiaria de seguros (F7), sector, sep-2026:** 95,3% → **77,2%**. La venta neta de moneda extranjera
+  a plazo no cambia (US$ 16.050 millones; US$ 8.011 millones vienen de contratos con objetivo CBE). Cambia el
+  denominador: los activos en moneda extranjera pasan de US$ 16.841 a US$ 20.779 millones, porque ahora incluyen
+  US$ 3.937 millones de renta fija en dólares de empresas chilenas (B.1), que antes quedaban fuera. EuroAmerica, por
+  ejemplo, pasa de 165% a 112%.
+- **Z'' de Altman (F8):** con dato 216 de 370 empresas en jun-2026 (95 en zona segura, 62 gris, 59 peligro; 143 excluidas por
+  ser financieras, holdings o administradoras de fondos) y 253 de 564 en dic-2025 (151 excluidas). Deuda neta / EBITDA:
+  solo 40 empresas en jun-2026 y 64 en dic-2025, porque exigen depreciación informada (~105 de 564).
+- **Valor final de B.1 (F11):** reconcilia con el B.8 en 61 de 63 compañías a ±1% (sep-2026, vida y generales). Cargado solo en
+  202609; el backfill de los demás meses queda documentado en la hoja de ruta, sin correr.
+- **Cruce de las AFP (F6):** 171 de 182 emisores de la SP con RUT identificado (99% del monto).
+
+**Dónde me aparté del plan, y por qué.**
+
+1. **F4 y F11:** la concentración por emisor usa el *valor final* (no el valor par) en los períodos que lo traen completo, y el
+   valor par en el resto. Las series por emisor, los emisores en común y el ranking siguen en valor par hasta el backfill: mezclar
+   las dos medidas en una serie habría mostrado un salto falso en el último mes. Lo que se obtuvo es valor *contable*, no de mercado.
+2. **F8:** el EBITDA y la deuda neta / EBITDA exigen que la empresa informe depreciación; sin ella el «EBITDA» sería el EBIT. Con
+   patrimonio negativo el ROE se excluye y deuda / patrimonio se ordena entre los peores (sin esto, esas empresas salían como las
+   mejores). La definición de los indicadores (`RATIO_META`) vive en `db/common.py` y se reexporta desde la capa web, para no hacer
+   que la capa de datos importe de la web. Se agregó «Pasivos / Activos» a los indicadores seleccionables.
+3. **F10:** las tarjetas quedaron en tres filas de 5, 5 y 4 (desempleo en «Actividad y precios» y el spread de depósitos en «Tasas y
+   expectativas»), para que la rejilla existente cierre sin dejar tarjetas sueltas. La pendiente 10 − 2 años de la portada usa las
+   tasas swap *observadas* (66 pb el 13-nov); la de `/curvas` usa la curva *ajustada* (69 pb).
+4. **F5:** `BR`, `CS`, `BVL`, `BEC`, `BH`, `PE` y los códigos de la SP sin verificar quedan «(sin glosa)»; no se tomaron del plan sin
+   evidencia (`config/tipos_instrumento.yaml` dice cuál es la de cada uno).
+
+**Pendientes** (también en `docs/wiki/Hoja-de-Ruta.md`): backfill del valor final; diccionario de los códigos de la SP; fuentes
+nuevas para la portada (IPSA diario, petróleo, EMBI o CDS, VIX); depreciación en los EEFF.
 
 Si se acaba el tiempo, el orden ya prioriza lo visible y barato (F1–F2). F11 es opcional.
 No hay F3: lo hizo Opus antes del plan (sección «Ya hecho»); la numeración se conserva.

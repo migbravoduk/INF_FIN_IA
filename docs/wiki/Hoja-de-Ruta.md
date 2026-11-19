@@ -57,6 +57,26 @@ tablas comunes. Pendientes de datos que se vieron al rediseñar, resueltos en la
   por cuenta y en el detalle; el evolutivo ya lo hacía.
 - [x] `tests/test_web.py` lee el menú desde `api.deps.NAV` (100 tests).
 
+### Hecho el 19-nov-2026 (plan de observaciones, `docs/PLAN_OBSERVACIONES_19NOV.md`)
+
+- [x] **Emisor canónico por nemotécnico** en la renta fija de seguros (612 posiciones de 177 nemotécnicos
+  reasignadas en sep-2026) y **fusiones** de RUT (Itaú–Corpbanca, BICE–Security, Scotiabank con ex BBVA y
+  ex Desarrollo) en `config/entidades.yaml`. Nombres de SURA y de 26 originadores de mutuos hipotecarios.
+- [x] Concentración por emisor de seguros por **monto** (valor final) y con filas que se abren para ver
+  quién lo tiene; tipo de instrumento (`config/tipos_instrumento.yaml`) en la vista por emisor.
+- [x] Emisores en común con **AFP**, cruzados por RUT.
+- [x] **Cobertura cambiaria** de seguros: una sola medida por monto (95,3% → 77,2% en el sector, sep-2026).
+- [x] **Ranking**: 15 mejores y 15 peores, flujos de 12 meses, Z'' de Altman y deuda neta / EBITDA; enlaces
+  entre el ranking y la vista por emisor.
+- [x] Portada con 10 indicadores de mercado nuevos, cada uno con su fecha y fuente; proyecciones y curvas.
+- [ ] Diccionario de los códigos de instrumento de la SP (`WNMC`, `WNMV`, `YNMC`, `YNMV`, `PFI`, `CC2`, `SNT`,
+  `SNM`, `BCS`, `BFI` …): hoy se muestran crudos «(sin glosa)». También `BR`, `CS`, `BVL`, `BEC`, `BH`, `PE`
+  de B.1 (ver `config/tipos_instrumento.yaml`).
+- [ ] Indicadores de mercado que **necesitan una fuente nueva** y quedaron fuera de la portada: IPSA
+  diario (hoy solo hay el mensual), petróleo, EMBI o CDS de Chile, VIX.
+- [ ] Depreciación en los EEFF: solo ~1 de cada 5 empresas la informa en el archivo plano, así que el
+  margen EBITDA y la deuda neta / EBITDA del ranking cubren unas 100 empresas.
+
 ### Pendientes consolidados (17-nov-2026)
 
 Modelos y análisis:
@@ -66,8 +86,12 @@ Modelos y análisis:
   atípicos en bancos (gana 58% de pares, empeora a 3 meses).
 - [ ] Sectores curados en el modelo estructural: reintentar con más shrinkage (`LAMBDA_SECTOR`).
 - [ ] Frontera eficiente (S5, opcional). Costos financieros como deuda × tasa. Narrativa con LLM.
-- [ ] Valorización de mercado de la renta fija de seguros (B.1) sin reconciliar: bloquea las
-  curvas de crédito por emisor. Clasificaciones de riesgo por emisor.
+- [x] Valor final por posición de la renta fija de seguros (B.1): reconciliado con el B.8 (61 de 63
+  compañías a ±1% en sep-2026) y cargado solo en 202609. **Pendiente:** el backfill de los demás meses
+  (bajar cada ZIP y `main.py import-cartera-seguros --period AAAAMM`; ~100 MB por mes) y, con él,
+  usar el valor final también en las series por emisor, los emisores en común y el ranking.
+  Sigue pendiente el valor de **mercado** (curvas de crédito por emisor) y las clasificaciones de
+  riesgo por emisor.
 
 Datos y fuentes:
 - [ ] Derivados: verificar el cierre del 5-nov con el BCCh de nov-2026 (~enero); seguros antes
@@ -188,7 +212,11 @@ Pendiente que requiere decisión o curaduría humana:
 - [x] **FECU anual de seguros**: `report_freq='anual'` cargado (143 mil filas, verificado 17-nov-2026).
 - [x] **Cuotas FFMM desde 2018** (D1 del PLAN_MEJORAS): cargadas 2018-01 → hoy. La cartera
   FFMM (y sus derivados) empieza en 2024-07.
-- [ ] **Renta fija B.1: montos de valoración de mercado sin reconciliar.** Se cargan solo los campos que validan al 100% (identificación + valor nominal, offsets 0-154). Cerrarlo requiere el catálogo de descriptores (archivo B.9).
+- [x] **Renta fija B.1: valor final por posición** (19-nov-2026): posiciones 893-905 del registro de 970
+  caracteres, en M$, reconciliado con el B.8 (`collectors/seguros_cartera.py`, `B1_VALOR_FINAL`). Cargado solo
+  en 202609. El resto de los campos de valoración del final del registro (tasas, valor a costo amortizado
+  y razonable) sigue sin reconciliar y requiere el catálogo de descriptores (archivo B.9).
+- [ ] **Backfill del valor final de B.1** a los demás meses (ver arriba).
 - [x] Bancos: historia mensual **2019 → hoy** (backfill jul-2026: 1.920 reportes, 0 fallas, ~977k filas nuevas; 16 bancos × 12 meses/año). La serie evolutiva empalma el cambio de plan de cuentas 2022 (nombres + unidades millones→pesos). Extensible con `fetch-banks --history --year-start N`.
 
 Ver **[Issues-Resueltos](Issues-Resueltos)** para el registro histórico.

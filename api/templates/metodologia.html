@@ -10,6 +10,7 @@
 <nav class="toc-lateral" aria-label="Contenido de la página">
     <a href="#met-productos">Métricas de productos</a>
     <a href="#curvas">Curvas de tasas</a>
+    <a href="#inversion-institucional">Inversión institucional</a>
     <a href="#salud-financiera">Salud financiera (Z'')</a>
     <a href="#met-fuentes">Fuentes y unidades</a>
     <a href="#met-calidad">Controles de calidad</a>
@@ -79,6 +80,34 @@ depende solo de la métrica elegida; ningún proveedor paga por aparecer o por s
       overnight base 360 (la convención de la TPM). Contiene premio por plazo: no es una expectativa
       pura, y por eso suele quedar sobre las encuestas en horizontes de 1–2 años.</li>
   <li><b>Spread bancario.</b> Depósitos a plazo transados en bolsa menos la curva swap al mismo plazo.</li>
+</ul>
+</div>
+
+<div class="sec">{{ ui.sec_head("Inversión institucional: emisores, montos y cobertura", id="inversion-institucional", arriba=none) }}</div>
+<div class="prosa">
+<ul>
+  <li><b>Emisor canónico.</b> En la renta fija de las compañías de seguros (archivo B.1) cada compañía informa el RUT del
+      emisor de cada instrumento, y no siempre coinciden: hay errores de digitación y RUT de bancos absorbidos que siguen en
+      uso. Para cada nemotécnico y mes, el emisor es el RUT que informa la mayoría de las posiciones; en un empate, el que
+      usan los fondos mutuos para ese instrumento. Los mutuos hipotecarios y el leasing no se reasignan: su nemotécnico es
+      propio de cada originador. En sep-2026 esto reasigna 612 posiciones de 177 nemotécnicos (2,4% del monto). La tabla
+      original no se modifica: la corrección se aplica al leer.</li>
+  <li><b>Fusiones.</b> Los RUT de entidades absorbidas se suman al de la entidad que sobrevive: Itaú–Corpbanca, BICE–Security y
+      Scotiabank con el ex BBVA Chile y el ex Banco del Desarrollo. Se declaran con su evidencia en
+      <code>config/entidades.yaml</code>.</li>
+  <li><b>Monto: valor par y valor final.</b> El <em>valor par</em> es el saldo vigente de cada posición, o el monto de origen si
+      la compañía lo informa en cero (leasing, letras y muchos bonos), pasado a pesos con la UF y el dólar del cierre; sobrestima
+      lo que amortizó. El <em>valor final</em> es el que informa cada posición en el archivo B.1 y cuadra con el valor final de
+      la renta fija nacional del archivo de cartera (B.8): a ±1% en 61 de 63 compañías en sep-2026, al peso en la mayoría. La
+      concentración por emisor usa el valor final cuando el período lo trae completo; los demás períodos y las vistas que los
+      comparan en el tiempo usan el valor par. Ninguno es valor de mercado, y la renta fija extranjera no viene en este archivo.</li>
+  <li><b>Cobertura cambiaria de las compañías.</b> Venta neta de moneda extranjera a plazo (forwards y swaps válidos del archivo
+      B.7) dividida por los activos en moneda extranjera: la inversión en el extranjero del B.8 más la renta fija en dólares de
+      empresas chilenas del B.1. Es una medida por monto; el porcentaje de contratos con objetivo de cobertura es otra cosa. Sobre
+      100% es una posición a que el dólar baje, no una cobertura.</li>
+  <li><b>Emisores en común.</b> Cruce por RUT entre seguros, fondos mutuos y AFP. La Superintendencia de Pensiones nombra al emisor
+      sin RUT: se cruza por nombre y por una tabla curada (171 de 182 emisores, 99% del monto). Cada fuente cierra en su propio
+      mes y la de las AFP llega con unos cuatro meses de rezago.</li>
 </ul>
 </div>
 
