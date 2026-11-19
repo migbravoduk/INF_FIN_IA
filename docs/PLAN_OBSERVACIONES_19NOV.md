@@ -15,7 +15,7 @@ vuelvas a investigar desde cero**: confírmalo con las consultas de control indi
 | F4 | Concentración por emisor de seguros: monto expuesto y filas expandibles | hecha | 939d71b |
 | F5 | Tipo de instrumento en la exposición por emisor | hecha | eb35c31 |
 | F6 | Emisores en común con AFP | hecha | 30bfa32 |
-| F7 | Cobertura de derivados de seguros: medida por monto | pendiente | — |
+| F7 | Cobertura de derivados de seguros: medida por monto | hecha | 5596081 |
 | F8 | Ranking: 15 peores e indicadores de salud (Z de Altman) | pendiente | — |
 | F9 | Vincular ranking y exposición por emisor | pendiente | — |
 | F10 | Panel de portada: indicadores de mercado | pendiente | — |
@@ -47,7 +47,7 @@ No hay F3: lo hizo Opus antes del plan (sección «Ya hecho»); la numeración s
 5. **Contrato de plantillas:** `scripts/ui_guard.py check` debe decir «Contrato intacto».
    - Si una fase agrega ids, `name=` o `hx-*` nuevos, regenera la línea base con `scripts/ui_guard.py snapshot` en esa misma fase y dilo en el commit.
    - No se borra ni se renombra nada existente.
-6. **Tests:** `pytest -q` debe pasar entero. Hoy son 117; cada fase suma los suyos. Puedes
+6. **Tests:** `pytest -q` debe pasar entero. Hoy son 121; cada fase suma los suyos. Puedes
    editar `tests/`. Los tests que leen la base real usan el fixture `real_db_readonly`, que se
    salta si la base está tomada.
 7. **Presentación:**
@@ -133,7 +133,7 @@ aparezca expuesta en renta fija a Empresas CMPC?»**
 ## F0 — Preparación y línea base
 
 1. `git status` limpio y en `feature/web-api-skeleton`.
-2. Levanta `:8001`. Corre `pytest -q` (117 tests) y `ui_guard.py check`.
+2. Levanta `:8001`. Corre `pytest -q` (121 tests) y `ui_guard.py check`.
 3. Toma la línea base:
 
    ```
