@@ -20,9 +20,65 @@ def test_modelo_usa_clasificacion_anterior():
     assert st.SECTOR_FUENTE == "nombre"
 
 
+def _b1(db, filas):
+    """Inserta posiciones B.1 mínimas: (compañía, rut_emisor, tipo, nemotécnico)."""
+    db.conn.executemany("""INSERT INTO cmf_insurer_portfolio_fixed_income
+        (insurance_type, period, rut, rut_emisor, tipo_instrumento, nemotecnico, valor_nominal, unidad_monetaria)
+        VALUES ('vida', 202609, ?, ?, ?, ?, 1000, 'UF')""", filas)
+
+
+def _canon(db):
+    from db.cross import emisor_canonico_cte
+    return dict(db.conn.execute(
+        f"WITH {emisor_canonico_cte('SELECT 202609 AS period')} SELECT nemo, rut_canon FROM canon").fetchall())
+
+
+def test_emisor_canonico_mayoria(mem_db):
+    # Caso real (202609): una compañía informó BCMPC-S con el RUT de Empresas CMPC; las demás,
+    # con el de Inversiones CMPC. Gana el mayoritario.
+    _b1(mem_db, [("1", "96596540", "BE", "BCMPC-S"), ("2", "96596540", "BE", "BCMPC-S"),
+                 ("3", "090222000", "BE", "bcmpc-s "), ("1", "97004000", "BB", "BCHI-X")])
+    c = _canon(mem_db)
+    assert c == {"BCMPC-S": "96596540"}          # BCHI-X tiene un solo RUT: no necesita resolverse
+
+
+def test_emisor_canonico_empate_y_originadores(mem_db):
+    # Empate 1 a 1: decide el RUT que usa la cartera de fondos mutuos para ese nemotécnico.
+    _b1(mem_db, [("1", "97018000", "BB", "DES-1"), ("2", "97051000", "BB", "DES-1"),
+                 # Mutuos y leasing: el nemotécnico es del originador; nunca se reasignan.
+                 ("1", "111", "MHA", "MHA-1"), ("2", "222", "MHA", "MHA-1"), ("3", "222", "MHA", "MHA-1")])
+    mem_db.conn.execute("""INSERT INTO cmf_mutual_fund_portfolio
+        (period_year, period_month, portfolio_type, fund_run, fund_name, raw_data)
+        VALUES (2026, 9, 'NACI', '9000', 'F', '{"FFM_6010100": "DES-1", "FFM_6010211": "97051000"}')""")
+    assert _canon(mem_db) == {"DES-1": "97051000"}
+
+
 @pytest.fixture(scope="module")
 def db(real_db_readonly):
     return real_db_readonly
+
+
+def test_nombres_curados(db):
+    nombres = dict(db.conn.execute("""SELECT rut, nombre_canonico FROM dim_entidad
+                                      WHERE rut IN ('96549050', '99514870')""").fetchall())
+    assert nombres.get("96549050") == "Seguros de Vida SURA S.A."
+    assert nombres.get("99514870") == "MetLife Chile Administradora de Mutuos Hipotecarios S.A."
+
+
+def test_cmpc_renta_fija_va_a_inversiones_cmpc(db):
+    """Empresas CMPC no emite bonos: el BCMPC-S que EuroAmerica le atribuyó es de Inversiones CMPC."""
+    from db.cross import issuer_holdings
+    per = db.conn.execute("SELECT MAX(period) FROM cmf_insurer_portfolio_fixed_income").fetchone()[0]
+    if per is None or per < 202609:
+        pytest.skip("sin B.1 de 202609 o posterior")
+    emp = issuer_holdings(db, "90222000")
+    seg = emp["seguros"]
+    assert seg is None or not any(f["tenedor"] == "99279000" and (f["ult"] or 0) > 0 for f in seg["tenedores"])
+    inv = issuer_holdings(db, "96596540")
+    assert inv["seguros"] and any(f["tenedor"] == "99279000" for f in inv["seguros"]["tenedores"])
+    if per == 202609:
+        assert emp["reasignados"]["salen_nemos"] == ["BCMPC-S"]
+        assert "BCMPC-S" in inv["reasignados"]["entran_nemos"]
 
 
 def test_fecha_comun_afp(db):

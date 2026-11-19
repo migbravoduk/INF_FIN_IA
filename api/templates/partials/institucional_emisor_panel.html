@@ -84,6 +84,19 @@
     {% if h.afp %}{{ bloque(h.afp, "Fondos de pensiones · AFP", "MMM$ valor de mercado", "em-afp-chart", "AFP", "Superintendencia de Pensiones") }}{% endif %}
 </div>
 
+{% set ra = h.reasignados %}
+{% if ra and ra.entran_pos %}
+<p class="nota">Seguros, {{ ra.period|string|mes_es }}: {{ ra.entran_pos|es(0) }} {{ 'posición' if ra.entran_pos == 1 else 'posiciones' }}
+    ({{ ra.entran_mm|es(0) }} MM$) que algunas compañías informaron con otro RUT se atribuyen a este emisor, porque es
+    el que informa la mayoría de los tenedores de ese instrumento ({{ ra.entran_nemos|join(', ') }}{{ '…' if ra.entran_nemos|length == 8 }}).</p>
+{% endif %}
+{% if ra and ra.salen_pos %}
+<p class="nota">Seguros, {{ ra.period|string|mes_es }}: {{ ra.salen_pos|es(0) }} {{ 'posición informada' if ra.salen_pos == 1 else 'posiciones informadas' }}
+    con este RUT ({{ ra.salen_mm|es(0) }} MM$) se {{ 'atribuye' if ra.salen_pos == 1 else 'atribuyen' }} a
+    {% for d in ra.salen_a %}{{ (d.nombre|nombre) if d.nombre else 'RUT ' ~ d.rut }}{{ ', ' if not loop.last }}{% endfor %},
+    que es el emisor que informa la mayoría de los tenedores de ese instrumento ({{ ra.salen_nemos|join(', ') }}{{ '…' if ra.salen_nemos|length == 8 }}).</p>
+{% endif %}
+
 {% if h.seguros %}
 <h3 class="sub-head">Compañías de seguros con posiciones</h3>
 {{ tabla(h.seguros, "Compañía") }}

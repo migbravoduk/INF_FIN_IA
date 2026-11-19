@@ -478,7 +478,11 @@ class FecuRepo:
         y originadores de leasing, que no son emisores inscritos y por eso no aparecen en
         ninguna tabla de EEFF. Por eso se devuelve también `tipo_principal`, sin el cual una
         fila sin nombre es ilegible. Cobertura medida (vida, 202606): 183 de 321 emisores.
+
+        El emisor es el CANÓNICO del nemotécnico (db/cross.emisor_canonico_cte): corrige los
+        RUT de emisor que cada compañía informa distinto para un mismo instrumento.
         """
+        from db.cross import canon_join, emisor_canonico_cte, emisor_efectivo
         where = "WHERE fi.period = ? AND fi.insurance_type = ? AND fi.rut_emisor IS NOT NULL"
         params: list = [int(period), str(insurance_type)]
         if rut:
@@ -487,7 +491,14 @@ class FecuRepo:
         return self.conn.execute(f"""
             -- dim_entidad primero (trae además los bancos, curados por bank_code → RUT);
             -- las tablas de EEFF quedan de respaldo si la maestra aún no se construyó.
-            WITH directorio AS (
+            WITH {emisor_canonico_cte(f"SELECT {int(period)} AS period")},
+            b AS (
+                SELECT fi.* REPLACE ({emisor_efectivo()} AS rut_emisor)
+                FROM cmf_insurer_portfolio_fixed_income fi
+                {canon_join()}
+                {where}
+            ),
+            directorio AS (
                 SELECT rut, arg_min(nombre, prioridad) AS nombre FROM (
                     SELECT rut, nombre_canonico AS nombre, 0 AS prioridad FROM dim_entidad
                     UNION ALL SELECT rut, company_name, 1 FROM cmf_financial_statements
@@ -501,8 +512,7 @@ class FecuRepo:
                        fi.unidad_monetaria,
                        COUNT(*)                AS n_instrumentos,
                        SUM(fi.valor_nominal)   AS nominal
-                FROM cmf_insurer_portfolio_fixed_income fi
-                {where}
+                FROM b fi
                 GROUP BY fi.rut_emisor, fi.unidad_monetaria
             ),
             ranked AS (
@@ -520,8 +530,7 @@ class FecuRepo:
                            COUNT(*) OVER (PARTITION BY fi.rut_emisor) AS n_tipos_distintos,
                            ROW_NUMBER() OVER (PARTITION BY fi.rut_emisor
                                               ORDER BY COUNT(*) DESC) AS rn
-                    FROM cmf_insurer_portfolio_fixed_income fi
-                    {where}
+                    FROM b fi
                     GROUP BY fi.rut_emisor, fi.tipo_instrumento
                 ) WHERE rn = 1
             )
@@ -533,18 +542,22 @@ class FecuRepo:
             LEFT JOIN directorio d ON d.rut = a.rut_emisor
             LEFT JOIN tipos t ON t.rut_emisor = a.rut_emisor
             ORDER BY r.total_instr DESC, a.n_instrumentos DESC
-        """, params + [int(limit)] + params).fetchdf()
+        """, params + [int(limit)]).fetchdf()
 
     def count_insurer_issuers(self, period: int, insurance_type: str = "vida",
                               rut: Optional[str] = None) -> int:
-        """Nº de emisores distintos en la renta fija, para poner el 'top N' en contexto."""
-        where = "WHERE period = ? AND insurance_type = ? AND rut_emisor IS NOT NULL"
+        """Nº de emisores distintos en la renta fija, para poner el 'top N' en contexto.
+        Cuenta emisores canónicos, igual que `get_insurer_issuer_exposure`."""
+        from db.cross import canon_join, emisor_canonico_cte, emisor_efectivo
+        where = "WHERE fi.period = ? AND fi.insurance_type = ? AND fi.rut_emisor IS NOT NULL"
         params: list = [int(period), str(insurance_type)]
         if rut:
-            where += " AND rut = ?"
+            where += " AND fi.rut = ?"
             params.append(str(rut))
-        row = self.conn.execute(
-            f"SELECT COUNT(DISTINCT rut_emisor) FROM cmf_insurer_portfolio_fixed_income {where}",
+        row = self.conn.execute(f"""
+            WITH {emisor_canonico_cte(f"SELECT {int(period)} AS period")}
+            SELECT COUNT(DISTINCT {emisor_efectivo()})
+            FROM cmf_insurer_portfolio_fixed_income fi {canon_join()} {where}""",
             params).fetchone()
         return int(row[0]) if row and row[0] is not None else 0
 

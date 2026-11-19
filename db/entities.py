@@ -32,7 +32,8 @@ CONFIG = config_path("entidades.yaml")
 
 # Prioridad cuando un RUT aparece en varias fuentes (menor = manda).
 _PRIORIDAD = {"estado": 0, "banco": 0, "afp": 1, "agf": 2, "aseguradora_vida": 3,
-              "aseguradora_generales": 3, "corredora": 4, "agente_valores": 4, "emisor": 5,
+              "aseguradora_generales": 3, "corredora": 4, "agente_valores": 4,
+              "administradora_mutuos": 4, "emisor": 5,
               "otro": 6}
 
 

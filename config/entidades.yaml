@@ -43,6 +43,13 @@ emisores:
   # Itaú Chile, que algunas carteras siguen informando después de la fusión con Corpbanca.
   "97041000": {nombre: "Itaú Chile (RUT del ex Banco Itaú Chile)", corto: "Itaú (RUT antiguo)",
                tipo: "banco", evidencia: "nemotécnicos BITA…/FNITA…/BCORA…, iguales a 97023000"}
+  # La FECU la nombra solo "SURA"; la razón social completa viene en el B.8 (cartera de inversiones).
+  "96549050": {nombre: "Seguros de Vida SURA S.A.", corto: "SURA Vida", tipo: "aseguradora_vida",
+               evidencia: "usuario 19-nov-2026; 'SEGUROS DE VIDA SURA SA' en cmf_insurer_portfolio_control"}
+  # Mayor originador de mutuos hipotecarios endosables (MHA) de B.1: no reporta EEFF a la CMF.
+  "99514870": {nombre: "MetLife Chile Administradora de Mutuos Hipotecarios S.A.",
+               corto: "MetLife Mutuos Hipotecarios", tipo: "administradora_mutuos",
+               evidencia: "usuario 19-nov-2026; 17.179 mutuos MHA en B.1 202609 (3 compañías)"}
   # PENDIENTE: 77844703 (bonos BTBD… y depósitos FNTBD…). Parece un banco nuevo, pero no está
   # en cmf_bank_statements; confirmar en el registro de la CMF antes de nombrarlo.
 

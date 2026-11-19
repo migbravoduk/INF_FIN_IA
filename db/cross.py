@@ -29,6 +29,7 @@ TIPO_LABEL = {"estado": "Estado", "banco": "Banco", "emisor": "Emisor con EEFF",
               "agf": "Administradora de fondos", "aseguradora_vida": "Seguros de vida",
               "aseguradora_generales": "Seguros generales", "corredora": "Corredora",
               "agente_valores": "Agente de valores", "afp": "AFP",
+              "administradora_mutuos": "Administradora de mutuos hipotecarios",
               "fondo_mutuo": "Fondo mutuo"}
 
 
@@ -45,6 +46,86 @@ def _fx_cte(periods_sql: str) -> str:
             FROM meses m)"""
 
 
+# ---------------------------------------------------------------------------------------
+# Emisor canónico por nemotécnico (B.1).
+#
+# Las compañías no siempre informan el mismo RUT de emisor para un mismo instrumento: en
+# 202609 había 169 nemotécnicos con RUT contradictorio. Son errores de digitación (EuroAmerica
+# informó el bono BCMPC-S con el RUT de Empresas CMPC; las otras 4 tenedoras y los fondos
+# mutuos, con el de Inversiones CMPC, que es la emisora) y RUT de bancos absorbidos que
+# algunas carteras siguen usando. La tabla se conserva tal cual; la corrección se aplica al leer.
+#
+# Regla, por (período, nemotécnico): gana el RUT informado en MÁS posiciones de B.1 (las dos
+# ramas juntas); en empate, el que usa la cartera nacional de fondos mutuos para ese
+# nemotécnico en el mismo mes; si sigue el empate, el menor RUT. Los mutuos hipotecarios
+# (MHA, MHB) y el leasing (CLEAS) quedan fuera: su nemotécnico es propio de cada
+# originador y el RUT informado se respeta.
+# ---------------------------------------------------------------------------------------
+TIPOS_ORIGINADOR = ("MHA", "MHB", "CLEAS")
+_TIPOS_ORIG_SQL = "('MHA', 'MHB', 'CLEAS')"
+
+
+def emisor_canonico_cte(periods_sql: str, rut: str | None = None) -> str:
+    """
+    CTE `canon(period, nemo, rut_canon)` con el emisor canónico de cada nemotécnico de B.1
+    en los períodos de `periods_sql` (una consulta que devuelve la columna `period`).
+
+    `rut` (solo dígitos) restringe el cálculo a los nemotécnicos que alguna compañía informó
+    con ese RUT: el canónico siempre es uno de los RUT informados, así que basta para saber
+    qué posiciones entran o salen de ese emisor, y evita recorrer todo el mes.
+    """
+    filtro = ""
+    if rut:
+        if not str(rut).isdigit():
+            raise ValueError(f"RUT inválido: {rut!r}")
+        filtro = f"""AND upper(trim(fi.nemotecnico)) IN (
+                SELECT upper(trim(x.nemotecnico)) FROM cmf_insurer_portfolio_fixed_income x
+                WHERE x.period IN (SELECT period FROM canon_p) AND ltrim(x.rut_emisor, '0') = '{rut}')"""
+    return f"""
+        canon_p AS ({periods_sql}),
+        canon_n AS (
+            SELECT fi.period, upper(trim(fi.nemotecnico)) AS nemo, ltrim(fi.rut_emisor, '0') AS rut,
+                   COUNT(*) AS n
+            FROM cmf_insurer_portfolio_fixed_income fi
+            WHERE fi.period IN (SELECT period FROM canon_p)
+              AND fi.tipo_instrumento NOT IN {_TIPOS_ORIG_SQL}
+              AND fi.rut_emisor IS NOT NULL AND fi.nemotecnico IS NOT NULL AND trim(fi.nemotecnico) <> ''
+              {filtro}
+            GROUP BY 1, 2, 3),
+        -- Solo hace falta resolver los nemotécnicos con más de un RUT informado: en el resto el
+        -- canónico es el informado (y `emisor_efectivo` cae a él). Mantiene la consulta liviana.
+        canon_m AS (
+            SELECT * FROM canon_n
+            WHERE (period, nemo) IN (SELECT period, nemo FROM canon_n GROUP BY 1, 2 HAVING COUNT(*) > 1)),
+        canon_f AS (
+            SELECT p.period_year * 100 + p.period_month AS period, upper(trim({_FFM_NEMO})) AS nemo,
+                   {_FFM_RUT} AS rut, COUNT(*) AS n_ffm
+            FROM cmf_mutual_fund_portfolio p
+            WHERE p.portfolio_type = 'NACI'
+              AND p.period_year * 100 + p.period_month IN (SELECT DISTINCT period FROM canon_m)
+              AND upper(trim({_FFM_NEMO})) IN (SELECT DISTINCT nemo FROM canon_m)
+            GROUP BY 1, 2, 3),
+        canon AS (
+            SELECT period, nemo, rut AS rut_canon FROM (
+                SELECT n.period, n.nemo, n.rut,
+                       ROW_NUMBER() OVER (PARTITION BY n.period, n.nemo
+                                          ORDER BY n.n DESC, coalesce(f.n_ffm, 0) DESC, n.rut) AS rk
+                FROM canon_m n LEFT JOIN canon_f f USING (period, nemo, rut))
+            WHERE rk = 1)"""
+
+
+def canon_join(alias: str = "fi") -> str:
+    """LEFT JOIN de B.1 (`alias`) contra `canon`; usar con `emisor_efectivo(alias)`."""
+    return (f"LEFT JOIN canon ON canon.period = {alias}.period "
+            f"AND canon.nemo = upper(trim({alias}.nemotecnico)) "
+            f"AND {alias}.tipo_instrumento NOT IN {_TIPOS_ORIG_SQL}")
+
+
+def emisor_efectivo(alias: str = "fi") -> str:
+    """RUT del emisor que se usa al leer B.1: el canónico si existe, si no el informado."""
+    return f"coalesce(canon.rut_canon, ltrim({alias}.rut_emisor, '0'))"
+
+
 def issuer_options(db, limit: int = 600) -> list[dict]:
     """
     Emisores para el selector: los que tienen posiciones en el último período de seguros
@@ -56,9 +137,11 @@ def issuer_options(db, limit: int = 600) -> list[dict]:
     if not per_seg and not per_ffm:
         return []
     rows = db.conn.execute(f"""
-        WITH seg AS (
-            SELECT ltrim(rut_emisor, '0') rut, COUNT(*) n FROM cmf_insurer_portfolio_fixed_income
-            WHERE period = ? AND rut_emisor IS NOT NULL GROUP BY 1),
+        WITH {emisor_canonico_cte(f"SELECT {int(per_seg or 0)} AS period")},
+        seg AS (
+            SELECT {emisor_efectivo()} rut, COUNT(*) n FROM cmf_insurer_portfolio_fixed_income fi
+            {canon_join()}
+            WHERE fi.period = ? AND fi.rut_emisor IS NOT NULL GROUP BY 1),
         ffm AS (
             SELECT {_FFM_RUT} rut, COUNT(*) n FROM cmf_mutual_fund_portfolio p
             WHERE p.portfolio_type = 'NACI' AND p.period_year * 100 + p.period_month = ?
@@ -95,6 +178,8 @@ def issuer_holdings(db, rut: str, n_periods: int = 13) -> dict:
     Devuelve {rut, nombre, tipo, periodos, seguros: {serie, por_tenedor}, ffmm: {...}}.
     """
     rut = str(rut).strip().replace(".", "").split("-")[0].lstrip("0")
+    if not rut.isdigit():
+        return {"rut": rut, "nombre": None, "periodos": [], "seguros": None, "ffmm": None}
     ent = db.conn.execute("""SELECT coalesce(nombre_corto, nombre_canonico), nombre_canonico, tipo
                              FROM dim_entidad WHERE rut = ?""", [rut]).fetchone()
     fondo = db.conn.execute("""SELECT arg_max(fund_name, date), arg_max(agf_name, date)
@@ -119,23 +204,57 @@ def issuer_holdings(db, rut: str, n_periods: int = 13) -> dict:
     meses = f"SELECT unnest([{lista}]) AS period"
 
     # --- Seguros: por compañía y mes ---------------------------------------------------
-    seg = db.conn.execute(f"""
+    # Posiciones donde este RUT es el emisor informado o el canónico (F3 del plan del 19-nov):
+    # `efe` es el que se usa; `inf` es lo que escribió la compañía.
+    seg_all = db.conn.execute(f"""
         WITH {_fx_cte(meses)},
+        {emisor_canonico_cte(meses, rut=rut)},
         b AS (
             SELECT fi.period, fi.rut AS tenedor, fi.insurance_type AS ramo,
-                   fi.unidad_monetaria AS mon,
+                   fi.unidad_monetaria AS mon, upper(trim(fi.nemotecnico)) AS nemo,
+                   ltrim(fi.rut_emisor, '0') AS inf, {emisor_efectivo()} AS efe,
                    CASE WHEN coalesce(fi.valor_nominal_vig, 0) > 0 THEN fi.valor_nominal_vig
                         ELSE fi.valor_nominal END AS nominal
             FROM cmf_insurer_portfolio_fixed_income fi
-            WHERE ltrim(fi.rut_emisor, '0') = ? AND fi.period IN ({lista}))
-        SELECT b.period, b.tenedor, any_value(b.ramo) ramo, COUNT(*) pos,
-               SUM(CASE b.mon WHEN 'UF' THEN b.nominal * fx.uf
-                              WHEN '$$' THEN b.nominal
-                              WHEN 'PROM' THEN b.nominal * fx.usd END) / 1e6 AS mm,
-               COUNT(*) FILTER (WHERE b.mon NOT IN ('UF', '$$', 'PROM')) AS sin_fx
+            {canon_join()}
+            WHERE fi.period IN ({lista})
+              AND (ltrim(fi.rut_emisor, '0') = ? OR canon.rut_canon = ?))
+        SELECT b.period, b.tenedor, b.ramo, b.mon, b.nemo, b.inf, b.efe,
+               CASE b.mon WHEN 'UF' THEN b.nominal * fx.uf
+                          WHEN '$$' THEN b.nominal
+                          WHEN 'PROM' THEN b.nominal * fx.usd END / 1e6 AS mm
         FROM b JOIN fx USING (period)
-        GROUP BY 1, 2 ORDER BY 1, 2
-    """, [rut]).fetchdf()
+    """, [rut, rut]).fetchdf()
+    seg_efe = seg_all[seg_all.efe == rut]
+    if seg_efe.empty:
+        seg = seg_efe.assign(pos=0, sin_fx=0)[["period", "tenedor", "ramo", "pos", "mm", "sin_fx"]]
+    else:
+        seg = (seg_efe.assign(sin_fx=~seg_efe.mon.isin(["UF", "$$", "PROM"]))
+               .groupby(["period", "tenedor"], as_index=False)
+               .agg(ramo=("ramo", "first"), pos=("mon", "size"), mm=("mm", "sum"), sin_fx=("sin_fx", "sum"))
+               .sort_values(["period", "tenedor"]))
+
+    # Reasignaciones del último mes de seguros: lo que las compañías informaron con otro RUT y la
+    # regla atribuye a este emisor (entran), y lo informado con este RUT que va a otro (salen).
+    reasignados = None
+    if not seg_all.empty:
+        ult_seg = int(seg_all.period.max())
+        u = seg_all[seg_all.period == ult_seg]
+        ent_ = u[(u.efe == rut) & (u.inf != rut)]
+        sal_ = u[(u.inf == rut) & (u.efe != rut)]
+        if len(ent_) or len(sal_):
+            destinos = sal_.groupby("efe").mm.sum().sort_values(ascending=False)
+            nombres_d = dict(db.conn.execute(
+                "SELECT rut, coalesce(nombre_corto, nombre_canonico) FROM dim_entidad").fetchall())
+            reasignados = {
+                "period": ult_seg,
+                "entran_pos": int(len(ent_)), "entran_mm": float(ent_.mm.sum()),
+                "entran_nemos": sorted(ent_.nemo.unique().tolist())[:8],
+                "salen_pos": int(len(sal_)), "salen_mm": float(sal_.mm.sum()),
+                "salen_nemos": sorted(sal_.nemo.unique().tolist())[:8],
+                "salen_a": [{"rut": r, "nombre": nombres_d.get(r), "mm": float(v)}
+                            for r, v in destinos.head(3).items()],
+            }
 
     # --- Fondos mutuos: por fondo y mes ----------------------------------------------------
     ffm = db.conn.execute(f"""
@@ -225,7 +344,8 @@ def issuer_holdings(db, rut: str, n_periods: int = 13) -> dict:
     return {"rut": rut, "nombre": nombre, "razon": razon, "tipo": tipo,
             "tipo_label": TIPO_LABEL.get(tipo or "", tipo),
             "periodos": periodos, "seguros": bloque(seg, "seguros"), "ffmm": bloque(ffm, "ffmm"),
-            "afp": bloque(afp, "afp", afp_per) if afp is not None else None, "afp_glosas": glosas}
+            "afp": bloque(afp, "afp", afp_per) if afp is not None else None, "afp_glosas": glosas,
+            "reasignados": reasignados}
 
 
 def common_issuers(db, limit: int = 40) -> dict:
@@ -244,8 +364,9 @@ def common_issuers(db, limit: int = 40) -> dict:
     # dos filas iguales y el cruce duplicaría montos y posiciones.
     rows = db.conn.execute(f"""
         WITH {_fx_cte("SELECT DISTINCT unnest([?, ?]) AS period")},
+        {emisor_canonico_cte(f"SELECT {int(per_seg)} AS period")},
         seg AS (
-            SELECT upper(trim(fi.nemotecnico)) nemo, ltrim(fi.rut_emisor, '0') rut,
+            SELECT upper(trim(fi.nemotecnico)) nemo, {emisor_efectivo()} rut,
                    COUNT(*) pos_seg, COUNT(DISTINCT fi.rut) cias,
                    SUM(CASE fi.unidad_monetaria WHEN 'UF' THEN nom * fx.uf WHEN '$$' THEN nom
                                                 WHEN 'PROM' THEN nom * fx.usd END) / 1e6 AS mm_seg
@@ -253,6 +374,7 @@ def common_issuers(db, limit: int = 40) -> dict:
                                  ELSE valor_nominal END AS nom
                   FROM cmf_insurer_portfolio_fixed_income) fi
             JOIN fx ON fx.period = fi.period
+            {canon_join()}
             WHERE fi.period = ? AND fi.nemotecnico IS NOT NULL AND trim(fi.nemotecnico) <> ''
             GROUP BY 1, 2),
         cur AS (SELECT fund_run, arg_max(currency, date) currency
