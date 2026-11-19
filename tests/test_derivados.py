@@ -122,3 +122,51 @@ def test_alertas_agrupan_por_afp():
     swaps = [a for a in out if "swaps" in a["texto"]]
     assert len(swaps) == 1 and swaps[0]["nivel"] == "alto" and "A, C" in swaps[0]["texto"]
     assert any("105%" in a["texto"] for a in out)          # sobrecobertura del Fondo E
+
+
+# --- Cobertura cambiaria de seguros, por monto (plan 19-nov, F7) ---------------------------
+
+def test_cobertura_pct_formula():
+    from db.derivados_seguros import cobertura_pct
+    assert cobertura_pct(50, 100) == 50.0
+    assert cobertura_pct(120, 100) == 120.0                  # sobre 100% = posición, no cobertura
+    assert cobertura_pct(10, 0.5) is None                    # denominador ~0: no se calcula
+    assert cobertura_pct(10, None) is None
+
+
+def test_cobertura_seguros_por_monto(real_db_readonly):
+    from db.derivados_global import coberturas_seguros
+    seg = coberturas_seguros(real_db_readonly, top=500)
+    if not seg:
+        pytest.skip("sin B.7")
+    t = seg["total"]
+    assert 0 <= t["cobertura"] <= 300                        # sector: en torno a 70–100%
+    assert abs(t["activos_me_usd"] - (t["ext_b8_usd"] + t["me_b1_usd"])) < 1e-6 * t["activos_me_usd"]
+    assert t["cbe_usd"] <= t["venta_neta_usd"] + 1e-6        # la parte CBE no puede exceder la venta total
+    assert t["pct_excluido"] is None or 0 <= t["pct_excluido"] <= 100
+    for f in seg["filas"]:
+        assert f["activos_me_usd"] >= f["ext_b8_usd"] - 1e-9  # el denominador nuevo solo agrega
+        assert "ext_usd" not in f                             # renombrado: activos_me_usd
+
+
+def test_resumen_seguros_dos_medidas_con_nombre_propio(real_db_readonly):
+    from db.derivados_seguros import resumen_seguros
+    r = resumen_seguros(real_db_readonly)
+    if not r:
+        pytest.skip("sin B.7")
+    c = r["companias"][0]
+    assert "pct_cobertura" not in c                           # el nombre ambiguo ya no existe
+    assert 0 <= c["pct_contratos_cobertura"] <= 100
+    assert c["pct_cobertura_monto"] is None or c["pct_cobertura_monto"] >= 0
+    assert r["cobertura_total"]["cobertura"] is not None
+
+
+def test_paginas_de_derivados_muestran_las_medidas(real_db_readonly):
+    from fastapi.testclient import TestClient
+    from api.main import app
+    c = TestClient(app)
+    g = c.get("/derivados")
+    assert g.status_code == 200 and "% cubierto (monto)" in g.text
+    i = c.get("/inversion-institucional/derivados")
+    assert i.status_code == 200
+    assert "% cubierto (monto)" in i.text and "% contratos declarados de cobertura" in i.text

@@ -223,23 +223,35 @@ la inflación o las tasas?, ¿dónde se concentra?</p>
 {% if seg %}
 <h3 class="sub-head">Compañías de seguros {{ corte(seg.ultimo, "CMF, archivos B.7 y B.8") }}</h3>
 <p class="lectura lectura--sm">
-    Las compañías tienen {{ (seg.total.ext_usd / 1e3)|es(1) }} mil MMUSD invertidos afuera y una posición
-    corta en moneda extranjera vía derivados de {{ (seg.total.me_usd / 1e3)|es(1) }} mil: cubren cerca
-    del <strong>{{ pct(seg.total.cobertura) }}</strong>. Es un mercado concentrado: las tres mayores
+    Las compañías tienen {{ (seg.total.activos_me_usd / 1e3)|es(1) }} mil MMUSD en activos en moneda extranjera
+    y una venta neta de moneda extranjera a plazo de {{ (seg.total.venta_neta_usd / 1e3)|es(1) }} mil: cubren cerca
+    del <strong>{{ pct(seg.total.cobertura) }}</strong>. De esa venta, {{ (seg.total.cbe_usd / 1e3)|es(1) }} mil
+    vienen de contratos con objetivo CBE (cobertura explícita). Es un mercado concentrado: las tres mayores
     suman el {{ seg.top3|es(0) }}% del nocional. La mayoría de los contratos declara un objetivo
-    "1512", que la CMF no documenta en el manual; "CBE" es cobertura explícita.
+    "1512", que la CMF no documenta en el manual.
 </p>
+{% call ui.metodo("Cómo se mide la cobertura de las compañías") %}
+<p><strong>% cubierto (monto) = venta neta de moneda extranjera a plazo ÷ activos en moneda extranjera.</strong>
+<em>Numerador:</em> forwards y swaps válidos del archivo B.7, en USD equivalentes (neto = patas largas − cortas).
+<em>Denominador:</em> las inversiones en el extranjero del archivo B.8 más la renta fija en dólares de empresas
+chilenas del B.1 (bonos emitidos afuera, que el B.8 clasifica como nacionales; los euros no se suman).
+<em>Se excluye:</em> los contratos cuyas patas no calzan con la UF o el dólar del cierre
+({{ seg.total.pct_excluido|es(2) if seg.total.pct_excluido is not none else '—' }}% del nocional bruto de forwards
+y swaps este mes). Es una medida por monto; no la confundas con el % de contratos que declaran fines de cobertura
+(<a href="/inversion-institucional/derivados">Inversión institucional · derivados</a>). Sobre 100% es una posición a
+que el dólar baje, no una cobertura.</p>
+{% endcall %}
 <div class="tbl-wrap">
 <table class="tbl" aria-label="Compañías de seguros: derivados y cobertura">
     <thead><tr><th>Compañía</th><th class="num">Nocional (MMUSD)</th><th class="num">% del mercado</th>
-        <th class="num">Neto moneda ext.</th><th class="num">Inversión extranjera</th>
-        <th class="num">Cobertura</th><th class="num">Valor razonable</th>
+        <th class="num">Neto moneda ext.</th><th class="num">Activos en moneda ext.</th>
+        <th class="num">% cubierto (monto)</th><th class="num">Valor razonable</th>
         <th class="num">Objetivo CBE / INV / 1512</th><th class="num">Contraparte exterior</th></tr></thead>
     <tbody>
     {% for f in seg.filas %}
     <tr><td class="ent">{{ f.nombre|nombre }}<span class="sub">{{ f.ramo }} · {{ f.contratos }} contratos · {{ f.contrapartes }} contrapartes</span></td>
         <td class="num">{{ mm(f.bruto_mmusd) }}</td><td class="num">{{ pct(f.peso, 1) }}</td>
-        <td class="num">{{ signo(f.me_usd) }}</td><td class="num">{{ mm(f.ext_usd) }}</td>
+        <td class="num">{{ signo(f.me_usd) }}</td><td class="num">{{ mm(f.activos_me_usd) }}</td>
         <td class="num"><b class="{{ 'neg' if f.cobertura and f.cobertura > 120 }}">{{ pct(f.cobertura) }}</b></td>
         <td class="num">{{ signo(f.vr_mmusd, 1) }}</td>
         <td class="num">{{ f.pct_cbe|es(0) }} / {{ f.pct_inv|es(0) }} / {{ f.pct_otro|es(0) }}%</td>
@@ -248,8 +260,8 @@ la inflación o las tasas?, ¿dónde se concentra?</p>
     </tbody>
 </table>
 </div>
-<p class="nota">Fuente: CMF, archivos B.7 (derivados, contrato a contrato) y B.8 (cartera por código,
-    para la inversión extranjera). Neto en moneda extranjera = patas en moneda extranjera largas −
+<p class="nota">Fuente: CMF, archivos B.7 (derivados, contrato a contrato), B.8 (cartera por código,
+    para la inversión extranjera) y B.1 (renta fija en dólares). Neto en moneda extranjera = patas en moneda extranjera largas −
     cortas, en USD equivalentes. Se muestran las {{ seg.filas|length }} mayores de {{ seg.n }}.</p>
 {% endif %}
 

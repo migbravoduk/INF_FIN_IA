@@ -217,15 +217,26 @@ precio implícito no calza con la UF o el dólar del cierre y queda fuera de las
 <div class="tbl-wrap"><table class="tbl" aria-label="Compañías de seguros con derivados">
     <thead><tr><th>Compañía</th><th class="num">Contratos</th><th class="num">Swaps / fwd / otros</th>
         <th class="num">Nocional (MMM$)</th><th class="num">Neto ME (MMUSD)</th>
-        <th class="num">Valor razonable (MMM$)</th><th class="num">% cobertura</th><th class="num">% contraparte exterior</th></tr></thead>
+        <th class="num">Valor razonable (MMM$)</th><th class="num">% cubierto (monto)</th>
+        <th class="num">% contratos declarados de cobertura</th><th class="num">% contraparte exterior</th></tr></thead>
     <tbody>{% for c in seg.companias %}<tr>
         <td class="ent">{{ c.nombre|nombre }}<span class="sub">{{ c.ramo }}</span></td>
         <td class="num">{{ c.contratos|es(0) }}</td><td class="num">{{ c.swaps }} / {{ c.forwards }} / {{ c.otros }}</td>
         <td class="num">{{ (c.bruto_mm / 1000)|es(1) }}</td>
         <td class="{{ 'neg' if c.me_usd < 0 else 'pos' }} num">{{ c.me_usd|es(0) }}</td>
         <td class="{{ 'neg' if c.vr_mm < 0 else 'pos' }} num">{{ (c.vr_mm / 1000)|es(1) }}</td>
-        <td class="num">{{ c.pct_cobertura|es(0) }}%</td><td class="num">{{ c.pct_exterior|es(0) }}%</td></tr>{% endfor %}</tbody>
+        <td class="num">{{ (c.pct_cobertura_monto|es(0) ~ '%') if c.pct_cobertura_monto is not none else '—' }}</td>
+        <td class="num">{{ c.pct_contratos_cobertura|es(0) }}%</td><td class="num">{{ c.pct_exterior|es(0) }}%</td></tr>{% endfor %}</tbody>
 </table></div>
+{% call ui.metodo("Dos medidas de cobertura") %}
+<p><strong>% cubierto (monto)</strong> = venta neta de moneda extranjera a plazo (forwards y swaps válidos) ÷ activos en moneda
+extranjera (inversión en el extranjero del B.8 más la renta fija en dólares de empresas chilenas del B.1); es la medida de
+fondo y la misma de <a href="/derivados">Derivados</a>.
+{% if seg.cobertura_total and seg.cobertura_total.cobertura is not none %}Para todo el mercado de seguros: {{ seg.cobertura_total.cobertura|es(0) }}%
+({{ seg.cobertura_total.pct_excluido|es(2) if seg.cobertura_total.pct_excluido is not none else '—' }}% del nocional bruto de forwards y swaps queda fuera por patas incoherentes).{% endif %}
+<strong>% contratos declarados de cobertura</strong> = porcentaje del <em>número</em> de contratos cuyo objetivo informado no es
+inversión (INV); no pondera por monto, así que un contrato chico pesa lo mismo que uno enorme.</p>
+{% endcall %}
 <p class="nota">Contrapartes por nocional: {% for c in seg.contrapartes %}{{ c.tipo }} {{ c.pct|es(0) }}%{{ ' · ' if not loop.last }}{% endfor %}.</p>
 {% else %}<p class="vacio">Aún sin datos del archivo B.7 (<code>main.py backfill-derivados-seguros</code>).</p>{% endif %}
 

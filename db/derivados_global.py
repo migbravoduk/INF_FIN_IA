@@ -300,23 +300,18 @@ def coberturas_afp(db) -> dict:
 
 
 def coberturas_seguros(db, top: int = 12) -> dict:
-    """Compañía (B.7 + B.8): posición neta en moneda extranjera vía derivados contra su
-    inversión en el extranjero, y para qué declara usarlos."""
-    from api.insurer_glossary import clean_company_name, describe
-    from db.derivados_seguros import _frame as frame_seg
+    """Compañía (B.7 + B.8 + B.1): cobertura cambiaria por MONTO (`db.derivados_seguros.cobertura_cambiaria`:
+    venta neta a plazo ÷ activos en moneda extranjera) y para qué declara usar los derivados."""
+    from api.insurer_glossary import clean_company_name
+    from db.derivados_seguros import cobertura_cambiaria, _frame as frame_seg
     ult = db.conn.execute("SELECT MAX(period) FROM cmf_insurer_derivatives").fetchone()[0]
     if not ult:
         return {}
     d = frame_seg(db, int(ult))
     d = d[d.period == ult]
+    cob = cobertura_cambiaria(db, d)
     d = d[d.valido | ~d.tipo.isin(["forward", "swap"])]
     usd = float(d.usd.iloc[0]) if len(d) else None
-    ctrl = db.conn.execute("""SELECT rut, insurance_type, investment_code, valor_final
-                              FROM cmf_insurer_portfolio_control WHERE period = ?""", [int(ult)]).fetchdf()
-    ctrl["geo"] = ctrl.investment_code.map(lambda c: describe(c)["geo"])
-    ext = (ctrl[ctrl.geo == "extranjero"].groupby(["rut", "insurance_type"]).valor_final.sum() * 1e3 / usd / 1e6
-           if usd else pd.Series(dtype=float))
-    cart = ctrl.groupby(["rut", "insurance_type"]).valor_final.sum() * 1e3 / usd / 1e6 if usd else pd.Series(dtype=float)
     nombres = dict(db.conn.execute("""SELECT rut, arg_max(company_name, period) FROM cmf_insurer_portfolio_control
                                       WHERE company_name <> '' GROUP BY 1""").fetchall())
     g = (d.groupby(["rut", "insurance_type"])
@@ -328,14 +323,24 @@ def coberturas_seguros(db, top: int = 12) -> dict:
                exterior=("tipo_contraparte", lambda s: float(s.isin(["04", "05", "06"]).mean() * 100)),
                ncp=("contraparte", "nunique"))
           .reset_index())
+    t = cob["tabla"]
     filas = []
     for r in g.itertuples():
         k = (r.rut, r.insurance_type)
-        e, c = float(ext.get(k, 0.0)), float(cart.get(k, 0.0))
+        c = t.loc[k] if k in t.index else None
         filas.append({"nombre": clean_company_name(nombres.get(r.rut, ""), r.rut), "ramo": r.insurance_type,
                       "contratos": int(r.contratos), "bruto_mmusd": float(r.bruto_m) * 1e3 / usd / 1e6 if usd else None,
-                      "me_usd": float(r.me_usd), "ext_usd": e, "cartera_usd": c,
-                      "cobertura": (-float(r.me_usd) / e * 100) if e > 1 else None,
+                      "me_usd": float(r.me_usd),
+                      "venta_neta_usd": float(c.venta_neta_usd) if c is not None else 0.0,
+                      "cbe_usd": float(c.cbe_usd) if c is not None else 0.0,
+                      "ext_b8_usd": float(c.ext_b8_usd) if c is not None else 0.0,
+                      "me_b1_usd": float(c.me_b1_usd) if c is not None else 0.0,
+                      "activos_me_usd": float(c.activos_me_usd) if c is not None else 0.0,
+                      "cartera_usd": float(c.cartera_usd) if c is not None else 0.0,
+                      "cobertura": (None if c is None or c.cobertura is None or c.cobertura != c.cobertura
+                                    else float(c.cobertura)),
+                      "pct_excluido": (None if c is None or c.pct_excluido != c.pct_excluido
+                                       else float(c.pct_excluido)),
                       "vr_mmusd": float(r.vr_m) * 1e3 / usd / 1e6 if usd else None,
                       "pct_cbe": r.cbe, "pct_inv": r.inv, "pct_otro": r.otro,
                       "pct_exterior": r.exterior, "contrapartes": int(r.ncp)})
@@ -344,10 +349,8 @@ def coberturas_seguros(db, top: int = 12) -> dict:
     for f in filas:
         f["peso"] = (f["bruto_mmusd"] or 0) / tot_bruto * 100 if tot_bruto else None
     tot_me = sum(f["me_usd"] for f in filas)
-    tot_ext = sum(f["ext_usd"] for f in filas)
-    return {"ultimo": f"{ult // 100}-{ult % 100:02d}", "filas": filas[:top], "n": len(filas),
-            "total": {"me_usd": tot_me, "ext_usd": tot_ext, "bruto": tot_bruto,
-                      "cobertura": -tot_me / tot_ext * 100 if tot_ext else None},
+    total = {**cob["total"], "me_usd": tot_me, "bruto": tot_bruto}
+    return {"ultimo": f"{ult // 100}-{ult % 100:02d}", "filas": filas[:top], "n": len(filas), "total": total,
             "top3": sum(f["peso"] or 0 for f in filas[:3])}
 
 
@@ -434,7 +437,7 @@ def alertas(ind: dict, afp: dict, seg: dict, ffm: dict) -> list[dict]:
     for f in (seg or {}).get("filas", []):
         if f["cobertura"] is not None and f["cobertura"] > 120:
             out.append({"nivel": "medio", "entidad": f["nombre"],
-                        "texto": f"posición corta en moneda extranjera equivalente al {f['cobertura']:.0f}% de su inversión en el exterior"})
+                        "texto": f"vende a plazo moneda extranjera por el {f['cobertura']:.0f}% de sus activos en moneda extranjera: el exceso es una posición a que el dólar baje, no una cobertura"})
     for f in (ffm or {}).get("apalancados", []):
         out.append({"nivel": "medio", "entidad": f"Fondo mutuo {f['fondo']}",
                     "texto": f"nocional de derivados {f['veces']:.1f} veces su patrimonio"})
