@@ -4,45 +4,21 @@
 {% block title %}Emisores en común · INF_FIN_IA{% endblock %}
 
 {% block content %}
-{{ ui.page_head("Emisores en común: aseguradoras y fondos mutuos",
-    "Instrumentos que están a la vez en la renta fija de las compañías de seguros y en la cartera de los fondos mutuos, cruzados por nemotécnico y agrupados por emisor.",
+{{ ui.page_head("Emisores en común: seguros, fondos mutuos y AFP",
+    "Emisores que tienen inversión a la vez de varios inversionistas institucionales, cruzados por RUT del emisor y con el monto expuesto en cada fuente.",
     migas=[("Inversión institucional", "/inversion-institucional")]) }}
-<p class="nota mt-0">Períodos: seguros {{ per_seg or '—' }}; fondos mutuos {{ per_ffm or '—' }}.</p>
 
-{% call ui.metodo("Cómo leer los montos") %}
-<p>Los montos son MM$ expuestos al emisor en esos instrumentos en común.
-Seguros: valor nominal vigente (valor par, no de mercado) pasado a pesos con la UF y el dólar
-del cierre; fondos mutuos: valorización de mercado (los fondos en dólares, al dólar del mes).
-Las dos fuentes miden distinto, por eso se muestran separadas y su suma es referencial. Las AFP
-no entran: la Superintendencia publica su cartera agregada por categoría, sin instrumento.</p>
-{% endcall %}
+<form class="filtros" hx-get="/inversion-institucional/emisores/tabla" hx-target="#emisores-tabla"
+      hx-trigger="change" hx-swap="innerHTML">
+    <label>Presente en
+        <select name="min_fuentes">
+            <option value="2" {{ "selected" if min_fuentes != 3 }}>2 o más fuentes</option>
+            <option value="3" {{ "selected" if min_fuentes == 3 }}>las 3 fuentes</option>
+        </select>
+    </label>
+</form>
 
-{% if not rows %}
-{{ ui.vacio("Sin instrumentos en común para los períodos cargados.") }}
-{% else %}
-<div class="tbl-wrap tbl-wrap--alto">
-<table class="tbl tbl--fija-1" aria-label="Emisores en común entre aseguradoras y fondos mutuos">
-    <thead><tr>
-        <th>Emisor</th><th class="num">Instrumentos en común</th>
-        <th class="num">Compañías de seguros</th><th class="num">Fondos mutuos</th>
-        <th class="num">Seguros (MM$)</th><th class="num">Fondos mutuos (MM$)</th>
-        <th class="num">Total (MM$)</th>
-    </tr></thead>
-    <tbody>
-    {% for r in rows %}
-    <tr>
-        <td class="ent"><a href="/inversion-institucional/emisor?rut={{ r.rut }}">{{ (r.emisor or 'Sin nombre en las fuentes')|nombre }}</a><span class="sub">RUT {{ r.rut }}{% if r.tipo %} · {{ r.tipo|replace('_', ' ') }}{% endif %}</span></td>
-        <td class="num">{{ r.instrumentos|num }}</td>
-        <td class="num">{{ r.cias_seg|num }}</td>
-        <td class="num">{{ r.fondos_ffm|num }}</td>
-        <td class="num">{{ r.mm_seg|num }}</td>
-        <td class="num">{{ r.mm_ffm|num }}</td>
-        <td class="num fuerte">{{ r.mm_total|num }}</td>
-    </tr>
-    {% endfor %}
-    </tbody>
-</table>
+<div id="emisores-tabla">
+    {% include "partials/institucional_emisores_tabla.html" %}
 </div>
-<p class="nota">Las compañías y fondos se suman por instrumento: una compañía con dos bonos del mismo emisor cuenta dos veces.</p>
-{% endif %}
 {% endblock %}

@@ -522,61 +522,108 @@ def issuer_holdings(db, rut: str, n_periods: int = 13) -> dict:
             "reasignados": reasignados, "absorbidos": eq[1:], "sucesor": fusiones().get(rut)}
 
 
-def common_issuers(db, limit: int = 40) -> dict:
+def common_issuers(db, limit: int = 40, min_fuentes: int = 2) -> dict:
     """
-    Emisores con instrumentos a la vez en seguros (B.1) y fondos mutuos (NACI), con el monto
-    expuesto en esos instrumentos, en MM$ al cierre de cada fuente:
-    seguros = nominal vigente a pesos con la UF y el dólar del cierre (valor par, no de mercado);
-    fondos = valorización de mercado, los fondos en dólares a pesos con el dólar del mes.
-    Instrumentos de seguros en otras monedas sin tipo de cambio (euro) no se suman.
+    Emisores presentes en varias fuentes institucionales, cruzados por RUT del emisor, con el monto
+    expuesto en cada una (MM$ al cierre de su último mes):
+
+    - seguros (B.1, renta fija): valor par a pesos (`monto_par_sql`) con el emisor canónico del
+      nemotécnico y las fusiones. Se excluyen los mutuos hipotecarios y el leasing (`MHA`, `MHB`,
+      `CLEAS`): sus «emisores» son originadores, no emisores de mercado;
+    - fondos mutuos (cartera nacional): valorización de mercado, los fondos en dólares a pesos con
+      el dólar del mes;
+    - AFP (cartera desagregada de la SP, por emisor): valor de mercado. La SP nombra al emisor sin
+      RUT; se cruza por nombre (`mapa_emisores_sp`).
+
+    `min_fuentes` (2 o 3): cuántas de las tres fuentes deben tener al emisor. Los tenedores se
+    cuentan DISTINTOS (compañías, fondos, AFP), no por instrumento. Cada fuente cierra en su propio
+    mes: la SP llega con ~4 meses de rezago. Los montos no son sumables en rigor (valor par frente
+    a valor de mercado); el total es referencial.
     """
+    min_fuentes = 3 if int(min_fuentes) >= 3 else 2
     per_seg = db.conn.execute("SELECT MAX(period) FROM cmf_insurer_portfolio_fixed_income").fetchone()[0]
-    per_ffm = db.conn.execute("SELECT MAX(period) FROM v_mutual_fund_holdings").fetchone()[0]
-    if not per_seg or not per_ffm:
-        return {"rows": [], "per_seg": per_seg, "per_ffm": per_ffm}
-    # DISTINCT: seguros y fondos suelen cerrar el mismo mes; con el período repetido, `fx` tendría
-    # dos filas iguales y el cruce duplicaría montos y posiciones.
-    rows = db.conn.execute(f"""
-        WITH {_fx_cte("SELECT DISTINCT unnest([?, ?]) AS period")},
-        {emisor_canonico_cte(f"SELECT {int(per_seg)} AS period")},
-        seg AS (
-            SELECT upper(trim(fi.nemotecnico)) nemo, {emisor_efectivo()} rut,
-                   COUNT(*) pos_seg, COUNT(DISTINCT fi.rut) cias,
-                   SUM({monto_par_sql()}) AS mm_seg
+    per_ffm = db.conn.execute("SELECT MAX(period_year * 100 + period_month) FROM cmf_mutual_fund_portfolio "
+                              "WHERE portfolio_type = 'NACI'").fetchone()[0]
+    per_afp = db.conn.execute("SELECT MAX(period) FROM sp_cartera_detalle WHERE tabla = 'emisor_nac'").fetchone()[0]
+    base = {"rows": [], "per_seg": per_seg, "per_ffm": per_ffm, "per_afp": per_afp,
+            "min_fuentes": min_fuentes, "cobertura_afp": None, "n_emisores": 0}
+    if sum(1 for x in (per_seg, per_ffm, per_afp) if x) < 2:
+        return base
+
+    seg, ffm, afp = {}, {}, {}
+    if per_seg:
+        per = f"SELECT {int(per_seg)} AS period"
+        for rut, pos, cias, mm in db.conn.execute(f"""
+            WITH {_fx_cte(per)},
+            {emisor_canonico_cte(per)}
+            SELECT {emisor_efectivo()} AS rut, COUNT(*) AS pos, COUNT(DISTINCT fi.rut) AS cias,
+                   SUM({monto_par_sql()}) AS mm
             FROM cmf_insurer_portfolio_fixed_income fi
             JOIN fx ON fx.period = fi.period
             {canon_join()}
-            WHERE fi.period = ? AND fi.nemotecnico IS NOT NULL AND trim(fi.nemotecnico) <> ''
-            GROUP BY 1, 2),
-        cur AS (SELECT fund_run, arg_max(currency, date) currency
-                FROM cmf_mutual_fund_quota_values GROUP BY 1),
-        ffm AS (
-            SELECT upper(trim({_FFM_NEMO})) nemo, COUNT(*) pos_ffm, COUNT(DISTINCT p.fund_run) fondos,
-                   SUM({_FFM_VAL} / 1e3 * CASE WHEN cur.currency = 'DOLAR' THEN fx.usd ELSE 1 END) AS mm_ffm
+            WHERE fi.period = ? AND fi.rut_emisor IS NOT NULL
+              AND fi.tipo_instrumento NOT IN {_TIPOS_ORIG_SQL}
+            GROUP BY 1""", [int(per_seg)]).fetchall():
+            seg[rut] = {"pos": int(pos), "tenedores": int(cias), "mm": None if mm is None else float(mm)}
+    if per_ffm:
+        per = f"SELECT {int(per_ffm)} AS period"
+        for rut, pos, fondos, mm in db.conn.execute(f"""
+            WITH {_fx_cte(per)},
+            cur AS (SELECT fund_run, arg_max(currency, date) currency
+                    FROM cmf_mutual_fund_quota_values GROUP BY 1)
+            SELECT {fusion_sql(_FFM_RUT)} AS rut, COUNT(*) AS pos, COUNT(DISTINCT p.fund_run) AS fondos,
+                   SUM({_FFM_VAL} / 1e3 * CASE WHEN cur.currency = 'DOLAR' THEN fx.usd ELSE 1 END) AS mm
             FROM cmf_mutual_fund_portfolio p
             JOIN fx ON fx.period = p.period_year * 100 + p.period_month
             LEFT JOIN cur ON cur.fund_run = p.fund_run
             WHERE p.period_year * 100 + p.period_month = ? AND p.portfolio_type = 'NACI'
-              AND {_FFM_NEMO} IS NOT NULL
-            GROUP BY 1)
-        SELECT seg.rut, coalesce(e.nombre_corto, e.nombre_canonico) AS emisor, e.tipo,
-               COUNT(DISTINCT seg.nemo) instrumentos, SUM(seg.cias) cias_seg, SUM(ffm.fondos) fondos_ffm,
-               SUM(seg.pos_seg) pos_seg, SUM(ffm.pos_ffm) pos_ffm,
-               SUM(seg.mm_seg) mm_seg, SUM(ffm.mm_ffm) mm_ffm
-        FROM seg JOIN ffm USING (nemo)
-        LEFT JOIN dim_entidad e ON e.rut = seg.rut
-        GROUP BY 1, 2, 3
-        ORDER BY coalesce(SUM(seg.mm_seg), 0) + coalesce(SUM(ffm.mm_ffm), 0) DESC
-        LIMIT ?
-    """, [per_seg, per_ffm, per_seg, per_ffm, limit]).fetchall()
-    cols = ["rut", "emisor", "tipo", "instrumentos", "cias_seg", "fondos_ffm", "pos_seg", "pos_ffm",
-            "mm_seg", "mm_ffm"]
+              AND {_FFM_RUT} IS NOT NULL AND {_FFM_RUT} NOT IN ('', '0')
+            GROUP BY 1""", [int(per_ffm)]).fetchall():
+            ffm[rut] = {"pos": int(pos), "tenedores": int(fondos), "mm": None if mm is None else float(mm)}
+    cobertura = None
+    if per_afp:
+        mapa = mapa_emisores_sp(db)
+        filas = db.conn.execute("""
+            SELECT glosa, afp, SUM(valor) FROM sp_cartera_detalle
+            WHERE tabla = 'emisor_nac' AND period = ? AND columna = 'total' AND metrica = 'monto_pesos'
+              AND afp <> 'TOTAL' GROUP BY 1, 2""", [int(per_afp)]).fetchall()
+        tot_monto = sum(float(v or 0) for _, _, v in filas)
+        mapeado = 0.0
+        glosas_tot, glosas_ok = set(), set()
+        afps: dict = {}
+        for glosa, afp_n, v in filas:
+            glosas_tot.add(glosa)
+            rut = mapa.get(glosa)
+            if not rut:
+                continue
+            glosas_ok.add(glosa)
+            mapeado += float(v or 0)
+            d = afp.setdefault(rut, {"pos": 0, "mm": 0.0})
+            d["mm"] += float(v or 0)
+            afps.setdefault(rut, set()).add(afp_n)
+        for rut, d in afp.items():
+            d["tenedores"] = len(afps[rut])
+        cobertura = {"emisores_total": len(glosas_tot), "emisores_ok": len(glosas_ok),
+                     "pct_monto": (mapeado / tot_monto * 100) if tot_monto else None}
+
+    nombres = {r[0]: (r[1], r[2]) for r in db.conn.execute(
+        "SELECT rut, coalesce(nombre_corto, nombre_canonico), tipo FROM dim_entidad").fetchall()}
     out = []
-    for r in rows:
-        d = dict(zip(cols, r))
-        d["mm_total"] = (d["mm_seg"] or 0) + (d["mm_ffm"] or 0)
-        out.append(d)
-    return {"rows": out, "per_seg": per_seg, "per_ffm": per_ffm}
+    for rut in set(seg) | set(ffm) | set(afp):
+        fuentes = [x for x in (seg.get(rut), ffm.get(rut), afp.get(rut)) if x]
+        if len(fuentes) < min_fuentes:
+            continue
+        mm_seg, mm_ffm, mm_afp = (seg.get(rut) or {}).get("mm"), (ffm.get(rut) or {}).get("mm"), (afp.get(rut) or {}).get("mm")
+        nom, tipo = nombres.get(rut, (None, None))
+        out.append({
+            "rut": rut, "emisor": nom, "tipo": tipo, "fuentes": len(fuentes),
+            "mm_seg": mm_seg, "cias_seg": (seg.get(rut) or {}).get("tenedores"), "pos_seg": (seg.get(rut) or {}).get("pos"),
+            "mm_ffm": mm_ffm, "fondos_ffm": (ffm.get(rut) or {}).get("tenedores"), "pos_ffm": (ffm.get(rut) or {}).get("pos"),
+            "mm_afp": mm_afp, "afps": (afp.get(rut) or {}).get("tenedores"),
+            "mm_total": (mm_seg or 0) + (mm_ffm or 0) + (mm_afp or 0),
+        })
+    out.sort(key=lambda d: -d["mm_total"])
+    return {**base, "rows": out[:limit], "n_emisores": len(out), "cobertura_afp": cobertura}
 
 
 # ---------------------------------------------------------------------------------------

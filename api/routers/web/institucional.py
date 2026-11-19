@@ -18,10 +18,21 @@ from api.routers.web._shared import (build_overview_context, BC_CATEGORIAS, BC_U
 router = APIRouter()
 
 @router.get("/inversion-institucional/emisores")
-def inversion_institucional_emisores(request: Request, db: Database = Depends(get_db)):
-    """Emisores en común entre la cartera de seguros (B.1) y la de fondos mutuos."""
+def inversion_institucional_emisores(request: Request, min_fuentes: int = Query(2, ge=2, le=3),
+                                     db: Database = Depends(get_db)):
+    """Emisores en común entre seguros (B.1), fondos mutuos y AFP, cruzados por RUT."""
     from db.cross import common_issuers
-    return templates.TemplateResponse(request, "institucional_emisores.html", common_issuers(db))
+    return templates.TemplateResponse(request, "institucional_emisores.html",
+                                      common_issuers(db, min_fuentes=min_fuentes))
+
+
+@router.get("/inversion-institucional/emisores/tabla")
+def inversion_institucional_emisores_tabla(request: Request, min_fuentes: int = Query(2, ge=2, le=3),
+                                           db: Database = Depends(get_db)):
+    """Fragmento HTMX: la tabla de emisores en común con un mínimo de fuentes (2 o 3)."""
+    from db.cross import common_issuers
+    return templates.TemplateResponse(request, "partials/institucional_emisores_tabla.html",
+                                      common_issuers(db, min_fuentes=min_fuentes))
 
 
 _OPCIONES_EMISOR: dict = {}   # cache por proceso: el selector cuesta ~1,5 s y cambia al cargar datos

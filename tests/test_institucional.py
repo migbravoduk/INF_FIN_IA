@@ -240,3 +240,46 @@ def test_por_tipo_suma_el_total_del_bloque(db):
         assert abs(sum(t["mm"] for t in b["por_tipo"]) - total) / total < 0.005, k
         assert abs(sum(t["pct"] for t in b["por_tipo"]) - 100) < 1e-6, k
         assert all("tipos" in f for f in b["tenedores"])
+
+
+# --- Emisores en común: seguros, fondos mutuos y AFP por RUT (plan 19-nov, F6) -------------
+
+def test_emisores_en_comun_cruza_tres_fuentes(db):
+    from db.cross import common_issuers, issuer_holdings
+    c = common_issuers(db, limit=500)
+    if not c["rows"]:
+        pytest.skip("sin carteras")
+    por_rut = {r["rut"]: r for r in c["rows"]}
+    bch = por_rut["97004000"]                                   # Banco de Chile: las tres fuentes
+    assert bch["fuentes"] == 3 and bch["mm_seg"] and bch["mm_ffm"] and bch["mm_afp"]
+    assert all(r["fuentes"] >= 2 for r in c["rows"])
+    # Tenedores distintos: nunca más compañías que las que informan en el período.
+    n_cias = db.conn.execute("SELECT COUNT(DISTINCT rut) FROM cmf_insurer_portfolio_fixed_income "
+                             "WHERE period = ?", [c["per_seg"]]).fetchone()[0]
+    assert all((r["cias_seg"] or 0) <= n_cias for r in c["rows"])
+    # El monto de AFP y de seguros coincide con el bloque de la vista por emisor (mismo RUT y mes).
+    h = issuer_holdings(db, "97004000")
+    ult = lambda b: [s for s in b["serie"] if s["period"] == b["ult"]][0]["mm"]
+    assert abs(bch["mm_afp"] - ult(h["afp"])) < 1e-6 * bch["mm_afp"] + 1e-6
+    assert abs(bch["mm_seg"] - ult(h["seguros"])) < 1e-6 * bch["mm_seg"] + 1e-6
+    # Seguros excluye mutuos y leasing: los originadores no son «emisores en común».
+    assert "99514870" not in por_rut                            # MetLife mutuos hipotecarios
+    assert c["cobertura_afp"]["emisores_ok"] <= c["cobertura_afp"]["emisores_total"]
+
+
+def test_emisores_en_comun_min_fuentes(db):
+    from db.cross import common_issuers
+    dos, tres = common_issuers(db, limit=500, min_fuentes=2), common_issuers(db, limit=500, min_fuentes=3)
+    assert tres["n_emisores"] <= dos["n_emisores"]
+    assert all(r["fuentes"] == 3 for r in tres["rows"])
+
+
+def test_pagina_emisores_en_comun(real_db_readonly):
+    from fastapi.testclient import TestClient
+    from api.main import app
+    c = TestClient(app)
+    for url in ("/inversion-institucional/emisores", "/inversion-institucional/emisores?min_fuentes=3",
+                "/inversion-institucional/emisores/tabla?min_fuentes=3"):
+        assert c.get(url).status_code == 200, url
+    assert c.get("/inversion-institucional/emisores/tabla?min_fuentes=9").status_code == 422
+    assert 'name="min_fuentes"' in c.get("/inversion-institucional/emisores").text

@@ -186,7 +186,7 @@ NAV = [
         {"t": "Cartera de seguros", "url": "/seguros/cartera", "d": "Asset allocation de las aseguradoras"},
         {"t": "Derivados institucionales", "url": "/inversion-institucional/derivados", "d": "Monitor de swaps de las AFP"},
         {"t": "Inversión por emisor", "url": "/inversion-institucional/emisor", "d": "Quién invierte en cada emisor"},
-        {"t": "Emisores en común", "url": "/inversion-institucional/emisores", "d": "Aseguradoras y fondos mutuos"},
+        {"t": "Emisores en común", "url": "/inversion-institucional/emisores", "d": "Seguros, fondos mutuos y AFP"},
     ]},
     {"t": "Fondos y productos", "hijos": [
         {"t": "Productos de inversión", "url": "/productos", "d": "Rentabilidad, riesgo y costo comparables", "extra": ["/producto"]},
