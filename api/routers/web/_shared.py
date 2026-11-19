@@ -183,6 +183,27 @@ def _select_bank_periods(allp: list, serie: str) -> list:
     return allp[-12:]
 
 
+# Indicadores del ranking: etiqueta, tipo y sentido («mejor» = alto|bajo). La definición vive en db/common.py
+# para que el ranking de la capa de datos y la vista lean lo mismo.
+from db.common import RATIO_META  # noqa: E402,F401
+RANK_LABELS = {k: m["label"] for k, m in RATIO_META.items()}
+
+_RANK_CACHE: dict = {}
+
+
+def ranking_universo(db, period: int) -> list[dict]:
+    """Ratios (con flujos de 12 meses) de todas las empresas de un período, cacheados por proceso.
+    Calcularlos tarda ~2 s; se recalculan solo si cambia el nº de filas del período (carga nueva)."""
+    n = db.conn.execute("SELECT COUNT(*) FROM cmf_financial_statements WHERE period = ?",
+                        [int(period)]).fetchone()[0]
+    clave = (int(period), int(n))
+    if clave not in _RANK_CACHE:
+        if len(_RANK_CACHE) >= 6:
+            _RANK_CACHE.clear()
+        _RANK_CACHE[clave] = db.get_ratios_universo(int(period))
+    return _RANK_CACHE[clave]
+
+
 _RATIO_LABELS = {
     "roe": "ROE",
     "roa": "ROA",

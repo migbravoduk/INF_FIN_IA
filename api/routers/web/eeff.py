@@ -241,9 +241,12 @@ def ranking(request: Request, db: Database = Depends(get_db)):
     """Vista de ranking de empresas por indicador financiero."""
     from api.company_profiles import get_all_sectors
     return templates.TemplateResponse(request, "ranking.html", {
-        "periods": db.get_cmf_periods(), "ratios": _RATIO_LABELS,
+        "periods": db.get_cmf_periods(), "ratios": RANK_LABELS,
         "sectors": get_all_sectors(),
     })
+
+
+_TOP_RANKING = 15
 
 
 @router.get("/ranking/table")
@@ -254,15 +257,30 @@ def ranking_table(
     sector: Optional[str] = Query(None),
     db: Database = Depends(get_db),
 ):
-    """Fragmento HTMX: top empresas por un ratio en un período."""
+    """
+    Fragmento HTMX: las 15 mejores y las 15 peores empresas por un indicador (el sentido de «mejor»
+    depende del indicador: en deuda / patrimonio, el menor es el mejor), con los ratios de flujo de los
+    últimos 12 meses y una columna fija de salud financiera (Z'' de Altman).
+    """
+    from db.common import ordenar_ranking
+    metric = metric if metric in RATIO_META else "roe"
     periods = db.get_cmf_periods()
     period_int = int(period) if period else (periods[0] if periods else None)
     sec = sector.strip() if sector else None
-    rows = db.get_ratios_ranking(period_int, metric, 15, sec) if period_int else []
-    is_pct = metric in ("roe", "roa", "margen_neto", "margen_bruto", "pasivo_activo", "margen_ebit", "margen_ebitda")
+    universo = ranking_universo(db, period_int) if period_int else []
+    con, total = ordenar_ranking(universo, metric, sec)
+    mejores = con[:_TOP_RANKING]
+    peores = con[_TOP_RANKING:][::-1][:_TOP_RANKING]          # de la peor hacia arriba; sin repetir a las mejores
+    finitos = [abs(r["value"]) for r in con if r["texto"] is None]
+    pool = [r for r in universo if not sec or r["sector"] == sec]
+    meta = RATIO_META[metric]
     return templates.TemplateResponse(request, "partials/ranking_table.html", {
-        "rows": rows, "metric_label": _RATIO_LABELS.get(metric, metric),
-        "period": period_int, "is_pct": is_pct,
+        "mejores": mejores, "peores": peores, "meta": meta, "metric": metric,
+        "metric_label": meta["label"], "period": period_int,
+        "maximo": max(finitos) if finitos else None,
+        "n_con": len(con), "n_total": total,
+        "n_excl_fin": sum(1 for r in pool if r["excl_fin"]),
+        "n_sin_deprec": sum(1 for r in pool if not r["deprec_informada"]),
     })
 
 

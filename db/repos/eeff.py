@@ -208,35 +208,69 @@ class EeffRepo:
         """Indicadores financieros de una empresa/período (ver compute_ratios)."""
         return compute_ratios(self.query_cmf_statements(rut=rut, period=period, limit=2000))
 
-    def get_ratios_ranking(self, period: int, metric: str = "roe", n: int = 15, sector: str = None) -> list[dict]:
+    def _flujos_primera_ocurrencia(self, period: int) -> dict:
+        """{rut: {cuenta de flujo: valor}} de un período (primera ocurrencia = orden IFRS)."""
+        from db.common import FLOW_ACCOUNTS
+        marcas = ",".join("?" * len(FLOW_ACCOUNTS))
+        rows = self.conn.execute(f"""
+            SELECT rut, account_name, arg_min(value, id) FROM cmf_financial_statements
+            WHERE period = ? AND account_name IN ({marcas}) GROUP BY 1, 2""",
+                                 [int(period), *FLOW_ACCOUNTS]).fetchall()
+        out: dict = {}
+        for rut, name, v in rows:
+            out.setdefault(str(rut), {})[name] = v
+        return out
+
+    def get_ratios_universo(self, period: int, ltm: bool = True) -> list[dict]:
         """
-        Ranking de empresas por un ratio en un período. Calcula ratios de todas las empresas
-        del período (una sola consulta + cómputo en memoria) y ordena desc.
-        Filtra distorsiones: para métricas en % exige |valor| <= 150 y que haya ingresos.
+        Ratios de TODAS las empresas de un período, una fila por empresa (una consulta y cálculo en
+        memoria). Con `ltm=True` los ratios de flujo (ROE, ROA, márgenes, cobertura de intereses,
+        Z'', deuda neta / EBITDA) son de los últimos 12 meses: acumulado actual + año anterior −
+        mismo trimestre del año anterior (en diciembre, el año completo). Una empresa sin los
+        períodos que necesita queda sin esos ratios, no sin los de balance.
+
+        Cada fila trae además `sector` y `excl_fin`: sector financiero, holding o AGF, donde el Z'' y
+        la deuda neta / EBITDA no tienen sentido (quedan en None). El margen EBITDA y la deuda neta /
+        EBITDA exigen que la empresa informe depreciación (`deprec_informada`); si no, el «EBITDA» sería el EBIT.
         """
+        from api.company_profiles import sector_of
+        from db.common import SECTORES_SIN_Z, first_values, is_agf_name, ltm_flows
         df = self.query_cmf_statements(period=period, limit=10**9)
         if df.empty:
             return []
-        is_pct = metric in ("roe", "roa", "margen_neto", "margen_bruto", "pasivo_activo")
+        mes = int(period) % 100
+        dic = mismo = {}
+        if ltm and mes != 12:
+            dic = self._flujos_primera_ocurrencia((int(period) // 100 - 1) * 100 + 12)
+            mismo = self._flujos_primera_ocurrencia(int(period) - 100)
         out = []
-        from api.company_profiles import get_profile
         for rut, sub in df.groupby("rut", sort=False):
             cname = str(sub.iloc[0]["company_name"])
-            if sector:
-                prof = get_profile(rut, cname)
-                if prof["macro_sector"] != sector:
-                    continue
-            r = compute_ratios(sub)
-            if not r or r.get(metric) is None:
+            flujos = ltm_flows(first_values(sub), dic.get(str(rut)), mismo.get(str(rut)), mes) if ltm else None
+            r = compute_ratios(sub, ltm=flujos)
+            if not r:
                 continue
-            v = r[metric]
-            # excluye holdings/fondos sin operación y valores distorsionados
-            if is_pct and (abs(v) > 150 or r.get("margen_neto") is None):
-                continue
-            out.append({"company_name": cname,
-                        "rut": str(rut), "value": v, "currency": r["currency"]})
-        out.sort(key=lambda x: x["value"], reverse=True)
-        return out[:n]
+            sector = sector_of(str(rut), cname)
+            excl = sector in SECTORES_SIN_Z or is_agf_name(cname)
+            if excl:                                     # el Z'' y la deuda neta no se leen igual en estos
+                r["z_altman"] = r["deuda_neta_ebitda"] = None
+                r["ebitda_negativo"] = False
+            if not r["deprec_informada"]:
+                r["margen_ebitda"] = None
+            out.append({**r, "rut": str(rut), "company_name": cname, "sector": sector, "excl_fin": excl,
+                        "ltm": bool(ltm)})
+        return out
+
+    def get_ratios_ranking(self, period: int, metric: str = "roe", n: Optional[int] = 15,
+                           sector: str = None, ltm: bool = True) -> list[dict]:
+        """
+        Ranking de empresas por un ratio en un período, de MEJOR a peor (`db.common.RATIO_META` dice
+        cuál es el sentido de cada indicador), con los ratios de flujo de los últimos 12 meses.
+        `n=None` devuelve a todas las que tienen dato.
+        """
+        from db.common import ordenar_ranking
+        con, _ = ordenar_ranking(self.get_ratios_universo(period, ltm), metric, sector)
+        return con if n is None else con[:n]
 
     def get_company_ratios_series(self, rut: str) -> list[dict]:
         """

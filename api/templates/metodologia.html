@@ -10,6 +10,7 @@
 <nav class="toc-lateral" aria-label="Contenido de la página">
     <a href="#met-productos">Métricas de productos</a>
     <a href="#curvas">Curvas de tasas</a>
+    <a href="#salud-financiera">Salud financiera (Z'')</a>
     <a href="#met-fuentes">Fuentes y unidades</a>
     <a href="#met-calidad">Controles de calidad</a>
 </nav>
@@ -78,6 +79,28 @@ depende solo de la métrica elegida; ningún proveedor paga por aparecer o por s
       overnight base 360 (la convención de la TPM). Contiene premio por plazo: no es una expectativa
       pura, y por eso suele quedar sobre las encuestas en horizontes de 1–2 años.</li>
   <li><b>Spread bancario.</b> Depósitos a plazo transados en bolsa menos la curva swap al mismo plazo.</li>
+</ul>
+</div>
+
+<div class="sec">{{ ui.sec_head("Salud financiera: Z'' de Altman y deuda neta / EBITDA", id="salud-financiera", arriba=none) }}</div>
+<div class="prosa">
+<p><strong>Z'' de Altman</strong> (versión para empresas no manufactureras y de mercados emergentes; Altman, 1995 y 2005):
+<code>Z'' = 6,56·X1 + 3,26·X2 + 6,72·X3 + 1,05·X4</code>, con <em>X1</em> = (activos corrientes − pasivos corrientes) ÷ activos
+totales, <em>X2</em> = ganancias acumuladas ÷ activos totales, <em>X3</em> = EBIT de los últimos 12 meses ÷ activos totales y
+<em>X4</em> = patrimonio ÷ pasivos totales. Zonas: <strong>más de 2,6</strong>, segura; <strong>entre 1,1 y 2,6</strong>, gris;
+<strong>menos de 1,1</strong>, peligro. Es una señal de alerta estadística, no una clasificación de riesgo ni una recomendación.</p>
+<ul>
+    <li><strong>Quién queda fuera:</strong> los sectores «Servicios Financieros» y «Holdings e Inversiones» y las administradoras de fondos,
+        porque el balance de un banco, una holding o una AGF no se lee con estas razones. También las empresas que no informan
+        ganancias acumuladas (en diciembre, cerca de un tercio de las no financieras).</li>
+    <li><strong>Últimos 12 meses (LTM):</strong> las cuentas del estado de resultados vienen acumuladas en el año. El ranking las
+        anualiza: acumulado actual + año anterior completo − mismo período del año anterior (en diciembre, el año). Si falta alguno de
+        esos períodos, la empresa queda fuera de los indicadores de flujo, pero no de los de balance.</li>
+    <li><strong>Deuda financiera neta / EBITDA:</strong> (otros pasivos financieros + pasivos por arrendamientos − efectivo) ÷ EBITDA de
+        12 meses. Solo se calcula si la empresa informa depreciación en el archivo plano de la CMF (cerca de una de cada cinco);
+        sin ella el «EBITDA» sería el EBIT y el apalancamiento saldría inflado. Con EBITDA negativo se ordena como el peor.</li>
+    <li><strong>Patrimonio negativo:</strong> el ROE se excluye y deuda / patrimonio se ordena entre los peores, porque con patrimonio
+        negativo ambos cambian de signo.</li>
 </ul>
 </div>
 
