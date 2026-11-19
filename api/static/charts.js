@@ -194,8 +194,11 @@
     INF.hoy = function (x, texto) {
         return { shape: { type: "line", xref: "x", yref: "paper", x0: x, x1: x, y0: 0, y1: 1,
                           line: { color: "#64748b", width: 1, dash: "dot" } },
-                 annotation: { x: x, xref: "x", y: 1, yref: "paper", yanchor: "top", xanchor: "left", xshift: 4,
-                               showarrow: false, text: texto || "proyección →", font: { size: 11, color: MUTED } } };
+                 // Vertical y pegado a la izquierda de la línea: queda dentro del gráfico aunque la zona
+                 // proyectada sea angosta (8 de 46 trimestres; ~60 px en celular).
+                 annotation: { x: x, xref: "x", y: 1, yref: "paper", yanchor: "top", xanchor: "right", xshift: -3,
+                               textangle: -90, showarrow: false, text: texto || "real | proyección",
+                               font: { size: 11, color: MUTED } } };
     };
     // Etiquetas directas al final de cada serie, apiladas si chocan (12 px por nivel).
     // series = [{x: [...], y: [...], texto: "Cuprum 10,9%", color: "#…"}]. Requiere margin.r ≥ 80.

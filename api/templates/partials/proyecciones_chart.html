@@ -182,13 +182,17 @@
                     hovertemplate: "%{x}<br>dato: %{y:,.1f}<br>calibrado con: %{customdata:,.1f}<extra>atípico</extra>" });
             }
 
-            var hoy = INF.hoy(lastP, "proyección →");
+            var hoy = INF.hoy(lastP, "proyección");
+            // Celular: últimos 24 períodos de historia, para que la proyección no quede aplastada.
+            var angosto = document.getElementById(el).clientWidth < 520;
+            var rango = angosto ? [Math.max(-0.5, allCats.length - 24 - fx.length - 0.5), allCats.length - 0.5] : undefined;
             Plotly.newPlot(el, traces, {
-                margin: { t: 30, r: 10, b: 40, l: 70 },
+                margin: { t: 30, r: 16, b: 40, l: 70 },
                 xaxis: {
                     type: "category",
                     categoryorder: "array",
                     categoryarray: allCats,
+                    range: rango,
                     tickvals: anuales,
                     ticktext: anuales.map(function (c) { return c.slice(0, 4); })
                 },
