@@ -1,0 +1,18 @@
+# ============================================================
+# Comisiones AFP — % sobre la remuneración imponible mensual
+# (cotización obligatoria; se paga ADEMÁS del 10% que va al fondo)
+#
+# Fuente: sitios AFP / comparadores (rankia.cl, queafp.cl, uno.cl),
+# verificado jul-2026. Fuente normativa: spensiones.cl (Infórmate y
+# Decide). ACTUALIZAR aquí cuando alguna AFP cambie su comisión —
+# la métrica "rentabilidad neta de comisiones" de /afp la usa.
+# ============================================================
+vigencia: 2026-07
+comisiones:
+  CAPITAL: 1.44
+  CUPRUM: 1.44
+  HABITAT: 1.27
+  MODELO: 0.58
+  PLANVITAL: 1.16
+  PROVIDA: 1.45
+  UNO: 0.46

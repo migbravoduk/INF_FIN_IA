@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+{% import "partials/_ui.html" as ui %}
+
+{% block title %}Curvas de tasas · INF_FIN_IA{% endblock %}
+
+{% block content %}
+{% call ui.page_head("Curvas de tasas", "Curvas nominal (pesos) y real (UF) de Chile, ajustadas cada día sobre swaps cámara y bonos del Banco Central y la Tesorería.") %}
+    <a class="chip" href="/metodologia#curvas">Cómo se calculan</a>
+{% endcall %}
+
+<form method="get" action="/curvas" class="filtros">
+    <label>Fecha
+        <input type="date" name="fecha" value="{{ fecha_sel }}" min="{{ fecha_min }}" max="{{ fecha_max }}">
+    </label>
+    <button type="submit" class="btn">Ver</button>
+    {% if curvas %}<span class="ayuda">Datos al {{ (curvas.swap_clp.fecha if curvas.swap_clp else '')|fecha_es }}.</span>{% endif %}
+</form>
+
+{% if not curvas %}
+<p class="vacio">Sin curvas ajustadas. Ejecuta <code>main.py build-productos</code> después de cargar las series del Banco Central.</p>
+{% else %}
+
+<nav class="toc" aria-label="Secciones">
+    <span class="toc-label">Ir a</span>
+    <a href="#cu-cero">Curva cero cupón</a>
+    <a href="#cu-bei">Inflación implícita</a>
+    {% if tpm %}<a href="#cu-tpm">TPM: mercado y encuestas</a>{% endif %}
+    {% if spread %}<a href="#cu-spread">Depósitos frente al swap</a>{% endif %}
+    <a href="#cu-historia">Historia</a>
+</nav>
+
+<section class="sec mt-0">
+    {{ ui.sec_head("Curva cero cupón por plazo", id="cu-cero", fecha=(curvas.swap_clp.fecha if curvas.swap_clp else none), fuente="Banco Central", arriba=none) }}
+    {{ ui.viz("ch-curvas", "Curva cero cupón por plazo",
+              sub="% efectivo anual · plazo en años, escala logarítmica · línea = curva ajustada (continua: swap; segmentos: bonos) · puntos = tasas observadas ese día",
+              fuente="Banco Central", alto="lg",
+              lee="Cómo leerla: cada punto es la tasa que exige hoy el mercado por prestar a ese plazo. Si sube con el plazo, el mercado espera tasas más altas o cobra premio por plazo; si baja (curva invertida), anticipa recortes. La distancia entre pesos y UF es la inflación que descuenta el mercado." ~ (" Hoy: pendiente 10 años − 2 años en pesos = " ~ pendiente_pb|es(0, True) ~ " pb." if pendiente_pb is not none else "")) }}
+    <div class="tbl-wrap">
+    <table class="tbl" aria-label="Curvas ajustadas y tasas por plazo">
+        <thead><tr><th>Curva</th><th>Fecha</th><th>Modelo</th><th class="num">Error de ajuste</th><th class="num">1 año</th><th class="num">2 años</th><th class="num">5 años</th><th class="num">10 años</th></tr></thead>
+        <tbody>
+        {% for k, c in curvas.items() %}
+        <tr><td class="ent">{{ c.titulo }}</td><td>{{ c.fecha|fecha_es }}</td>
+            <td>{{ {'nss': 'Svensson', 'ns': 'Nelson-Siegel', 'ns_tau_fijo': 'Nelson-Siegel, τ fijo'}[c.modelo] }}</td>
+            <td class="num">{{ ((c.rmse_pb|es(1) ~ ' pb')) if c.rmse_pb is not none else 'exacto (3 puntos)' }}</td>
+            {% for t in [1, 2, 5, 10] %}
+            {% set ns = namespace(v=None) %}
+            {% for i in range(c.plazos|length) %}{% if ns.v is none and c.plazos[i] >= t - 0.0001 %}{% set ns.v = c.cero[i] %}{% endif %}{% endfor %}
+            <td class="num">{{ ((ns.v|es(2) ~ '%')) if ns.v is not none and c.plazos[0] <= t + 0.0001 else '—' }}</td>
+            {% endfor %}
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</section>
+
+<section class="sec">
+    {{ ui.sec_head("Compensación inflacionaria (inflación implícita)", id="cu-bei", fecha=(curvas.swap_clp.fecha if curvas.swap_clp else none), fuente="Banco Central", arriba=none) }}
+    <p class="nota mt-0">Diferencia entre la curva nominal y la real al mismo plazo: la inflación promedio anual que
+        el mercado descuenta, más premios por riesgo y liquidez. La columna del Banco Central sirve de control.</p>
+    <div class="tbl-wrap">
+    <table class="tbl" aria-label="Compensación inflacionaria por plazo">
+        <thead><tr><th>Plazo</th><th class="num">Con swaps</th><th class="num">Con bonos</th><th class="num">Publicada BCCh (swaps)</th><th class="num">Diferencia (pb)</th></tr></thead>
+        <tbody>
+        {% for r in bei %}
+        <tr><td class="ent">{{ r.plazo }} {{ 'año' if r.plazo == 1 else 'años' }}</td>
+            <td class="num">{{ ((r.swap|es(2) ~ '%')) if r.swap is defined else '—' }}</td>
+            <td class="num">{{ ((r.bono|es(2) ~ '%')) if r.bono is defined else '—' }}</td>
+            <td class="num">{{ ((r.bcch|es(2) ~ '%')) if r.bcch is defined else '—' }}</td>
+            <td class="num">{{ ((((r.swap - r.bcch) * 100)|es(0, True) ~ ' pb')) if r.swap is defined and r.bcch is defined else '' }}</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    <p class="nota">Meta del Banco Central: 3%. A 1 año la diferencia con el BCCh es mayor porque la UF sigue al IPC
+        con rezago y aquí no se corrige ese efecto.</p>
+</section>
+
+{% if tpm %}
+<section class="sec">
+    {{ ui.sec_head("Tasa de política monetaria: mercado frente a encuestas", id="cu-tpm", fuente="Banco Central", arriba=none) }}
+    {{ ui.viz("ch-tpm", "TPM implícita en los swaps frente a las encuestas",
+              sub="% · línea = TPM que descuentan los swaps (forward a 1 mes, base 360) · puntos = mediana de las encuestas del Banco Central",
+              fuente="Banco Central", alto="md",
+              lee="Cómo leerla: si la línea va sobre los puntos, el mercado espera una TPM más alta que los economistas encuestados (o cobra premio por plazo); si va bajo los puntos, espera más recortes.") }}
+    <p class="nota">La TPM implícita incluye premio por plazo, por lo que tiende a quedar sobre las encuestas en horizontes largos.</p>
+</section>
+{% endif %}
+
+{% if spread %}
+<section class="sec">
+    {{ ui.sec_head("Depósitos bancarios frente al swap", id="cu-spread", fuente="Banco Central", arriba=none) }}
+    <p class="nota mt-0">Tasa de depósitos a plazo transados en bolsa (pesos) menos la curva swap al mismo plazo: el premio
+        que se paga por el riesgo de los bancos. % efectivo anual.</p>
+    <div class="tbl-wrap">
+    <table class="tbl" aria-label="Depósitos bancarios frente al swap">
+        <thead><tr><th>Plazo</th><th class="num">Depósito</th><th class="num">Swap</th><th class="num">Spread (pb)</th></tr></thead>
+        <tbody>
+        {% for r in spread %}
+        <tr><td class="ent">{{ r.dias }} días</td><td class="num">{{ (r.deposito|es(2) ~ '%') }}</td>
+            <td class="num">{{ (r.swap|es(2) ~ '%') }}</td>
+            <td class="num">{{ (r.spread_pb|es(0, True) ~ ' pb') }}</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</section>
+{% endif %}
+
+<section class="sec">
+    {{ ui.sec_head("Historia: tasas swap a 2 y 10 años", id="cu-historia", fuente="Banco Central", arriba=none) }}
+    {{ ui.viz("ch-hist", "Tasas swap a 2 y 10 años", sub="cierre semanal, cero cupón, % efectivo anual · azul = pesos (nominal), naranjo = UF (real)", fuente="Banco Central", alto="md",
+              lee="Cómo leerla: si la tasa a 10 años sube más que la de 2, la curva se empina (más crecimiento o inflación esperados, o más premio por plazo); si la de 2 años supera a la de 10, la curva está invertida, señal típica de recortes por venir.") }}
+</section>
+
+<script>
+(function () {
+  // Colores de la paleta común (charts.js): azul = pesos (nominal), naranjo = UF (real).
+  const COL = {nominal: INF.PALETA[0], real: INF.PALETA[1], bcch: INF.PALETA[2], eee: INF.PALETA[6]};
+  const ink = INF.COLOR.tinta;
+  const base = {margin: {l: 48, r: 12, t: 10, b: 44},
+                yaxis: {ticksuffix: '%', zeroline: false}, xaxis: {zeroline: false}};
+  const curvas = {{ curvas | tojson }};
+
+  // 1) Curvas en la fecha, con etiqueta directa al final de cada una
+  const tr = [], fin = [];
+  for (const [k, c] of Object.entries(curvas)) {
+    const col = c.tipo === 'nominal' ? COL.nominal : COL.real;
+    const dash = k.startsWith('bono') ? 'dash' : 'solid';
+    const corto = (k.startsWith('bono') ? 'Bonos ' : 'Swap ') + (c.tipo === 'nominal' ? 'pesos' : 'UF');
+    tr.push({x: c.plazos, y: c.cero, name: c.titulo, mode: 'lines', showlegend: false, line: {color: col, width: 2, dash},
+             hovertemplate: '%{x:.2f} años: %{y:.2f}%<extra>' + c.titulo + '</extra>'});
+    tr.push({x: c.puntos.map(p => p.plazo), y: c.puntos.map(p => p.tasa), mode: 'markers', showlegend: false,
+             marker: {color: col, size: 8, symbol: k.startsWith('bono') ? 'diamond' : 'circle',
+                      line: {color: '#111a2c', width: 2}},
+             hovertemplate: 'observada %{x:.2f} años: %{y:.2f}%<extra>' + c.titulo + '</extra>'});
+    fin.push({x: c.plazos, y: c.cero, texto: corto, color: col});
+  }
+  Plotly.newPlot('ch-curvas', tr, {...base, hovermode: 'closest', showlegend: false,
+      margin: {...base.margin, r: 100},
+      // en un eje logarítmico las anotaciones van en unidades log10
+      annotations: INF.etiquetasFinales(fin).map(a => ({...a, x: Math.log10(a.x)})),
+      xaxis: {...base.xaxis, type: 'log',
+              tickvals: [1/365, 0.0833, 0.25, 0.5, 1, 2, 3, 5, 10, 20, 30], ticktext: ['1d', '1m', '3m', '6m', '1', '2', '3', '5', '10', '20', '30']}});
+
+  // 2) TPM implícita
+  const tpm = {{ tpm | tojson }};
+  if (tpm && tpm.meses) {
+    const t2 = [{x: tpm.meses, y: tpm.mercado, name: 'Implícita en swaps', mode: 'lines', line: {color: COL.nominal, width: 2},
+                 hovertemplate: 'mes %{x}: %{y:.2f}%<extra>mercado</extra>'}];
+    for (const [fuente, col, sym] of [['EOF', COL.real, 'circle'], ['EEE', COL.eee, 'diamond']]) {
+      const e = tpm.encuestas.filter(r => r.fuente === fuente);
+      if (e.length) t2.push({x: e.map(r => r.meses), y: e.map(r => r.tpm), mode: 'markers',
+          name: fuente === 'EOF' ? 'Encuesta Operadores Financieros' : 'Encuesta Expectativas Económicas',
+          marker: {color: col, size: 9, symbol: sym, line: {color: '#111a2c', width: 2}},
+          customdata: e.map(r => r.fecha), hovertemplate: 'mes %{x}: %{y:.2f}% (encuesta %{customdata})<extra>' + fuente + '</extra>'});
+    }
+    const ys = t2.flatMap(t => t.y).concat(tpm.tpm_actual != null ? [tpm.tpm_actual] : []).filter(v => v != null);
+    const pad = Math.max(0.15, (Math.max(...ys) - Math.min(...ys)) * 0.08);
+    const ref = tpm.tpm_actual != null ? INF.refH(tpm.tpm_actual, 'TPM vigente ' + INF.fmt(tpm.tpm_actual, 2) + '%') : null;
+    Plotly.newPlot('ch-tpm', t2, {...base, hovermode: 'closest',
+        yaxis: {...base.yaxis, range: [Math.min(...ys) - pad, Math.max(...ys) + pad]},
+        xaxis: {...base.xaxis, title: {text: 'meses desde la fecha', standoff: 6}, dtick: 3},
+        shapes: ref ? [ref.shape] : [],
+        annotations: ref && ref.annotation ? [ref.annotation] : []});
+  }
+
+  // 3) Historia, con etiqueta final (tasa a 2 y 10 años)
+  const h = {{ historia | tojson }};
+  const t3 = [], fin3 = [];
+  for (const [k, col] of [['swap_clp', COL.nominal], ['swap_uf', COL.real]]) {
+    if (!h[k]) continue;
+    for (const [plazo, dash] of [['2a', 'dot'], ['10a', 'solid']]) {
+      const nombre = (k === 'swap_clp' ? 'Pesos ' : 'UF ') + plazo.replace('a', ' años');
+      t3.push({x: h[k].fecha, y: h[k][plazo], name: nombre, mode: 'lines', connectgaps: false, showlegend: false,
+               line: {color: col, width: 2, dash}, hovertemplate: '%{y:.2f}%<extra>' + nombre + '</extra>'});
+      const ult = h[k][plazo].filter(v => v != null).pop();
+      fin3.push({x: h[k].fecha, y: h[k][plazo], texto: nombre + ' ' + INF.fmt(ult, 2) + '%', color: col});
+    }
+  }
+  Plotly.newPlot('ch-hist', t3, {...base, hovermode: 'x unified', showlegend: false,
+      margin: {...base.margin, r: 130}, annotations: INF.etiquetasFinales(fin3)});
+})();
+</script>
+{% endif %}
+{% endblock %}

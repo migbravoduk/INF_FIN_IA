@@ -1,0 +1,57 @@
+{#
+  partials/compare_chart.html — Overlay de una partida en varias empresas.
+  multi = [{name, points:[{x, value}]}], account, mode ('base100' | 'periodo').
+#}
+{% import "partials/_ui.html" as ui %}
+{% if multi %}
+{# Leyenda HTML explícita: deja claro qué color es cada empresa. #}
+<div id="compare-legend" class="cmp-legend"></div>
+{{ ui.viz("compare-chart-container", account,
+          sub=("valores del período (desacumulado)" if mode == "periodo" else "evolución comparada · base 100 = primer período"),
+          fuente="CMF", alto="lg") }}
+{% if mode == "periodo" %}
+<p class="nota">Partida de resultado o flujo: se muestra desacumulada (valor de cada
+    período). Comparar montos absolutos entre empresas asume misma moneda y escala.</p>
+{% endif %}
+<script>
+(function () {
+    var cid = "compare-chart-" + Math.random().toString(36).substring(2, 9);
+    var el = document.getElementById("compare-chart-container");
+    if (el) el.id = cid;
+
+    var multi = {{ multi | tojson }};
+    multi.forEach(function (s) { s.name = INF.nombre(s.name); });
+    var isPct = {{ 'false' if mode == "periodo" else 'true' }};
+    var palette = INF.PALETA;     // un color por empresa, en orden
+    // Leyenda HTML (más legible que la nativa para nombres largos de empresa).
+    document.getElementById("compare-legend").innerHTML = multi.map(function (s, i) {
+        var col = palette[i % palette.length];
+        return "<span class='cmp-leg-item'><span class='sw' style='background:" + col + "'></span>" + s.name + "</span>";
+    }).join("");
+    function draw() {
+        if (!window.Plotly) { return setTimeout(draw, 100); }
+        var traces = multi.map(function (s, i) {
+            return { x: s.points.map(function (p) { return p.x; }),
+                     y: s.points.map(function (p) { return p.value; }),
+                     type: "scatter", mode: "lines+markers", name: s.name,
+                     line: { color: palette[i % palette.length], width: 2 } };
+        });
+        var finales = multi.map(function (s, i) {
+            var corto = s.name.length > 18 ? s.name.slice(0, 17) + "…" : s.name;
+            return { x: s.points.map(function (p) { return p.x; }), y: s.points.map(function (p) { return p.value; }),
+                     texto: corto, color: palette[i % palette.length] };
+        });
+        var layout = {
+            margin: { t: 10, r: 130, b: 40, l: 60 }, showlegend: false, hovermode: "x unified",
+            annotations: INF.etiquetasFinales(finales),
+            xaxis: { type: "category", categoryorder: "category ascending" }
+        };
+        if (isPct) { layout.shapes = [INF.refH(100).shape]; }
+        Plotly.newPlot(cid, traces, layout);
+    }
+    draw();
+})();
+</script>
+{% elif account %}
+{{ ui.vacio("No hay datos para esa partida en las empresas elegidas.") }}
+{% endif %}

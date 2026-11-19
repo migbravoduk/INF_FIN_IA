@@ -1,0 +1,30 @@
+# ============================================================
+# Hitos del monitor de derivados institucionales (docs/PLAN_DERIVADOS.md).
+# Contexto para leer las series en el tiempo; NO son datos. Cada hito lleva su fuente.
+# Las cifras de prensa se citan como tales: no se mezclan con las series del Banco Central.
+# ============================================================
+
+hitos:
+  - fecha: 2026-04-09
+    titulo: "SP limita el riesgo de derivados de los fondos"
+    detalle: "Resolución 549 de la Superintendencia de Pensiones (en consulta desde febrero): límite a los derivados medido como pérdida estimada en un escenario de estrés; 2% para el Fondo E (según prensa)."
+    fuente: "https://www.diarioconcepcion.cl/politica/2026/10/26/perdidas-derivados-afp-superintendencia-pensiones.html"
+  - fecha: 2026-09-30
+    titulo: "Swaps: −US$ 10.064 millones a valor de mercado"
+    detalle: "Valorización negativa de los swaps de todos los fondos al 30-sep (Fondo E: −US$ 1.074 millones), según informes citados por la prensa. El Fondo E cae 10,39% real entre enero y septiembre (SP)."
+    fuente: "https://www.biobiochile.cl/especial/bbcl-investiga/noticias/articulos/2026/11/01/la-ruta-del-descalabro-informes-reconstruyen-como-las-afp-apostaron-en-manada-en-swaps-en-eeuu.shtml"
+  - fecha: 2026-10-20
+    titulo: "SP inicia proceso sancionatorio contra las siete AFP"
+    detalle: "Por las decisiones de inversión en swaps que afectaron al Fondo E."
+    fuente: "https://www.biobiochile.cl/noticias/economia/actualidad-economica/2026/10/20/superintendencia-de-pensiones-inicia-proceso-contra-las-siete-afp-por-el-desplome-del-fondo-e.shtml"
+  - fecha: 2026-10-26
+    titulo: "Superintendente: pérdidas de US$ 10 mil millones"
+    detalle: "Pérdidas de valoración en derivados de los multifondos de ~US$ 10.100 millones al 30-sep, ~US$ 7.000 millones al 20-oct; alertas a las AFP desde 2024 (según prensa)."
+    fuente: "https://www.diarioelpulso.cl/2026/10/26/superintendente-de-pensiones-eleva-a-us-10-000-millones-las-perdidas-de-valoracion-de-las-afp-en-derivados-y-revela-alertas-desde-2024/"
+  - fecha: 2026-11-05
+    titulo: "Plazo para cerrar contratos"
+    detalle: "Las nuevas normas se aplican plenamente desde el 4-nov y obligan a cerrar contratos; el plazo para reducir la exposición vence el 5-nov (según prensa). Los datos del Banco Central de nov-2026 deberían mostrarlo."
+    fuente: "https://www.emol.com/noticias/Economia/2026/10/20/1214603/perdidas-afp-fondo-e-conceptos.html"
+
+# Fecha del plazo de cierre que el monitor vigila (ver db/derivados.estado_cierre).
+plazo_cierre: 2026-11-05

@@ -1,0 +1,319 @@
+"""
+Backtest fuera de muestra de las proyecciones macrofundadas (rolling origin).
+
+Para cada (empresa, partida) y cada origen T (trimestre de corte):
+  - se ajusta el modelo SOLO con datos hasta T,
+  - se proyectan h = 1..H trimestres,
+  - las exógenas futuras usan el VINTAGE de la EEE: la senda tal como se veía
+    ~2 meses después del cierre de T (cuando el EEFF de T ya estaba publicado
+    y el analista contaba con la encuesta de ese mes). Sin fuga de información.
+
+Especificaciones comparadas:
+  eee       — SARIMAX(1,0,0)x(0,1,1,4) + exógenas macro (senda EEE vintage)
+  noexog    — mismo SARIMAX sin exógenas (¿aporta el macro?)
+  snaive    — naive estacional: y[T+h] = y[T+h-4] (benchmark mínimo)
+  estr_m4   — modelo ESTRUCTURAL (activos←macro, rotación→margen), ancla móvil 4T
+  estr_last — estructural con ancla en el último ratio observado ("mantener")
+  estr_med4 — ancla mediana 4T; estr_last_mmed4_nop — rotación last, margen mediana 4T
+  sufijos   _nop (no operacional separado), _lim (atípicos aislados antes de calibrar),
+            _acot (SARIMAX con tope); ver models/robusto.py. `eee` solo con --con-eee.
+  Ronda 6 (nov-2026): el híbrido de producción se compone desde estos specs
+  (scratch/decisiones_r6.py final).
+
+Métricas (por partida, spec y horizonte):
+  MASE  — |error| / escala, con escala = media|y_t - y_{t-4}| del tramo de
+          entrenamiento del primer origen. <1 = mejor que el naive estacional
+          in-sample. Escala-libre: agregable entre empresas y monedas.
+  sMAPE — solo informativa para ingresos (el resultado neto cruza cero).
+
+Uso:
+  python -m models.backtest --companies 40 --origins 8 --horizon 4 \
+      --db data/finanzas_chile.duckdb --out scratch/backtest_results.csv
+"""
+
+from __future__ import annotations
+
+import argparse
+import logging
+import time
+import warnings
+
+import numpy as np
+import pandas as pd
+
+from models.forecast import (FORECASTABLE_ACCOUNTS, EXOG_VARS, MIN_OBS, ORDER,
+                             SEASONAL_ORDER, get_quarterly_deaccumulated)
+from models.macro_path import build_macro_path
+from models.curve_factors import CURVE_FACTORS, curve_factors
+
+logger = logging.getLogger(__name__)
+
+PUBLICATION_LAG_MONTHS = 2  # el EEFF del trimestre T se conoce ~2 meses después
+
+
+def select_companies(db, n: int, origins: int, horizon: int) -> list[tuple[str, str]]:
+    """Empresas con historia suficiente de ingresos (ERFG o ERNG), por materialidad (mediana |ingresos|)."""
+    need = MIN_OBS + origins + horizon
+    df = db.conn.execute("""
+        SELECT rut, ANY_VALUE(company_name) AS nombre,
+               COUNT(DISTINCT period) AS np,
+               MEDIAN(ABS(value)) AS med
+        FROM cmf_financial_statements
+        WHERE account_name = 'Ingresos de actividades ordinarias'
+          AND statement_group IN ('ERFG', 'ERNG')
+        GROUP BY rut
+        HAVING COUNT(DISTINCT period) >= ?
+        ORDER BY med DESC
+        LIMIT ?
+    """, [need, n]).fetchdf()
+    return list(df[["rut", "nombre"]].itertuples(index=False, name=None))
+
+
+def _quarter_end(period: str) -> pd.Timestamp:
+    y, m = int(period[:4]), int(period[4:])
+    return pd.Timestamp(y, m, 1) + pd.offsets.MonthEnd(0)
+
+
+def _fit_and_forecast(endog_s, exog_hist, exog_fc, steps):
+    """SARIMAX con la misma especificación de producción; exógenas opcionales."""
+    from statsmodels.tsa.statespace.sarimax import SARIMAX
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        model = SARIMAX(
+            endog_s, exog=exog_hist,
+            order=ORDER, seasonal_order=SEASONAL_ORDER,
+            enforce_stationarity=False, enforce_invertibility=False,
+        )
+        fitted = model.fit(disp=False, maxiter=200)
+        return fitted.get_forecast(steps=steps, exog=exog_fc).predicted_mean
+
+
+class _StructuralCache:
+    """Panel cargado una vez; modelo de activos y senda macro cacheados por origen."""
+
+    def __init__(self, db, fuente: str = "encuestas", factores: list | None = None):
+        from models.structural import load_panel
+        self.db = db
+        self.fuente = fuente
+        self.factores = factores   # None = FACTORS de producción
+        self._fq: dict = {}       # as_of_period -> factores trimestrales
+        self.panel = load_panel(db)
+        self._models: dict = {}   # as_of_period -> AssetModel
+        self._macros: dict = {}   # as_of_period -> MacroPath
+        self._drv: dict = {}      # as_of_period -> impulsores no operacionales
+
+    def get(self, as_of_period: str, as_of_ts, horizon: int):
+        from models.structural import estimate_asset_model, _quarterly_factors
+        if as_of_period not in self._models:
+            mp = build_macro_path(self.db, horizon_months=3 * horizon + 9, as_of=as_of_ts,
+                                  fuente=self.fuente)
+            self._macros[as_of_period] = mp
+            extra = None
+            if self.factores and any(f in CURVE_FACTORS for f in self.factores):
+                extra = curve_factors(self.db, as_of_ts, 3 * horizon + 9)
+            fq = _quarterly_factors(mp, extra, self.factores)
+            self._fq[as_of_period] = fq
+            self._models[as_of_period] = estimate_asset_model(self.panel, fq, as_of_period)
+            from models.nonop import drivers
+            self._drv[as_of_period] = drivers(self.db, mp)
+        return self.panel, self._models[as_of_period], self._macros[as_of_period]
+
+    def drv(self, as_of_period: str):
+        return self._drv.get(as_of_period)
+
+    def fq(self, as_of_period: str):
+        return self._fq.get(as_of_period)
+
+
+# (nombre corto, ancla de la rotación, ancla del margen)
+ANCLAS = (("m4", "mean4", None), ("last", "last", None), ("med4", "median4", None),
+          ("last_mmed4", "last", "median4"))
+
+
+def backtest_series(db, rut: str, nombre: str, account: str,
+                    origins: int = 8, horizon: int = 4,
+                    structural: "_StructuralCache | None" = None,
+                    solo_estructural: bool = False, con_eee: bool = False,
+                    robusto: bool = True) -> list[dict]:
+    """Backtest rolling-origin de una (empresa, partida). Devuelve filas de resultados."""
+    endog = get_quarterly_deaccumulated(db, rut, account)
+    if endog.dropna().shape[0] < MIN_OBS + origins + horizon:
+        return []
+
+    n = len(endog)
+    first_origin = n - horizon - origins  # posición (0-based) del primer origen
+    # Escala MASE: naive estacional in-sample sobre el tramo común de entrenamiento
+    base = endog.iloc[:first_origin + 1]
+    scale = float(np.nanmean(np.abs(base.values[4:] - base.values[:-4])))
+    if not np.isfinite(scale) or scale <= 0:
+        return []
+
+    rows = []
+    for i in range(first_origin, n - horizon):
+        train = endog.iloc[:i + 1]
+        if train.dropna().shape[0] < MIN_OBS:
+            continue
+        origin_p = endog.index[i]
+        as_of = _quarter_end(origin_p) + pd.DateOffset(months=PUBLICATION_LAG_MONTHS)
+
+        targets = list(endog.index[i + 1:i + 1 + horizon])
+        preds = {}
+        sarimax_specs = ()
+        if not solo_estructural:
+            # Senda macro vintage (historia truncada + anclajes EEE al as_of); solo la usa el SARIMAX
+            mp = build_macro_path(db, horizon_months=3 * horizon + 9, as_of=as_of)
+            full_q = mp.full().resample("QE").mean()
+            full_q.index = [f"{d.year}{d.month:02d}" for d in full_q.index]
+            full_q = full_q[EXOG_VARS].ffill().bfill()
+            if any(p not in full_q.index for p in list(train.index) + targets):
+                continue
+            exog_hist = full_q.loc[train.index]
+            exog_fc = full_q.loc[targets]
+            mu, sd = exog_hist.mean(), exog_hist.std().replace(0.0, 1.0)
+            ehz, efz = (exog_hist - mu) / sd, (exog_fc - mu) / sd
+            endog_scale = max(float(np.nanstd(train.values)), 1.0)
+            sarimax_specs = [("noexog", train, None, None)]
+            if con_eee:
+                sarimax_specs.append(("eee", train, ehz.values, efz.values))
+            if robusto:
+                from models.robusto import limpiar_outliers
+                sarimax_specs.append(("noexog_lim", limpiar_outliers(train, 4)[0], None, None))
+
+        for spec, serie, ex_h, ex_f in sarimax_specs:
+            try:
+                preds[spec] = _fit_and_forecast(serie.values / endog_scale, ex_h, ex_f,
+                                                horizon) * endog_scale
+            except Exception:
+                logger.exception("%s falló %s/%s @%s", spec, rut, account, origin_p)
+                continue
+            if robusto:   # tope a la proyección explosiva (models/robusto.py)
+                from models.robusto import acotar
+                preds[spec + "_acot"] = acotar(preds[spec], train, 4)[0]
+        # Naive estacional: y[T+h] = y[T+h-4] (para h<=4 siempre cae dentro del train)
+        preds["snaive"] = np.array([endog.iloc[i + 1 + h - 4] for h in range(horizon)])
+
+        # Modelo estructural (dos anclas de ratio), con panel/modelo/macro cacheados
+        if structural is not None:
+            from models.structural import forecast_structural
+            key = "ingresos" if account == "Ingresos de actividades ordinarias" else "ganancia"
+            panel, amodel, mp_s = structural.get(origin_p, as_of, horizon)
+            specs = []
+            for corto, anchor, a_mgn in ANCLAS:
+                for lim in ((False, True) if robusto else (False,)):
+                    sfx = "_lim" if lim else ""
+                    if a_mgn is None:   # con ancla de margen propia, ingresos = spec sin ella
+                        specs.append((f"estr_{corto}{sfx}", anchor, False, lim, a_mgn))
+                    if key == "ganancia":
+                        specs.append((f"estr_{corto}_nop{sfx}", anchor, True, lim, a_mgn))
+            for spec, anchor, nop, lim, a_mgn in specs:
+                try:
+                    r = forecast_structural(db, rut, steps=horizon, panel=panel,
+                                            model=amodel, macro=mp_s,
+                                            as_of_period=origin_p, ratio_anchor=anchor,
+                                            nonop=nop, drv=structural.drv(origin_p),
+                                            factors_q=structural.fq(origin_p), limpiar=lim,
+                                            ancla_margen=a_mgn)
+                    if r is not None and r.get(key) is not None:
+                        s = r[key]
+                        preds[spec] = np.array([s.get(p, np.nan) for p in targets])
+                except Exception:
+                    logger.exception("%s falló %s/%s @%s", spec, rut, account, origin_p)
+
+        for h in range(horizon):
+            target_p = targets[h]
+            actual = endog.get(target_p, np.nan)
+            if not np.isfinite(actual):
+                continue
+            for spec, arr in preds.items():
+                fc = float(arr[h])
+                if not np.isfinite(fc):
+                    continue
+                rows.append({
+                    "rut": rut, "company": nombre, "account": account,
+                    "origin": origin_p, "h": h + 1, "target": target_p,
+                    "spec": spec, "actual": actual, "forecast": fc,
+                    "abs_err": abs(actual - fc), "mase": abs(actual - fc) / scale,
+                    "scale": scale,
+                })
+    return rows
+
+
+def summarize(df: pd.DataFrame) -> pd.DataFrame:
+    """MASE medio y mediano por (partida, spec, horizonte); sMAPE solo para ingresos."""
+    g = df.groupby(["account", "spec", "h"])
+    out = g.agg(n=("mase", "size"), mase_mean=("mase", "mean"),
+                mase_med=("mase", "median")).reset_index()
+    rev = df[df["account"] == "Ingresos de actividades ordinarias"].copy()
+    if not rev.empty:
+        rev["smape"] = 200 * rev["abs_err"] / (rev["actual"].abs() + rev["forecast"].abs())
+        sm = rev.groupby(["account", "spec", "h"])["smape"].median().rename("smape_med")
+        out = out.merge(sm.reset_index(), on=["account", "spec", "h"], how="left")
+    return out.round(3)
+
+
+def main():
+    ap = argparse.ArgumentParser(description="Backtest de proyecciones macrofundadas")
+    ap.add_argument("--db", default=None, help="Ruta a la BD DuckDB (default settings)")
+    ap.add_argument("--companies", type=int, default=40)
+    ap.add_argument("--origins", type=int, default=8)
+    ap.add_argument("--horizon", type=int, default=4)
+    ap.add_argument("--out", default="scratch/backtest_results.csv")
+    ap.add_argument("--no-structural", action="store_true",
+                    help="Omitir los specs estructurales (solo SARIMAX/naive)")
+    ap.add_argument("--solo-estructural", action="store_true",
+                    help="Omitir los SARIMAX (más rápido; para A/B entre specs estructurales)")
+    ap.add_argument("--cuentas", default="",
+                    help="Partidas separadas por coma (default: todas las proyectables)")
+    ap.add_argument("--senda", default="encuestas", choices=["encuestas", "mercado", "mezcla"],
+                    help="Fuente de tpm/ipc_yoy futuras del estructural (models/macro_path.py)")
+    ap.add_argument("--con-eee", action="store_true",
+                    help="Incluir el SARIMAX con exógenas (descartado en jul-2026)")
+    ap.add_argument("--sin-robusto", action="store_true",
+                    help="Omitir los specs con limpieza de atípicos (_lim) y tope (_acot)")
+    ap.add_argument("--factores", default="",
+                    help="Factores de la ecuación de activos separados por coma "
+                         "(default: models.structural.FACTORS; ver models/curve_factors.py)")
+    ap.add_argument("--sectores", default="nombre", choices=["curada", "nombre"],
+                    help="Clasificación sectorial del shrinkage estructural "
+                         "(models.structural.SECTOR_FUENTE)")
+    args = ap.parse_args()
+
+    import models.structural as _st
+    _st.SECTOR_FUENTE = args.sectores
+
+    from db.database import Database
+    logging.basicConfig(level=logging.WARNING)
+    db = Database(db_path=args.db, read_only=True)
+
+    companies = select_companies(db, args.companies, args.origins, args.horizon)
+    factores = [f for f in args.factores.split(",") if f] or None
+    structural = None if args.no_structural else _StructuralCache(db, args.senda, factores)
+    print(f"Backtest: {len(companies)} empresas x {len(FORECASTABLE_ACCOUNTS)} partidas "
+          f"x {args.origins} orígenes x h1..h{args.horizon} "
+          f"(estructural: {'sí' if structural else 'no'})")
+
+    t0, all_rows = time.time(), []
+    for k, (rut, nombre) in enumerate(companies, 1):
+        cuentas = [c for c in args.cuentas.split(",") if c] or FORECASTABLE_ACCOUNTS
+        for account in cuentas:
+            all_rows.extend(backtest_series(db, rut, nombre, account,
+                                            args.origins, args.horizon,
+                                            structural=structural,
+                                            solo_estructural=args.solo_estructural,
+                                            con_eee=args.con_eee,
+                                            robusto=not args.sin_robusto))
+        print(f"[{k}/{len(companies)}] {nombre[:50]:<50} filas acumuladas={len(all_rows)} "
+              f"t={time.time()-t0:.0f}s", flush=True)
+
+    df = pd.DataFrame(all_rows)
+    if df.empty:
+        print("Sin resultados.")
+        return
+    df.to_csv(args.out, index=False)
+    print(f"\nResultados detallados: {args.out} ({len(df)} filas)")
+    print("\n=== RESUMEN (MASE: <1 = mejor que naive estacional) ===")
+    print(summarize(df).to_string(index=False))
+
+
+if __name__ == "__main__":
+    main()

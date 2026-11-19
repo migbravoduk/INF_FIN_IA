@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% import "partials/_ui.html" as ui %}
+
+{% block title %}Ranking · INF_FIN_IA{% endblock %}
+
+{% block content %}
+{{ ui.page_head("Ranking de empresas por indicador",
+    "Las 15 mejores y las 15 peores empresas según el indicador elegido, con su salud financiera (Z'' de Altman) al lado.") }}
+
+<form class="filtros"
+      hx-get="/ranking/table"
+      hx-target="#ranking-result"
+      hx-trigger="load, change"
+      hx-swap="innerHTML">
+
+    <label>Indicador
+        <select name="metric">
+            {% for k, v in ratios.items() %}
+            <option value="{{ k }}"{{ " selected" if k == metric_sel }}>{{ v }}</option>
+            {% endfor %}
+        </select>
+    </label>
+
+    <label>Período
+        <select name="period">
+            {% for p in periods %}
+            <option value="{{ p }}">{{ p }}</option>
+            {% endfor %}
+        </select>
+    </label>
+
+    <label class="ancho">Sector / actividad
+        <select name="sector">
+            <option value="" selected>— Todos los sectores —</option>
+            {% for s in sectors %}
+            <option value="{{ s }}">{{ s }}</option>
+            {% endfor %}
+        </select>
+    </label>
+</form>
+
+<div id="ranking-result">
+    <p class="loading">Calculando ranking…</p>
+</div>
+{% endblock %}

@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% import "partials/_ui.html" as ui %}
+
+{% block title %}Salud financiera · INF_FIN_IA{% endblock %}
+
+{% block content %}
+{{ ui.page_head("Salud financiera: rentabilidad contra endeudamiento",
+    "Cada burbuja es una empresa: rentabilidad sobre patrimonio (ROE) en el eje vertical, deuda sobre patrimonio en el horizontal y tamaño según liquidez.") }}
+
+<form class="filtros"
+      hx-get="/salud/chart"
+      hx-target="#salud-result"
+      hx-trigger="load, change"
+      hx-swap="innerHTML">
+
+    <label>Período
+        <select name="period">
+            {% for p in periods %}
+            <option value="{{ p }}">{{ p }}</option>
+            {% endfor %}
+        </select>
+    </label>
+
+    <label class="ancho">Sector / actividad
+        <select name="sector">
+            <option value="" selected>— Todos los sectores —</option>
+            {% for s in sectors %}
+            <option value="{{ s }}">{{ s }}</option>
+            {% endfor %}
+        </select>
+    </label>
+</form>
+
+<div id="salud-result">
+    <p class="loading">Cargando matriz de riesgo vs rentabilidad…</p>
+</div>
+{% endblock %}

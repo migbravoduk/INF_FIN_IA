@@ -128,10 +128,18 @@ CREATE TABLE IF NOT EXISTS sp_instrument_prices (
 
 ## Scheduler automático
 
-| Job | Trigger | Acciones |
+Desde nov-2026 no hay jobs fijos de la SP: las tres fuentes están en el registro único
+`scheduler/sources.py` y las cubre el catch-up horario (`sp_cuotas`, `sp_precios`,
+`sp_cartera`).
+
+| Fuente | Rezago esperado | Qué baja el catch-up |
 |-----|---------|----------|
-| `sp_daily_fetch` | Lun–Vie 18:30 (Santiago) | Cinta de precios del día + valores cuota del año en curso |
-| `sp_monthly_fetch` | Día 15 de cada mes 20:00 | Cartera desagregada del mes anterior |
+| `sp_cuotas` | día hábil anterior | Valores cuota del año (o de los dos años si cruza el cambio de año) |
+| `sp_precios` | día hábil anterior | Hasta 30 días hábiles de cinta por corrida |
+| `sp_cartera` | ~4 meses (130 días) | Todos los meses faltantes desde el último cargado; se detiene en el primero no publicado |
+
+La cartera desagregada sale con ~4 meses de rezago: pedir un mes no publicado devuelve un
+volcado de error (`<pre>Array…`) en vez del ZIP, que el colector trata como "no publicado".
 
 ---
 
@@ -141,6 +149,15 @@ CREATE TABLE IF NOT EXISTS sp_instrument_prices (
 **Problema:** El XML de carteras contiene etiquetas `<glosa>` idénticas en distintas secciones del mismo fondo (ej: `ACC` para renta variable nacional y `ACC` para renta variable extranjera), causando violaciones en la clave primaria compuesta original `(period, afp_name, fund_type, instrument_glosa)`.
 
 **Solución:** Se reemplazó la clave primaria compuesta por un `id` autoincremental con secuencia DuckDB (`sp_portfolio_seq`) y se adoptó una estrategia **Delete-then-Insert** por período para mantener idempotencia.
+
+> **Ampliación (jul-2026):** la misma ambigüedad de glosas impide clasificar un instrumento
+> como nacional o extranjero por su código (el mismo `CFID(6)` aparece en la sección de fondos
+> mutuos nacionales y en la extranjera). El parser ahora preserva el orden del XML en
+> `row_order` (atributo `<fila numero>`) y asigna `section` = el totalizador `TOTAL …` que
+> cierra cada bloque. Así `get_foreign_portfolio` filtra por `section = 'TOTAL EXTRANJERO'`
+> de forma exacta. **Nunca clasificar la cartera por lista de códigos de instrumento.** El
+> backfill 2015–2026 confirmó `section` en todos los años (el esquema pasó de 8 a 9 secciones
+> en 2018 al aparecer los activos alternativos).
 
 ### 2. Bloqueo de DuckDB en inserciones masivas
 **Problema:** Al ejecutar el backfill completo (todos los fondos A–E desde 2002 en un único proceso), la conexión DuckDB quedaba bloqueada durante el `executemany` del Fondo B (~41.000 filas con `ON CONFLICT DO UPDATE`), posiblemente por la presión de memoria del proceso previo que mantenía la conexión abierta.

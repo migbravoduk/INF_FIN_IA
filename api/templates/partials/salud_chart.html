@@ -1,0 +1,95 @@
+{% import "partials/_ui.html" as ui %}
+{% if not data %}
+{{ ui.vacio("No hay datos suficientes para generar el gráfico en este período/sector.") }}
+{% else %}
+{{ ui.viz("salud-chart-container", "Rentabilidad contra endeudamiento",
+          sub="ROE (%) contra deuda / patrimonio (veces) · tamaño de la burbuja = liquidez corriente", fuente="CMF", alto="lg") }}
+<p class="nota" id="salud-fuera"></p>
+<p class="nota">
+    <strong>Verde:</strong> poco endeudadas y rentables (deuda menor a 1x y ROE mayor a 15%).
+    <strong>Rojo:</strong> endeudadas y con pérdidas (deuda mayor a 2,5x y ROE negativo).
+    El resto va en gris: sin señal extrema.
+</p>
+<script>
+    (function() {
+        var cid = "salud-chart-" + Math.random().toString(36).substring(2, 9);
+        var el = document.getElementById("salud-chart-container");
+        if (el) el.id = cid;
+
+        var rawData = {{ data | tojson }};
+        rawData.forEach(function (d) { d.name = INF.nombre(d.name); });
+
+        var xData = rawData.map(d => d.deuda);
+        var yData = rawData.map(d => d.roe);
+        var textData = rawData.map(d => d.name + "<br>Liquidez: " + INF.fmt(d.liquidez, 2));
+        var sizeData = rawData.map(d => Math.max(5, Math.min(d.liquidez * 10, 40)));
+        // El color sigue al cuadrante (no al ROE, que ya está en el eje).
+        var colorData = rawData.map(function (d) {
+            if (d.deuda < 1 && d.roe > 15) { return INF.COLOR.pos; }
+            if (d.deuda > 2.5 && d.roe < 0) { return INF.COLOR.neg; }
+            return INF.COLOR.contexto;
+        });
+
+        // Eje vertical: percentiles 2 a 98 del ROE, para que unos pocos extremos no aplasten al resto.
+        var orden = yData.slice().sort(function (a, b) { return a - b; });
+        function q(p) { var i = (orden.length - 1) * p, lo = Math.floor(i), hi = Math.ceil(i); return orden[lo] + (orden[hi] - orden[lo]) * (i - lo); }
+        var p2 = q(0.02), p98 = q(0.98), holgura = (p98 - p2) * 0.08 || 1;
+        var yMin = p2 - holgura, yMax = p98 + holgura;
+        var xMax = Math.max.apply(null, xData.concat([5]));
+        var fuera = yData.filter(function (v) { return v < yMin || v > yMax; }).length;
+        if (fuera) {
+            document.getElementById("salud-fuera").textContent =
+                INF.fmt(fuera, 0) + " empresas fuera del rango visible (ROE por debajo de " + INF.fmt(yMin, 0) + "% o sobre " + INF.fmt(yMax, 0) + "%).";
+        }
+
+        var trace = {
+            x: xData, y: yData, mode: 'markers', type: 'scatter',
+            text: textData, hoverinfo: 'text+x+y', showlegend: false,
+            marker: { size: sizeData, color: colorData, opacity: 0.75, line: { color: '#111a2c', width: 1 } }
+        };
+
+        // Nombres de las 6 empresas con mayor |ROE| dentro del rango visible.
+        var visibles = rawData.filter(function (d) { return d.roe >= yMin && d.roe <= yMax; })
+            .sort(function (a, b) { return Math.abs(b.roe) - Math.abs(a.roe); }).slice(0, 6);
+        // Los rótulos que caerían encima de otro se apilan hacia abajo (13 px por nivel).
+        var rangoVis = (yMax - yMin) || 1, ancla = null, nivel = 0;
+        var rotulos = visibles.map(function (d) {
+            var n = d.name.length > 22 ? d.name.slice(0, 21) + "…" : d.name;
+            return { x: d.deuda, y: d.roe, text: n, showarrow: false, xanchor: "left", xshift: 8,
+                     font: { size: 11, color: INF.COLOR.tinta } };
+        }).sort(function (a, b) { return b.y - a.y; });
+        rotulos.forEach(function (a) {
+            if (ancla !== null && (ancla - a.y) < rangoVis * 0.07) { nivel += 1; a.yshift = -13 * nivel; }
+            else { nivel = 0; ancla = a.y; }
+        });
+        var notas = [
+            { xref: "paper", yref: "paper", x: 0, y: 1, xanchor: "left", yanchor: "bottom", showarrow: false,
+              text: "Rentables y poco endeudadas", font: { size: 11, color: INF.COLOR.ref } },
+            { xref: "paper", yref: "paper", x: 1, y: 1, xanchor: "right", yanchor: "bottom", showarrow: false,
+              text: "Endeudadas y con pérdidas", font: { size: 11, color: INF.COLOR.ref } }
+        ];
+
+        var layout = {
+            margin: { t: 28, r: 20, b: 50, l: 60 },
+            xaxis: { title: { text: 'Deuda / patrimonio (veces)' }, rangemode: "tozero" },
+            yaxis: { title: { text: 'ROE (%)' }, range: [yMin, yMax] },
+            hovermode: 'closest',
+            annotations: notas.concat(rotulos),
+            shapes: [
+                // Cuadrante de poco endeudadas y rentables (baja deuda, ROE alto)
+                { type: 'rect', xref: 'x', yref: 'y', x0: 0, x1: 1, y0: 15, y1: Math.max(yMax, 30),
+                  fillcolor: 'rgba(74, 222, 128, 0.08)', line: { width: 0 } },
+                // Cuadrante de endeudadas y con pérdidas (alta deuda, ROE negativo)
+                { type: 'rect', xref: 'x', yref: 'y', x0: 2.5, x1: xMax, y0: Math.min(yMin, -10), y1: 0,
+                  fillcolor: 'rgba(248, 113, 113, 0.08)', line: { width: 0 } }
+            ]
+        };
+
+        function draw() {
+            if (!window.Plotly) { return setTimeout(draw, 100); }
+            Plotly.newPlot(cid, [trace], layout);
+        }
+        draw();
+    })();
+</script>
+{% endif %}

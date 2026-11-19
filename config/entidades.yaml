@@ -1,0 +1,110 @@
+# ============================================================
+# Entidades curadas a mano — RUT que sus propias fuentes NO traen.
+# Lo lee db/entities.rebuild_entities (comando `main.py build-productos`).
+#
+# REGLA: cada RUT lleva su evidencia. No se infieren RUT por parecido de nombre; si no hay
+# evidencia, la entidad se deja fuera (o con `rut: null`) y se anota qué falta.
+# ============================================================
+
+# Bancos: la API SBIFv3 identifica por código (`bank_code`), sin RUT.
+# Evidencia (2026-11-16): el RUT aparece como `rut_emisor` de bonos bancarios (BB), letras
+# hipotecarias (LH) y depósitos (DPC/DPL) en la cartera de renta fija de seguros (B.1,
+# período 202608), y el prefijo del nemotécnico identifica al banco.
+bancos:
+  "001": {rut: "97004000", corto: "Banco de Chile", evidencia: "nemotécnico BCHI…"}
+  "009": {rut: "97011000", corto: "Banco Internacional", evidencia: "nemotécnico BINTA…"}
+  "012": {rut: "97030000", corto: "BancoEstado", evidencia: "nemotécnico BEST…"}
+  "014": {rut: "97018000", corto: "Scotiabank", evidencia: "nemotécnico BBNS…"}
+  "016": {rut: "97006000", corto: "BCI", evidencia: "nemotécnico BBCI…"}
+  # BICE absorbió a Security (nov-2025): los bonos BSEC… vigentes figuran con el RUT de BICE.
+  "028": {rut: "97080000", corto: "Banco BICE", evidencia: "bonos BSEC… asumidos tras la fusión"}
+  "031": {rut: "97951000", corto: "HSBC", evidencia: "nemotécnico FUHSB…"}
+  "037": {rut: "97036000", corto: "Santander", evidencia: "nemotécnico BSTD…"}
+  "039": {rut: "97023000", corto: "Itaú", evidencia: "nemotécnico BCOR… (ex Corpbanca)"}
+  "049": {rut: "97053000", corto: "Banco Security", evidencia: "nemotécnico BSECC…"}
+  "051": {rut: "96509660", corto: "Banco Falabella", evidencia: "nemotécnico FAL…"}
+  "053": {rut: "97947000", corto: "Banco Ripley", evidencia: "nemotécnico BRPLA…"}
+  "055": {rut: "99500410", corto: "Banco Consorcio", evidencia: "nemotécnico BCNO…"}
+  "059": {rut: "76362099", corto: "BTG Pactual", evidencia: "nemotécnico BBTG…"}
+  # PENDIENTE (sin evidencia en los datos): "060" China Construction Bank y
+  # "061" Bank of China. Tomar el RUT de su ficha en cmfchile.cl antes de agregarlos.
+
+# Emisores de renta fija que no reportan EEFF a la CMF (Estado, Banco Central, cooperativas)
+# pero sí aparecen como `rut_emisor` en B.1 y en la cartera de fondos mutuos.
+# Evidencia (2026-11-17): prefijo del nemotécnico en ambas carteras, período 202609.
+emisores:
+  "60805000": {nombre: "Tesorería General de la República (Fisco de Chile)", corto: "Fisco (Tesorería)",
+               tipo: "estado", evidencia: "bonos BTP… (pesos) y BTU… (UF) de la Tesorería"}
+  "97029000": {nombre: "Banco Central de Chile", corto: "Banco Central",
+               tipo: "estado", evidencia: "bonos BCP…/BCU… y pagarés descontables PDBC"}
+  "82878900": {nombre: "Cooperativa del Personal de la Universidad de Chile (Coopeuch)", corto: "Coopeuch",
+               tipo: "emisor", evidencia: "bonos BCOO… y depósitos FNCOO…"}
+  # Mismos instrumentos que Itaú (97023000): BITA…, FNITA…, BCORA…. Es el RUT del ex Banco
+  # Itaú Chile, que algunas carteras siguen informando después de la fusión con Corpbanca.
+  "97041000": {nombre: "Itaú Chile (RUT del ex Banco Itaú Chile)", corto: "Itaú (RUT antiguo)",
+               tipo: "banco", evidencia: "nemotécnicos BITA…/FNITA…/BCORA…, iguales a 97023000"}
+  # La FECU la nombra solo "SURA"; la razón social completa viene en el B.8 (cartera de inversiones).
+  "96549050": {nombre: "Seguros de Vida SURA S.A.", corto: "SURA Vida", tipo: "aseguradora_vida",
+               evidencia: "usuario 19-nov-2026; 'SEGUROS DE VIDA SURA SA' en cmf_insurer_portfolio_control"}
+  # Mayor originador de mutuos hipotecarios endosables (MHA) de B.1: no reporta EEFF a la CMF.
+  "99514870": {nombre: "MetLife Chile Administradora de Mutuos Hipotecarios S.A.",
+               corto: "MetLife Mutuos Hipotecarios", tipo: "administradora_mutuos",
+               evidencia: "usuario 19-nov-2026; 17.179 mutuos MHA en B.1 202609 (3 compañías)"}
+  # Originadores de mutuos hipotecarios endosables de B.1 (MHA; Citibank: MHB). No reportan EEFF
+  # a la CMF. Razón social entregada por el usuario el 19-nov-2026, pareada por RUT con los 25
+  # originadores sin nombre de B.1 202609 (ver docs/PLAN_OBSERVACIONES_19NOV.md).
+  "96777060": {nombre: "BICE Hipotecaria Administradora de Mutuos Hipotecarios S.A.", corto: "BICE Hipotecaria", tipo: "administradora_mutuos", evidencia: "usuario 19-nov-2026; MHA en B.1"}
+  "96538310": {nombre: "Hipotecaria Security S.A.", corto: "Hipotecaria Security", tipo: "administradora_mutuos", evidencia: "usuario 19-nov-2026; MHA en B.1"}
+  "96546470": {nombre: "Hipotecaria La Construcción S.A.", corto: "Hipotecaria La Construcción", tipo: "administradora_mutuos", evidencia: "usuario 19-nov-2026; MHA en B.1"}
+  "76090605": {nombre: "Administradora de Mutuos Hipotecarios M y V S.A.", corto: "Mutuos M y V", tipo: "administradora_mutuos", evidencia: "usuario 19-nov-2026; MHA en B.1"}
+  "96786870": {nombre: "Mutuos Hipotecarios Renta Nacional S.A.", corto: "Mutuos Renta Nacional", tipo: "administradora_mutuos", evidencia: "usuario 19-nov-2026; MHA en B.1"}
+  "76697522": {nombre: "Evoluciona Administradora de Mutuos Hipotecarios S.A.", corto: "Evoluciona", tipo: "administradora_mutuos", evidencia: "usuario 19-nov-2026; MHA en B.1"}
+  # "No vigente" según el usuario: sus mutuos siguen en las carteras.
+  "96559030": {nombre: "Principal Créditos Hipotecarios S.A.", corto: "Principal Créditos Hipotecarios", tipo: "administradora_mutuos", evidencia: "usuario 19-nov-2026 (no vigente); MHA en B.1"}
+  "76594721": {nombre: "Creditú Administradora de Mutuos Hipotecarios S.A.", corto: "Creditú", tipo: "administradora_mutuos", evidencia: "usuario 19-nov-2026; MHA en B.1"}
+  "96778070": {nombre: "Penta Hipotecario Administradora de Mutuos Hipotecarios S.A.", corto: "Penta Hipotecario", tipo: "administradora_mutuos", evidencia: "usuario 19-nov-2026; MHA en B.1"}
+  "96542350": {nombre: "Consorcio Créditos Hipotecarios S.A.", corto: "Consorcio Créditos Hipotecarios", tipo: "administradora_mutuos", evidencia: "usuario 19-nov-2026; MHA en B.1"}
+  "96539080": {nombre: "CG Mutuos Hipotecarios S.A.", corto: "CG Mutuos Hipotecarios", tipo: "administradora_mutuos", evidencia: "usuario 19-nov-2026; MHA en B.1"}
+  "76965638": {nombre: "Central Hipotecaria S.A.", corto: "Central Hipotecaria", tipo: "administradora_mutuos", evidencia: "usuario 19-nov-2026; MHA en B.1"}
+  "96656420": {nombre: "Cimenta Mutuo Hipotecario S.A.", corto: "Cimenta Mutuo Hipotecario", tipo: "administradora_mutuos", evidencia: "usuario 19-nov-2026; MHA en B.1"}
+  "96781330": {nombre: "Contempora Créditos Hipotecarios S.A.", corto: "Contempora", tipo: "administradora_mutuos", evidencia: "usuario 19-nov-2026; MHA en B.1"}
+  "76136663": {nombre: "Agente Administrador de Mutuos Hipotecarios Andes S.A.", corto: "Mutuos Andes", tipo: "administradora_mutuos", evidencia: "usuario 19-nov-2026; MHA en B.1"}
+  "96598280": {nombre: "Administradora de Mutuos Hipotecarios del Centro S.A.", corto: "Mutuos del Centro", tipo: "administradora_mutuos", evidencia: "usuario 19-nov-2026; MHA en B.1"}
+  "77971124": {nombre: "4 Life Crédito Hipotecario S.A.", corto: "4 Life Crédito Hipotecario", tipo: "administradora_mutuos", evidencia: "usuario 19-nov-2026; MHA en B.1"}
+  "96795510": {nombre: "Hipotecaria Concreces S.A.", corto: "Concreces", tipo: "administradora_mutuos", evidencia: "usuario 19-nov-2026; MHA en B.1"}
+  "96722710": {nombre: "Administradora de Mutuos Hipotecarios Hogar y Mutuo S.A.", corto: "Hogar y Mutuo", tipo: "administradora_mutuos", evidencia: "usuario 19-nov-2026; MHA en B.1"}
+  "97008000": {nombre: "Citibank N.A.", corto: "Citibank", tipo: "banco", evidencia: "usuario 19-nov-2026; mutuos MHB (emitidos por banco) en B.1"}
+  "96722190": {nombre: "Hipotecaria Valoriza S.A.", corto: "Valoriza", tipo: "administradora_mutuos", evidencia: "usuario 19-nov-2026; MHA en B.1"}
+  "96810900": {nombre: "Procrédito S.A.", corto: "Procrédito", tipo: "administradora_mutuos", evidencia: "usuario 19-nov-2026; MHA en B.1"}
+  "99594170": {nombre: "Vive Mutuos Hipotecarios S.A.", corto: "Vive Mutuos Hipotecarios", tipo: "administradora_mutuos", evidencia: "usuario 19-nov-2026; MHA en B.1"}
+  "96700050": {nombre: "Suiza Mutuo Leasing S.A.", corto: "Suiza Mutuo Leasing", tipo: "administradora_mutuos", evidencia: "usuario 19-nov-2026; MHA en B.1"}
+  "96669240": {nombre: "Credycasa Créditos Hipotecarios S.A.", corto: "Credycasa", tipo: "administradora_mutuos", evidencia: "usuario 19-nov-2026; MHA en B.1"}
+  # PENDIENTE: 77844703 (bonos BTBD… y depósitos FNTBD…). Parece un banco nuevo, pero no está
+  # en cmf_bank_statements; confirmar en el registro de la CMF antes de nombrarlo.
+
+# Fusiones: RUT absorbido → RUT que sobrevive. Algunas carteras siguen informando bonos con el
+# RUT de un emisor que ya no existe; al leer (db/cross.emisor_efectivo) esas posiciones se suman
+# al sucesor. La tabla de origen no cambia. Mismo criterio de evidencia que el resto del archivo.
+fusiones:
+  # Itaú–Corpbanca: sobrevive Itaú Chile, que la CMF (bank_code 039) y los fondos mutuos informan
+  # con 97023000. En B.1 202609, 76645030 solo trae nemotécnicos BITA…/UITA…/BCOR…, los mismos de 97023000.
+  "76645030": {sucesor: "97023000", evidencia: "usuario 19-nov-2026 (fusión Itaú–Corpbanca); nemotécnicos BITA/UITA/BCOR"}
+  "97041000": {sucesor: "97023000", evidencia: "nemotécnicos BITA…/FNIT…/BCOR… iguales a 97023000 (ver emisores)"}
+  # Scotiabank absorbió a BBVA Chile y al Banco del Desarrollo: sus bonos UBBV…/BBBV… y DES… se
+  # informan a veces con el RUT antiguo y a veces con el de Scotiabank (B.1 202609).
+  "97032000": {sucesor: "97018000", evidencia: "usuario 19-nov-2026 (ex BBVA Chile); nemotécnicos UBBV/BBBV también con 97018000"}
+  "97051000": {sucesor: "97018000", evidencia: "usuario 19-nov-2026 (ex Banco del Desarrollo); nemotécnicos DES… también con 97018000"}
+  # BICE absorbió a Security (nov-2025): ver la nota del banco 028 arriba.
+  "97053000": {sucesor: "97080000", evidencia: "fusión BICE–Security nov-2025; bonos BSEC… vigentes con el RUT de BICE"}
+
+# AFP: los valores cuota de la SP las identifican por nombre (`afp_name`), sin RUT.
+# Evidencia (2026-11-17): la cartera desagregada de la SP (XML mensual, collectors/sp_cartera_detalle)
+# trae <afp><rut><numero>…</numero><dv>…</dv></rut><nombre>…</nombre> en cada cuadro por AFP.
+afp:
+  CAPITAL: {rut: "98000000", nombre: "AFP Capital S.A."}     # DV 1
+  CUPRUM: {rut: "76240079", nombre: "AFP Cuprum S.A."}       # DV 0
+  HABITAT: {rut: "98000100", nombre: "AFP Habitat S.A."}     # DV 8
+  MODELO: {rut: "76762250", nombre: "AFP Modelo S.A."}       # DV 3
+  PLANVITAL: {rut: "98001200", nombre: "AFP PlanVital S.A."} # DV K
+  PROVIDA: {rut: "76265736", nombre: "AFP ProVida S.A."}     # DV 8
+  UNO: {rut: "76960424", nombre: "AFP Uno S.A."}             # DV 3

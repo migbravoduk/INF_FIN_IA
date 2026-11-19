@@ -1,0 +1,96 @@
+{#
+  partials/fondos_panel.html — Panel de un fondo: retornos multi-horizonte + composición.
+  ret = {horizons:[], afps:[{afp, values:[]}], as_of}
+  comp = {period, sections:[], afps:[{afp, pcts:{sección: %}}]}
+#}
+{% import "partials/_ui.html" as ui %}
+{% if ret.afps %}
+{{ ui.viz("fondos-ret-chart", "Retorno nominal del valor cuota: Fondo " ~ fund,
+          sub=("% · hasta 12M acumulado, desde 3A anualizado · al " ~ (ret.as_of|fecha_es)),
+          fuente="Superintendencia de Pensiones", alto="lg") }}
+
+{# Máximo de cada horizonte: marca al mejor de cada columna #}
+{% set maximos = [] %}
+{% for j in range(ret.horizons|length) %}
+  {% set vals = [] %}
+  {% for a in ret.afps %}{% if a['values'][j] is not none %}{% set _ = vals.append(a['values'][j]) %}{% endif %}{% endfor %}
+  {% set _ = maximos.append(vals|max if vals else none) %}
+{% endfor %}
+<div class="tbl-wrap">
+    <table class="tbl" aria-label="Retornos del Fondo {{ fund }} por AFP y horizonte">
+        <thead>
+            <tr>
+                <th>AFP</th>
+                {% for h in ret.horizons %}<th class="num">{{ h }}</th>{% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+        {% for a in ret.afps %}
+            <tr>
+                <td class="ent">{{ a.afp|nombre }}</td>
+                {% for v in a["values"] %}
+                <td class="num{{ ' lider' if v is not none and v == maximos[loop.index0] }}">{{ (v|es(2) ~ '%') if v is not none else "—" }}</td>
+                {% endfor %}
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+<p class="nota">
+    Ordenado por retorno a 12M; el punto ● marca el mejor de cada horizonte. "—" = la AFP no existía en ese horizonte.
+    Retornos nominales sobre valor cuota (no descuentan comisiones: para el neto ver la página AFP).
+</p>
+
+{% if comp.afps %}
+{{ ui.viz("fondos-comp-chart", "Composición de cartera por AFP: Fondo " ~ fund,
+          sub=("% del fondo por sección del informe de la SP · período " ~ comp.period),
+          fuente="Superintendencia de Pensiones", alto="lg", clase="mt-5") }}
+{% endif %}
+
+<script>
+(function () {
+    var ret = {{ ret | tojson }};
+    var comp = {{ comp | tojson }};
+
+    function draw() {
+        if (!window.Plotly) { return setTimeout(draw, 100); }
+
+        // 1) Retornos: gráfico de puntos. x = horizonte, un punto por AFP (color fijo por AFP);
+        //    comparar alturas es más fácil que comparar barras agrupadas (7 AFP × 7 horizontes).
+        var ref = INF.refH(0);
+        Plotly.newPlot("fondos-ret-chart",
+            ret.afps.map(function (a) {
+                return { x: ret.horizons, y: a.values, name: INF.nombre(a.afp),
+                         type: "scatter", mode: "markers",
+                         marker: { size: 11, color: INF.colorAFP(a.afp), line: { color: "#111a2c", width: 1.5 } },
+                         hovertemplate: "%{x}: %{y:.2f}%<extra>" + INF.nombre(a.afp) + "</extra>" };
+            }), {
+            margin: { t: 10, r: 10, b: 40, l: 50 },
+            yaxis: { ticksuffix: "%" }, xaxis: { showgrid: true },
+            shapes: [ref.shape]
+        });
+
+        // 2) Composición: barras horizontales apiladas, y = AFP, un trace por sección (color fijo por orden)
+        if (comp.afps.length > 0) {
+            var afps = comp.afps.map(function (a) { return INF.nombre(a.afp); });
+            Plotly.newPlot("fondos-comp-chart",
+                comp.sections.map(function (s, i) {
+                    return {
+                        y: afps,
+                        x: comp.afps.map(function (a) { return a.pcts[s] || 0; }),
+                        name: s, type: "bar", orientation: "h",
+                        marker: { color: INF.PALETA[i % INF.PALETA.length] },
+                        hovertemplate: "<b>%{y}</b> · " + s + ": %{x:.2f}%<extra></extra>"
+                    };
+                }), {
+                margin: { t: 10, r: 10, b: 40, l: 90 }, barmode: "stack",
+                xaxis: { ticksuffix: "%", range: [0, 100] }
+            });
+        }
+    }
+    draw();
+})();
+</script>
+{% else %}
+{{ ui.vacio("Sin datos de cuotas para ese fondo.") }}
+{% endif %}

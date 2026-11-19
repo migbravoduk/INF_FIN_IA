@@ -1,0 +1,78 @@
+{#
+  partials/bc_comparar.html — Dos series macro superpuestas.
+  series = [{meta, serie}] (1 o 2), misma_unidad = bool.
+  Misma unidad: un solo eje (la distancia vertical entre las líneas es la brecha real, p. ej. BCP 5 y 10 años).
+  Unidades distintas: dos paneles apilados que comparten el eje de tiempo (nunca doble eje Y).
+#}
+{% import "partials/_ui.html" as ui %}
+{% if series | length < 2 %}
+{{ ui.vacio("Elige dos series para comparar.") }}
+{% elif not series[0].serie or not series[1].serie %}
+{{ ui.vacio("Alguna de las dos series no tiene datos en el rango elegido.") }}
+{% else %}
+<p class="nota mt-0">
+    {% if misma_unidad %}
+        Misma magnitud ({{ series[0].meta.unit_label }}): comparten eje, así que la
+        distancia vertical entre las líneas es la brecha real.
+        {% if ambas_tasas %}
+        Con la TPM y la inflación, esa brecha es la <strong>tasa de política real</strong>.
+        {% endif %}
+    {% else %}
+        Unidades distintas ({{ series[0].meta.unit_label or "—" }} y
+        {{ series[1].meta.unit_label or "—" }}): cada serie va en su propio panel, uno sobre otro,
+        con el mismo eje de tiempo. <strong>Solo se pueden comparar las formas, no los niveles.</strong>
+    {% endif %}
+</p>
+{{ ui.viz("bc-cmp-chart", (series[0].meta.name ~ " frente a " ~ series[1].meta.name),
+          sub=("misma unidad: " ~ series[0].meta.unit_label if misma_unidad else "dos paneles con el mismo eje de tiempo"),
+          fuente="Banco Central", alto=("md" if misma_unidad else "lg")) }}
+
+<script>
+(function () {
+    var a = {{ series[0].serie | tojson }};
+    var b = {{ series[1].serie | tojson }};
+    var mismaUnidad = {{ 'true' if misma_unidad else 'false' }};
+    var nombreA = {{ series[0].meta.name | tojson }};
+    var nombreB = {{ series[1].meta.name | tojson }};
+    var unidadA = {{ (series[0].meta.unit_label or '') | tojson }};
+    var unidadB = {{ (series[1].meta.unit_label or '') | tojson }};
+
+    function draw() {
+        if (!window.Plotly) { return setTimeout(draw, 100); }
+        var colA = INF.COLOR.foco, colB = INF.PALETA[1];
+        var traceA = {
+            x: a.map(function (d) { return d.date; }), y: a.map(function (d) { return d.value; }),
+            name: nombreA, type: "scatter", mode: "lines", line: { color: colA, width: 2 },
+            hovertemplate: "%{x|%d-%m-%Y}<br><b>%{y:,.2f}</b><extra>" + nombreA + "</extra>"
+        };
+        var traceB = {
+            x: b.map(function (d) { return d.date; }), y: b.map(function (d) { return d.value; }),
+            name: nombreB, type: "scatter", mode: "lines", line: { color: colB, width: 2 },
+            hovertemplate: "%{x|%d-%m-%Y}<br><b>%{y:,.2f}</b><extra>" + nombreB + "</extra>"
+        };
+        var layout = { hovermode: "x unified" };
+        if (mismaUnidad) {
+            layout.margin = { t: 10, r: 10, b: 40, l: 70 };
+            layout.yaxis = { title: { text: unidadA } };
+        } else {
+            // Dos paneles apilados (A arriba, B abajo) con el eje X compartido.
+            traceB.xaxis = "x2"; traceB.yaxis = "y2";
+            layout.margin = { t: 10, r: 10, b: 40, l: 70 };
+            layout.yaxis = { domain: [0.56, 1], title: { text: unidadA || nombreA } };
+            layout.yaxis2 = { domain: [0, 0.44], title: { text: unidadB || nombreB } };
+            layout.xaxis = { anchor: "y", matches: "x2", showticklabels: false };
+            layout.xaxis2 = { anchor: "y2" };
+            layout.annotations = [
+                { xref: "paper", yref: "paper", x: 0, y: 1, xanchor: "left", yanchor: "bottom", showarrow: false,
+                  text: nombreA, font: { size: 11, color: colA } },
+                { xref: "paper", yref: "paper", x: 0, y: 0.44, xanchor: "left", yanchor: "bottom", showarrow: false,
+                  text: nombreB, font: { size: 11, color: colB } }
+            ];
+            layout.showlegend = false;
+        }
+        Plotly.newPlot("bc-cmp-chart", [traceA, traceB], layout);
+    }
+    draw();
+})();
+</script>
+{% endif %}

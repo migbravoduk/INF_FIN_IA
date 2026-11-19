@@ -1,0 +1,62 @@
+{#
+  partials/ranking_table.html — Las 15 mejores y las 15 peores empresas por un indicador.
+  mejores / peores = [{company_name, rut, value, texto, currency, sector, z, zona}] (de la mejor / peor hacia afuera)
+  meta = {label, pct, mejor, flujo, unidad}, metric, metric_label, period, maximo (|valor| máximo finito),
+  n_con, n_total, n_excl_fin, n_sin_deprec
+#}
+{% import "partials/_ui.html" as ui %}
+
+{% macro valor(r) -%}
+  {%- if r.texto %}{{ r.texto }}
+  {%- elif meta.unidad == "%" %}{{ r.value|es(1, True) }}%
+  {%- elif meta.unidad == "x" %}{{ r.value|es(2) }}x
+  {%- elif meta.unidad == "mon" %}{{ r.value|es(0) }} {{ r.currency }}
+  {%- else %}{{ r.value|es(2) }}{% endif -%}
+{%- endmacro %}
+
+{% macro tabla(rows, titulo, aria) %}
+<section class="sec mt-0">
+    <h3 class="sub-head mt-0">{{ titulo }}</h3>
+    <div class="tbl-wrap">
+    <table class="tbl" aria-label="{{ aria }}">
+        <thead><tr><th class="num">#</th><th>Empresa</th><th class="num">{{ metric_label }}</th><th class="num">Salud (Z'')</th></tr></thead>
+        <tbody>
+        {% for r in rows %}
+            <tr>
+                <td class="num muted">{{ loop.index }}</td>
+                <td class="ent">{{ r.company_name|nombre }}{% if r.rut in con_tenencia %}<a class="enlace-ico" href="/inversion-institucional/emisor?rut={{ r.rut }}"
+                    title="¿Quién la tiene? Inversión de seguros, fondos mutuos y AFP en esta empresa"
+                    aria-label="¿Quién tiene a {{ r.company_name|nombre }}? Ver su inversión institucional"><span class="enlace-ico-i ico-search" aria-hidden="true"></span></a>{% endif %}<span class="sub">{{ r.sector }}</span></td>
+                <td class="num {{ 'neg' if r.texto or (meta.unidad in ('%', 'mon') and r.value < 0) }}">
+                    {{ valor(r) }}
+                    {% if r.texto is none and maximo and meta.unidad in ('%', 'mon') %}{{ ui.barra(r.value, maximo, 'pos' if r.value >= 0 else 'neg') }}{% endif %}
+                </td>
+                <td class="num">{% if r.z is not none %}{{ r.z|es(2) }}<span class="zona zona--{{ r.zona }}">{{ r.zona }}</span>{% else %}<span class="muted">—</span>{% endif %}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</section>
+{% endmacro %}
+
+{% if mejores %}
+{{ ui.sec_head(metric_label, fecha=period, fuente="CMF", arriba=none) }}
+<p class="nota mt-0">
+    {{ n_con|es(0) }} empresas con dato de {{ n_total|es(0) }}.
+    {% if meta.mejor == "bajo" %}En este indicador el valor más bajo es el mejor.{% else %}En este indicador el valor más alto es el mejor.{% endif %}
+    {% if meta.flujo %}Flujos de los últimos 12 meses (acumulado actual + año anterior − mismo trimestre del año anterior); una empresa sin esos períodos queda fuera.{% endif %}
+    {% if metric in ('z_altman', 'deuda_neta_ebitda') and n_excl_fin %}Se excluyen {{ n_excl_fin|es(0) }} empresas de sectores financieros, holdings y administradoras de fondos, donde este indicador no se lee igual.{% endif %}
+    {% if metric in ('deuda_neta_ebitda', 'margen_ebitda') %}Solo entran las empresas que informan depreciación ({{ (n_total - n_sin_deprec)|es(0) }}): sin ella el EBITDA sería el EBIT.{% endif %}
+    {% if metric == 'z_altman' %}Z'' de Altman: más de 2,6 zona segura; entre 1,1 y 2,6, gris; menos de 1,1, peligro. Falta si la empresa no informa ganancias acumuladas.{% endif %}
+</p>
+<div class="grid-viz grid-viz--2">
+    {{ tabla(mejores, "15 mejores", "Las 15 mejores empresas por " ~ metric_label) }}
+    {{ tabla(peores, "15 peores", "Las 15 peores empresas por " ~ metric_label) }}
+</div>
+<p class="nota">Salud (Z''): puntaje de Altman para empresas no manufactureras y mercados emergentes, calculado con los
+    flujos de los últimos 12 meses; no se calcula para sectores financieros, holdings ni administradoras de fondos. Es una
+    señal de alerta, no una clasificación de riesgo. <a href="/metodologia#salud-financiera">Cómo se calcula</a>.</p>
+{% else %}
+{{ ui.vacio("Sin datos para ese período e indicador.") }}
+{% endif %}

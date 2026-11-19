@@ -1,0 +1,26 @@
+# ============================================================
+# Emisores de la cartera desagregada de la SP (AFP) que no calzan por nombre con dim_entidad.
+# La SP nombra al emisor sin RUT (tabla 'emisor_nac' de sp_cartera_detalle); db/cross.py los
+# cruza por nombre normalizado y estos fijan a mano el resto. Clave: nombre tal como lo
+# publica la SP (se normaliza igual: sin tildes, puntuación ni "S.A.").
+# ============================================================
+BANCO CENTRAL DE CHILE: "97029000"
+TESORERIA GENERAL DE LA REPUBLICA: "60805000"
+# RUT tomados de dim_entidad. Cuando el nombre tiene dos RUT, se usa el que aparece como emisor
+# vigente en la renta fija de seguros (B.1) y en fondos mutuos (verificado 17-nov-2026).
+BANCO ITAU CHILE: "97023000"
+BANCO INTERNACIONAL: "97011000"          # 76930984 (dim_entidad) no emite: 0 posiciones en B.1/FFMM
+COOPERATIVA DE AHORRO Y CREDITO COOPEUCH: "82878900"
+CHILQUINTA ENERGIA S.A.: "96813520"      # 77402188 sin posiciones
+TELEFONICA MOVILES CHILE S.A.: "76124890"   # 87845500 con 151 posiciones vs. 774 + FFMM
+SALMONES CAMANCHA SA: "76065596"         # así viene en la SP (sin "CA")
+CAJA DE C. ASIGNACION FAMILIAR DE LOS ANDES: "81826800"
+MONEDA S.A. ADM. DE FONDOS DE INVERSION: "96684990"
+ALTAMAR SA ADMINISTRADORA GENERAL DE FONDOS: "76429904"
+CIA. NAC. TELEFONOS, TELEFONICA DEL SUR S.A.: "90299000"
+COMPANIA SUDAMERICANA DE VAPORES S.A.: "90160000"
+TOESCA S.A. ADM. DE FONDOS DE INVERSION: "96576660"
+# Sin asignar a propósito (dos RUT activos o identidad dudosa): COMPANIA GENERAL DE ELECTRICIDAD
+# (76411321 y 90042000 emiten ambos), SISTEMA DE TRANSMISION DEL SUR (77683400 / 77312201),
+# AUTOPISTA DEL MAIPO (¿= Ruta del Maipo 96875230?), BICE INVERSIONES AGF (dos RUT sin posiciones),
+# SUBSECRETARIA MINVU, CHILE HOLDINGS GP, TODO ARAUCO, NUEVA TERRA, INP, SECURITIZADORA INTERAMERICANA.

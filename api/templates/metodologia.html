@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+{% import "partials/_ui.html" as ui %}
+
+{% block title %}Metodología · INF_FIN_IA{% endblock %}
+
+{% block content %}
+{{ ui.page_head("Metodología y fuentes", "De dónde sale cada dato, en qué unidad viene y cómo se calcula cada cifra.") }}
+
+<div class="doc">
+<nav class="toc-lateral" aria-label="Contenido de la página">
+    <a href="#met-productos">Métricas de productos</a>
+    <a href="#curvas">Curvas de tasas</a>
+    <a href="#inversion-institucional">Inversión institucional</a>
+    <a href="#salud-financiera">Salud financiera (Z'')</a>
+    <a href="#met-fuentes">Fuentes y unidades</a>
+    <a href="#met-calidad">Controles de calidad</a>
+</nav>
+<div class="doc-cuerpo">
+
+<div class="sec mt-0">{{ ui.sec_head("Cómo se calculan las métricas de productos", id="met-productos", arriba=none) }}</div>
+<div class="prosa">
+<ul>
+  <li><b>Serie base.</b> Un valor cuota por mes y por producto: el último día del mes con publicación.
+      Cada serie de un fondo mutuo se mide por separado, porque tiene su propio valor cuota.</li>
+  <li><b>Pesos.</b> Los fondos en dólares se convierten con el dólar observado publicado el día hábil
+      siguiente al corte (el publicado el día D corresponde a las transacciones del día D−1). Así lo
+      exige la metodología de la CMF y así cuadran nuestras cifras con las oficiales.</li>
+  <li><b>Rentabilidad.</b> Variación del valor cuota. Es neta de la remuneración de la administradora
+      y del gasto operacional, que se descuentan a diario del patrimonio del fondo. La comisión de
+      colocación se cobra aparte al partícipe y se informa por separado. A 3 y 5 años se anualiza.
+      La real descuenta la variación de la UF entre las mismas fechas.</li>
+  <li><b>Categoría.</b> Familia del comparador de la CMF; si la CMF no la informa, el tipo oficial de
+      fondo. Fondos de pensiones: su letra (A a E). La posición es el percentil de la rentabilidad a
+      12 meses dentro de la categoría (100 = mejor).</li>
+  <li><b>Consistencia.</b> Porcentaje de los últimos 36 meses en que la rentabilidad a 12 meses quedó
+      en la mitad superior de su categoría.</li>
+  <li><b>Riesgo.</b> Volatilidad = desviación estándar de los retornos mensuales de 36 meses × √12.
+      Peor caída = máxima pérdida desde un máximo previo (60 meses). Escala 1–7 por volatilidad
+      (umbrales 0,5 / 2 / 5 / 10 / 15 / 25%). Sharpe y Sortino usan como tasa libre de riesgo la
+      tasa de captación bancaria a 30–89 días en pesos (BCCh), promedio del período.</li>
+  <li><b>Frente a un depósito a plazo.</b> Rentabilidad a 12 meses menos lo que habría rendido
+      renovar mes a mes un depósito a 30–89 días a la tasa de captación promedio del BCCh.</li>
+  <li><b>Costo a 10 años.</b> Diferencia entre invertir $1.000.000 durante 10 años sin costos y con
+      ellos, suponiendo la rentabilidad mediana de la categoría. Ilustración, no proyección.</li>
+  <li><b>Flujo neto.</b> Cambio del patrimonio menos lo que explica la rentabilidad: estima aportes
+      menos rescates.</li>
+  <li><b>Duración efectiva</b> (solo fondos de deuda en pesos y fondos D y E). Regresión de los últimos
+      60 meses (mínimo 24): retorno mensual = a + c × inflación UF del mes + b × cambio de tasas; la
+      duración es −b. El cambio de tasas es el desplazamiento paralelo de la curva swap (promedio de
+      2, 5 y 10 años), en pesos o en UF según cuál explique mejor al fondo. Se muestra ± 2 errores
+      estándar. No se informa en fondos en dólares (el tipo de cambio domina) ni cuando sale
+      significativamente negativa. Control: los fondos de deuda de corto plazo "≤ 90 días" dan
+      ~0,13 años y los "≤ 365 días" ~0,45, coherente con sus límites reglamentarios.</li>
+</ul>
+<p><b>Limitación conocida.</b> Los fondos que reparten beneficios: el valor cuota publicado no incluye
+el factor de reparto, así que su rentabilidad calculada sale menor que la real (nunca mayor). En sus
+fichas se muestra la cifra oficial de la CMF y un aviso.</p>
+<p><b>Qué no es esto.</b> Información para comparar, no asesoría de inversión. El orden de los listados
+depende solo de la métrica elegida; ningún proveedor paga por aparecer o por su posición.</p>
+</div>
+
+<div class="sec">{{ ui.sec_head("Curvas de tasas", id="curvas", arriba=none) }}</div>
+<div class="prosa">
+<ul>
+  <li><b>Insumos</b> (Banco Central, diarios desde 2005). Nominal swap: tasa interbancaria a 1 día,
+      swap promedio cámara a 90, 180 y 360 días y a 2, 3, 4, 5 y 10 años. Real swap: swap cámara en UF
+      a 1, 2, 3, 4, 5, 10 y 20 años. Soberana en pesos: interbancaria + bonos BCP/BTP a 2, 5 y 10 años.
+      Soberana en UF: bonos BCU/BTU a 2, 5, 10, 20 y 30 años. Un bono que no transó vale hasta 5 días.</li>
+  <li><b>Convenciones.</b> Tasas hasta 1 año: simples base 360. Swaps: tasa fija base actual/360,
+      llevada a base 365. Bonos: TIR efectiva anual. Todo se pasa a tasa continua para ajustar y se
+      muestra como efectiva anual.</li>
+  <li><b>Modelo.</b> Nelson-Siegel-Svensson con 6 o más puntos; Nelson-Siegel con 4–5; con 3 puntos,
+      Nelson-Siegel con τ fijo en la mediana histórica de esa curva. Los τ se buscan en una grilla y los
+      coeficientes por mínimos cuadrados. La curva no se extrapola fuera de los plazos observados.</li>
+  <li><b>Aproximación declarada.</b> Las tasas de swaps de 2 años o más y las TIR de bonos son tasas par
+      (con cupón); se ajustan como si fueran cero cupón. Control: la compensación inflacionaria a 5 y 10
+      años que sale de nuestras curvas swap difiere en ~2 pb, en promedio 2015–2026, de la que publica el
+      Banco Central; a 1 año, en ~10 pb, porque no corregimos el rezago de la UF respecto del IPC.</li>
+  <li><b>TPM implícita.</b> Tasa forward a 1 mes de la curva swap en pesos, expresada como tasa
+      overnight base 360 (la convención de la TPM). Contiene premio por plazo: no es una expectativa
+      pura, y por eso suele quedar sobre las encuestas en horizontes de 1–2 años.</li>
+  <li><b>Spread bancario.</b> Depósitos a plazo transados en bolsa menos la curva swap al mismo plazo.</li>
+</ul>
+</div>
+
+<div class="sec">{{ ui.sec_head("Inversión institucional: emisores, montos y cobertura", id="inversion-institucional", arriba=none) }}</div>
+<div class="prosa">
+<ul>
+  <li><b>Emisor canónico.</b> En la renta fija de las compañías de seguros (archivo B.1) cada compañía informa el RUT del
+      emisor de cada instrumento, y no siempre coinciden: hay errores de digitación y RUT de bancos absorbidos que siguen en
+      uso. Para cada nemotécnico y mes, el emisor es el RUT que informa la mayoría de las posiciones; en un empate, el que
+      usan los fondos mutuos para ese instrumento. Los mutuos hipotecarios y el leasing no se reasignan: su nemotécnico es
+      propio de cada originador. En sep-2026 esto reasigna 612 posiciones de 177 nemotécnicos (2,4% del monto). La tabla
+      original no se modifica: la corrección se aplica al leer.</li>
+  <li><b>Fusiones.</b> Los RUT de entidades absorbidas se suman al de la entidad que sobrevive: Itaú–Corpbanca, BICE–Security y
+      Scotiabank con el ex BBVA Chile y el ex Banco del Desarrollo. Se declaran con su evidencia en
+      <code>config/entidades.yaml</code>.</li>
+  <li><b>Monto: valor par y valor final.</b> El <em>valor par</em> es el saldo vigente de cada posición, o el monto de origen si
+      la compañía lo informa en cero (leasing, letras y muchos bonos), pasado a pesos con la UF y el dólar del cierre; sobrestima
+      lo que amortizó. El <em>valor final</em> es el que informa cada posición en el archivo B.1 y cuadra con el valor final de
+      la renta fija nacional del archivo de cartera (B.8): a ±1% en 61 de 63 compañías en sep-2026, al peso en la mayoría. La
+      concentración por emisor usa el valor final cuando el período lo trae completo; los demás períodos y las vistas que los
+      comparan en el tiempo usan el valor par. Ninguno es valor de mercado, y la renta fija extranjera no viene en este archivo.</li>
+  <li><b>Cobertura cambiaria de las compañías.</b> Venta neta de moneda extranjera a plazo (forwards y swaps válidos del archivo
+      B.7) dividida por los activos en moneda extranjera: la inversión en el extranjero del B.8 más la renta fija en dólares de
+      empresas chilenas del B.1. Es una medida por monto; el porcentaje de contratos con objetivo de cobertura es otra cosa. Sobre
+      100% es una posición a que el dólar baje, no una cobertura.</li>
+  <li><b>Emisores en común.</b> Cruce por RUT entre seguros, fondos mutuos y AFP. La Superintendencia de Pensiones nombra al emisor
+      sin RUT: se cruza por nombre y por una tabla curada (171 de 182 emisores, 99% del monto). Cada fuente cierra en su propio
+      mes y la de las AFP llega con unos cuatro meses de rezago.</li>
+</ul>
+</div>
+
+<div class="sec">{{ ui.sec_head("Salud financiera: Z'' de Altman y deuda neta / EBITDA", id="salud-financiera", arriba=none) }}</div>
+<div class="prosa">
+<p><strong>Z'' de Altman</strong> (versión para empresas no manufactureras y de mercados emergentes; Altman, 1995 y 2005):
+<code>Z'' = 6,56·X1 + 3,26·X2 + 6,72·X3 + 1,05·X4</code>, con <em>X1</em> = (activos corrientes − pasivos corrientes) ÷ activos
+totales, <em>X2</em> = ganancias acumuladas ÷ activos totales, <em>X3</em> = EBIT de los últimos 12 meses ÷ activos totales y
+<em>X4</em> = patrimonio ÷ pasivos totales. Zonas: <strong>más de 2,6</strong>, segura; <strong>entre 1,1 y 2,6</strong>, gris;
+<strong>menos de 1,1</strong>, peligro. Es una señal de alerta estadística, no una clasificación de riesgo ni una recomendación.</p>
+<ul>
+    <li><strong>Quién queda fuera:</strong> los sectores «Servicios Financieros» y «Holdings e Inversiones» y las administradoras de fondos,
+        porque el balance de un banco, una holding o una AGF no se lee con estas razones. También las empresas que no informan
+        ganancias acumuladas (en diciembre, cerca de un tercio de las no financieras).</li>
+    <li><strong>Últimos 12 meses (LTM):</strong> las cuentas del estado de resultados vienen acumuladas en el año. El ranking las
+        anualiza: acumulado actual + año anterior completo − mismo período del año anterior (en diciembre, el año). Si falta alguno de
+        esos períodos, la empresa queda fuera de los indicadores de flujo, pero no de los de balance.</li>
+    <li><strong>Deuda financiera neta / EBITDA:</strong> (otros pasivos financieros + pasivos por arrendamientos − efectivo) ÷ EBITDA de
+        12 meses. Solo se calcula si la empresa informa depreciación en el archivo plano de la CMF (cerca de una de cada cinco);
+        sin ella el «EBITDA» sería el EBIT y el apalancamiento saldría inflado. Con EBITDA negativo se ordena como el peor.</li>
+    <li><strong>Patrimonio negativo:</strong> el ROE se excluye y deuda / patrimonio se ordena entre los peores, porque con patrimonio
+        negativo ambos cambian de signo.</li>
+</ul>
+</div>
+
+<div class="sec">{{ ui.sec_head("Fuentes y unidades", id="met-fuentes", arriba=none) }}</div>
+<div class="tbl-wrap">
+<table class="tbl" aria-label="Fuentes y unidades de cada dato">
+    <thead><tr><th>Dato</th><th>Fuente</th><th>Frecuencia</th><th>Unidad</th><th>Notas</th></tr></thead>
+    <tbody>
+    {% for d in datasets %}
+    <tr><td class="ent">{{ d.titulo }}<span class="sub"><code>{{ d.tabla }}</code></span></td>
+        <td>{% if d.url_fuente %}<a href="{{ d.url_fuente }}" target="_blank" rel="noopener">{{ d.fuente }}</a>{% else %}{{ d.fuente }}{% endif %}</td>
+        <td>{{ d.frecuencia }}</td><td>{{ d.unidad }}</td><td class="muted">{{ d.notas or '' }}</td></tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+
+<div class="sec">{{ ui.sec_head("Controles de calidad", id="met-calidad", arriba=none) }}</div>
+{% if dq %}
+<p class="nota mt-0">Última corrida {{ dq.run_at }} · {{ dq.total }} controles ·
+   <span class="{{ 'neg' if dq.errores else 'pos' }}">{{ dq.errores }} errores</span> · {{ dq.avisos }} avisos</p>
+{% if dq.detalle %}
+<div class="tbl-wrap tbl-wrap--alto"><table class="tbl" aria-label="Controles de calidad">
+    <thead><tr><th>Control</th><th>Período</th><th>Estado</th><th>Detalle</th></tr></thead>
+    {% for r in dq.detalle[:40] %}<tr><td class="ent">{{ r.check_id }}</td><td>{{ r.periodo or '—' }}</td>
+        <td class="{{ 'neg' if r.estado == 'error' else '' }}">{{ r.estado }}</td><td class="muted">{{ r.detalle }} ({{ r.n_fallas }})</td></tr>{% endfor %}
+</table></div>
+{% endif %}
+{% else %}
+<p class="vacio">Aún no se han corrido los controles (<code>main.py validate</code>).</p>
+{% endif %}
+</div>
+</div>
+{% endblock %}

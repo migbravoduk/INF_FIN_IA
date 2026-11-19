@@ -1,0 +1,164 @@
+{#
+  partials/kpi_cards.html — Cifras clave del panel (docs/PLAN_ESTETICA.md F5a).
+  kpi = get_overview_kpis(): macro {pib_yoy,imacec_yoy,ipc_v12,usd_clp, fechas},
+  banca {period, top_assets[], top_results[]}, afp_returns {A..E}, mercado, mercado2 {tpm, pendiente, ...}.
+  Cada tarjeta lleva la fecha de su dato y su fuente (las series tienen rezagos distintos).
+#}
+{% import "partials/_ui.html" as ui %}
+{% set m = kpi.macro %}
+{% set cs = kpi.curva_soberana %}
+{% set tc = kpi.tasas_colocacion %}
+
+{# Fecha de cada dato: el día si la serie es diaria, el mes si no (cada fuente tiene su propio rezago). #}
+{% macro fch(x) %}{{ x.fecha|fecha_es if x.diaria else x.fecha }}{% endmacro %}
+{% set f = m.fechas or {} %}
+{% set mk = kpi.mercado2 or {} %}
+{% set bcch = "Banco Central" %}
+
+<h3 class="sub-head mt-0">Actividad y precios</h3>
+<div class="stats">
+    {{ ui.stat("PIB (var. anual)", (m.pib_yoy|es(2, True) if m.pib_yoy is not none else "—"), unidad="%" if m.pib_yoy is not none,
+               tono=none if m.pib_yoy is none else ('pos' if m.pib_yoy >= 0 else 'neg'),
+               fecha=f.pib_trimestre, fuente=bcch) }}
+    {{ ui.stat("IMACEC (var. anual)", (m.imacec_yoy|es(2, True) if m.imacec_yoy is not none else "—"), unidad="%" if m.imacec_yoy is not none,
+               tono=none if m.imacec_yoy is none else ('pos' if m.imacec_yoy >= 0 else 'neg'),
+               ctx="Minero " ~ (m.imacec_minero_yoy|es(2, True) ~ "%" if m.imacec_minero_yoy is not none else "—") ~ " · No minero " ~ (m.imacec_no_minero_yoy|es(2, True) ~ "%" if m.imacec_no_minero_yoy is not none else "—"),
+               fecha=f.imacec, fuente=bcch) }}
+    {{ ui.stat("IPC a 12 meses", (m.ipc_v12|es(2) if m.ipc_v12 is not none else "—"), unidad="%" if m.ipc_v12 is not none,
+               fecha=f.ipc, fuente=bcch) }}
+    {{ ui.stat("USD/CLP", (m.usd_clp|es(2) if m.usd_clp is not none else "—"), unidad="$ por US$" if m.usd_clp is not none,
+               fecha=(f.usd|fecha_es if f.usd else none), fuente=bcch) }}
+    {% if mk.desempleo %}{% set d = mk.desempleo %}
+    {{ ui.stat("Desempleo", d.valor|es(1), unidad="%",
+               delta=d.delta12, delta_txt=(d.delta12|es(1, True) ~ " pp en 12 meses") if d.delta12 is not none, invertir=true,
+               fecha=d.fecha, fuente="INE, vía Banco Central") }}
+    {% endif %}
+</div>
+
+<h3 class="sub-head">Tasas y expectativas</h3>
+<div class="stats">
+    {% if mk.tpm %}{% set d = mk.tpm %}
+    {{ ui.stat("Tasa de política monetaria", d.valor|es(2), unidad="%",
+               ctx=("Operadores financieros esperan " ~ (d.eof_12m.valor|es(2)) ~ "% a 12 meses") if d.eof_12m,
+               fecha=fch(d), fuente=bcch) }}
+    {% endif %}
+    {% if mk.pendiente %}{% set d = mk.pendiente %}
+    {{ ui.stat("Pendiente swap pesos, 10 − 2 años", d.pb|es(0, True), unidad="pb",
+               ctx=("Hace 12 meses: " ~ (d.pb_12m|es(0, True)) ~ " pb · tasas observadas") if d.pb_12m is not none else "Tasas observadas",
+               fecha=fch(d), fuente=bcch) }}
+    {% endif %}
+    {% if mk.inflacion_esperada %}{% set d = mk.inflacion_esperada %}
+    {{ ui.stat("Inflación esperada a 2 años (swap)", d.valor|es(2), unidad="%",
+               delta=d.sobre_meta_pb, delta_txt=(d.sobre_meta_pb|es(0, True) ~ " pb frente a la meta de " ~ (d.meta|es(0)) ~ "%"), invertir=true,
+               ctx=("Forward 5 en 5: " ~ (d.fwd_5x5.valor|es(2)) ~ "%") if d.fwd_5x5,
+               fecha=fch(d), fuente=bcch) }}
+    {% endif %}
+    {% if mk.eee_ipc_11m %}{% set d = mk.eee_ipc_11m %}
+    {{ ui.stat("Inflación a 11 meses (encuesta de expectativas)", d.valor|es(1), unidad="%",
+               fecha=d.fecha, fuente=bcch) }}
+    {% endif %}
+    {% if mk.spread_depositos %}{% set d = mk.spread_depositos %}
+    {{ ui.stat("Depósitos − swap a 90 días", d.pb|es(0, True), unidad="pb",
+               ctx=("Hace 12 meses: " ~ (d.pb_12m|es(0, True)) ~ " pb · premio por riesgo bancario") if d.pb_12m is not none else "Premio por riesgo bancario",
+               fecha=fch(d), fuente=bcch) }}
+    {% endif %}
+</div>
+
+<h3 class="sub-head">Externo</h3>
+<div class="stats">
+    {% if mk.cobre %}{% set d = mk.cobre %}
+    {{ ui.stat("Cobre", d.valor|es(2), unidad="US$ por libra",
+               delta=d.var12, delta_txt=(d.var12|es(1, True) ~ "% en 12 meses") if d.var12 is not none,
+               fecha=d.fecha, fuente=bcch) }}
+    {% endif %}
+    {% if mk.ipsa %}{% set d = mk.ipsa %}
+    {{ ui.stat("IPSA", d.valor|es(0), unidad="puntos",
+               delta=d.var12, delta_txt=(d.var12|es(1, True) ~ "% en 12 meses") if d.var12 is not none,
+               ctx="Dato mensual", fecha=d.fecha, fuente=bcch) }}
+    {% endif %}
+    {% if mk.ust_10y %}{% set d = mk.ust_10y %}
+    {{ ui.stat("Bono del Tesoro de EE.UU. a 10 años", d.valor|es(2), unidad="%",
+               ctx=("Bono en pesos a 10 años (BCP) − Tesoro: " ~ (d.spread_pb|es(0, True)) ~ " pb") if d.spread_pb is not none,
+               fecha=d.fecha, fuente=bcch) }}
+    {% endif %}
+    {% if mk.fed %}{% set d = mk.fed %}
+    {{ ui.stat("Tasa de la Reserva Federal", d.valor|es(2), unidad="%", fecha=fch(d), fuente=bcch) }}
+    {% endif %}
+</div>
+
+<div class="grid-viz grid-viz--2">
+    <section class="panel">
+        <h3>Tasas de interés y bonos · Banco Central</h3>
+        <div class="tbl-wrap">
+        <table class="tbl tbl--densa" aria-label="Tasas de bonos soberanos y de colocación">
+            <thead><tr><th>Curva soberana</th><th class="num">5 años</th><th class="num">10 años</th></tr></thead>
+            <tbody>
+                <tr><td class="ent">BCP en pesos</td>
+                    <td class="num">{{ cs.bcp_5y|es(2) ~ "%" if cs.bcp_5y is not none else "—" }}</td>
+                    <td class="num">{{ cs.bcp_10y|es(2) ~ "%" if cs.bcp_10y is not none else "—" }}</td></tr>
+                <tr><td class="ent">BCU en UF</td>
+                    <td class="num">{{ cs.bcu_5y|es(2) ~ "%" if cs.bcu_5y is not none else "—" }}</td>
+                    <td class="num">{{ cs.bcu_10y|es(2) ~ "%" if cs.bcu_10y is not none else "—" }}</td></tr>
+                <tr class="grupo"><td colspan="3">Tasas de colocación (mercado)</td></tr>
+                <tr><td class="ent">Crédito de consumo</td><td class="num" colspan="2">{{ tc.consumo|es(2) ~ "%" if tc.consumo is not none else "—" }}</td></tr>
+                <tr><td class="ent">Crédito comercial</td><td class="num" colspan="2">{{ tc.comercial|es(2) ~ "%" if tc.comercial is not none else "—" }}</td></tr>
+                <tr><td class="ent">Vivienda en UF (más de 3 años)</td><td class="num" colspan="2">{{ tc.vivienda|es(2) ~ "%" if tc.vivienda is not none else "—" }}</td></tr>
+            </tbody>
+        </table>
+        </div>
+    </section>
+
+    <section class="panel">
+        <h3>AFP · rentabilidad a 12 meses por fondo</h3>
+        <div class="tbl-wrap">
+        <table class="tbl tbl--densa" aria-label="Rentabilidad a 12 meses por fondo de pensiones">
+            <thead><tr><th>Fondo</th><th class="num">Sistema 12m</th><th>Líder</th><th class="num">Retorno del líder</th></tr></thead>
+            <tbody>
+            {% for f in ["A","B","C","D","E"] %}
+            {% set fr = kpi.afp_returns[f] %}
+            <tr>
+                <td class="ent">Fondo {{ f }}</td>
+                <td class="num {{ '' if fr.agg is none else ('pos' if fr.agg >= 0 else 'neg') }}">{{ (fr.agg|es(2, True) ~ "%") if fr.agg is not none else "—" }}</td>
+                <td>{{ fr.leader_afp|nombre if fr.leader_afp else "—" }}</td>
+                <td class="num {{ '' if fr.leader_ret is none else ('pos' if fr.leader_ret >= 0 else 'neg') }}">{{ (fr.leader_ret|es(1, True) ~ "%") if fr.leader_ret is not none else "—" }}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+        {% if kpi.afp_ranking %}<p class="nota mb-0">Mayor por patrimonio: <strong>{{ kpi.afp_ranking[0].afp_name|nombre }}</strong>.</p>{% endif %}
+        <p class="nota mb-0">Sistema = rentabilidad agregada y ponderada del sistema. Líder = AFP con mayor rentabilidad en ese fondo.</p>
+        <p class="nota mb-0">Mercado · SP: {{ kpi.mercado.n_instrumentos }} instrumentos en cinta {{ corte(kpi.mercado.date, "Superintendencia de Pensiones") }}</p>
+    </section>
+
+</div>
+
+<div class="grid-viz grid-viz--1">
+    <section class="panel">
+        <h3>Banca · CMF {{ corte(kpi.banca.period, "CMF") }}</h3>
+        {% set max_act = (kpi.banca.top_assets|map(attribute='val_total')|list|max) if kpi.banca.top_assets else 0 %}
+        {% set max_res = (kpi.banca.top_results|map(attribute='val_total')|map('abs')|list|max) if kpi.banca.top_results else 0 %}
+        <div class="grid-viz grid-viz--2 mt-0">
+        <div class="tbl-wrap">
+        <table class="tbl tbl--densa" aria-label="Los cinco bancos con más activos">
+            <thead><tr><th>Top 5 por activos</th><th class="num">Billones de $</th></tr></thead>
+            <tbody>
+            {% for r in kpi.banca.top_assets %}
+            <tr><td class="ent">{{ r.bank_name|nombre }}</td><td class="num">{{ (r.val_total / 1e12)|es(1) }}{{ ui.barra(r.val_total, max_act) }}</td></tr>
+            {% else %}<tr><td colspan="2">{{ ui.vacio("Sin datos") }}</td></tr>{% endfor %}
+            </tbody>
+        </table>
+        </div>
+        <div class="tbl-wrap">
+        <table class="tbl tbl--densa" aria-label="Los cinco bancos con mayor resultado">
+            <thead><tr><th>Top 5 por resultado</th><th class="num">Miles de millones de $</th></tr></thead>
+            <tbody>
+            {% for r in kpi.banca.top_results %}
+            <tr><td class="ent">{{ r.bank_name|nombre }}</td><td class="num {{ 'pos' if r.val_total >= 0 else 'neg' }}">{{ (r.val_total / 1e9)|es(0) }}{{ ui.barra(r.val_total, max_res, 'pos' if r.val_total >= 0 else 'neg') }}</td></tr>
+            {% else %}<tr><td colspan="2">{{ ui.vacio("Sin datos") }}</td></tr>{% endfor %}
+            </tbody>
+        </table>
+        </div>
+        </div>
+    </section>
+</div>

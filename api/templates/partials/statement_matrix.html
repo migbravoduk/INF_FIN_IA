@@ -1,0 +1,55 @@
+{#
+  partials/statement_matrix.html — Matriz evolutiva de UN estado (cuentas × períodos).
+  Recibe `st` = {label, code, ev:{periods:[asc], accounts:[{account_name, vals[], section?}]}}.
+#}
+{% import "partials/_ui.html" as ui %}
+<section class="sec">
+    {{ ui.sec_head(st.label, id=("est-" ~ st.code|replace(" ", "-")|replace("/", "-")), arriba=none) }}
+    <span class="chip mb-3">{{ st.code }}</span>
+    {% if st.ev.note %}{% call ui.aviso("warn") %}⚠ {{ st.ev.note }}{% endcall %}{% endif %}
+    {% if st.ev.accounts %}
+    <label class="nota mt-0"><input type="checkbox" class="js-ocultar-vacias" data-tabla="mat-{{ st.code }}" checked> Ocultar cuentas sin datos</label>
+    <div class="tbl-wrap tbl-wrap--alto">
+        <table class="tbl tbl--densa tbl--fija-1" id="mat-{{ st.code }}" aria-label="{{ st.label }}: cuentas por período">
+            <thead>
+                <tr>
+                    <th>Cuenta</th>
+                    {% for p in st.ev.periods %}<th class="num">{{ p // 100 }}-{{ "%02d"|format(p % 100) }}</th>{% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+            {% set ns = namespace(sec=None) %}
+            {% for a in st.ev.accounts %}
+                {% if a.section and a.section != ns.sec %}
+                <tr class="grupo"><td colspan="{{ st.ev.periods|length + 1 }}">{{ a.section }}</td></tr>
+                {% set ns.sec = a.section %}
+                {% endif %}
+                <tr class="{{ 'total' if a.is_total else '' }}">
+                    <td class="ent">{{ a.account_name }}</td>
+                    {% for v in a.vals %}<td class="num">{{ v|es(0) if v is not none else "—" }}</td>{% endfor %}
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    {{ ui.vacio("Sin datos para este estado.") }}
+    {% endif %}
+</section>
+<script>
+(function () {
+    document.querySelectorAll(".js-ocultar-vacias").forEach(function (chk) {
+        if (chk.dataset.enlazado) { return; }
+        chk.dataset.enlazado = "1";
+        var tabla = document.getElementById(chk.dataset.tabla);
+        function aplicar() {
+            tabla.querySelectorAll("tbody tr:not(.grupo):not(.total)").forEach(function (tr) {
+                var celdas = [].slice.call(tr.querySelectorAll("td.num"));
+                var vacia = celdas.length && celdas.every(function (td) { return td.textContent.trim() === "—"; });
+                tr.hidden = chk.checked && vacia;
+            });
+        }
+        chk.addEventListener("change", aplicar); aplicar();
+    });
+})();
+</script>

@@ -1,0 +1,46 @@
+# ============================================================
+# Familia de cada código de instrumento, para las tres fuentes de carteras institucionales:
+#   B.1  = renta fija de seguros (columna tipo_instrumento, Circular 1.835)
+#   FFMM = cartera nacional de fondos mutuos (FFM_6010400)
+#   SP   = cartera desagregada de las AFP (tabla emisor_nac; la columna es el código)
+#
+# REGLA (igual que las glosas de api/insurer_glossary.py): solo se escribe una familia cuando es
+# inequívoca y cada código lleva su evidencia. Un código que no está aquí se muestra tal cual,
+# con «(sin glosa)». Los códigos de la SP se confirmaron por quiénes los emiten, porque la SP no
+# informa nemotécnico. Pendientes (sin evidencia suficiente): BR, CS, BVL, BEC, BH, PE, PEOIND,
+# AFR, AFROIND, CSOIND, EC, OIE, BBP, BBPNEE, OIIF, OTROC, DPSA y los códigos W*/Y*/SNT/SNM/PFI/
+# CC2/BCS/BFI/OSAN/EPA/ECO/CSIN/SPA/BRP/BHM/BCA de la SP (su diccionario está pendiente).
+# Revisado el 19-nov-2026 contra B.1 y fondos mutuos de 202609 y la SP de 202606.
+# ============================================================
+codigos:
+  # --- Renta fija corporativa -------------------------------------------------------------
+  BE:  {familia: "Bono corporativo", evidencia: "B.1/FFMM: nemotécnicos de empresas (BCMPC-, BVIVO-, BENTE-)"}
+  DEB: {familia: "Bono corporativo", evidencia: "SP: lo emiten empresas no financieras (Andina, Engie, Lipigas); Inversiones CMPC solo DEB y sus bonos son BCMPC- (BE) en B.1"}
+  # --- Renta fija bancaria ----------------------------------------------------------------
+  BB:  {familia: "Bono bancario", evidencia: "B.1/FFMM: BCHIE, BBCIN, BTBD- (bancos)"}
+  BU:  {familia: "Bono bancario", evidencia: "B.1/FFMM: UCHI-, USTD-, UITA-, UCNO- (bancos, en UF)"}
+  BS:  {familia: "Bono bancario", evidencia: "B.1/FFMM: BBCIS, BSECS, BVOLS (bonos subordinados de bancos)"}
+  BEF: {familia: "Bono bancario", evidencia: "SP: solo bancos y Coopeuch (Banco de Chile, BancoEstado, Consorcio)"}
+  BSF: {familia: "Bono bancario", evidencia: "SP: solo bancos (Banco de Chile, BancoEstado, BTG Pactual)"}
+  # --- Deuda del Fisco y del Banco Central ------------------------------------------------
+  BTU:  {familia: "Deuda del Fisco o del Banco Central", evidencia: "B.1/FFMM: BTU0…; SP: Tesorería General de la República"}
+  BTP:  {familia: "Deuda del Fisco o del Banco Central", evidencia: "B.1/FFMM: BTP0…; SP: Tesorería General de la República"}
+  BCU:  {familia: "Deuda del Fisco o del Banco Central", evidencia: "B.1/FFMM: BCU0…; SP: Banco Central de Chile"}
+  PDBC: {familia: "Deuda del Fisco o del Banco Central", evidencia: "B.1/FFMM: nemotécnico BNPDB(C), pagarés descontables del Banco Central"}
+  # --- Letras y depósitos -----------------------------------------------------------------
+  LH:  {familia: "Letra hipotecaria", evidencia: "B.1/FFMM: nemotécnicos FAL46, EST43, DES45 (bancos)"}
+  LHF: {familia: "Letra hipotecaria", evidencia: "SP: solo bancos (BancoEstado, Ripley, Banco de Chile)"}
+  DPC: {familia: "Depósito a plazo", evidencia: "B.1/FFMM: FNBCI, FNSEC, FNFAL (depósitos de bancos)"}
+  DPL: {familia: "Depósito a plazo", evidencia: "B.1/FFMM: FUCOR, FNBCI, FUITA (depósitos de bancos)"}
+  DPF: {familia: "Depósito a plazo", evidencia: "SP: solo bancos (Itaú, Falabella, BCI, Scotiabank)"}
+  # --- Créditos hipotecarios y leasing (glosas oficiales de la circular 1.835) --------------
+  MHA:   {familia: "Mutuo hipotecario endosable", evidencia: "Anexo §2.1 de la Circular 1.835: agentes administradores de mutuos"}
+  MHB:   {familia: "Mutuo hipotecario endosable", evidencia: "Anexo §2.2 de la Circular 1.835: mutuos emitidos por bancos"}
+  CLEAS: {familia: "Leasing inmobiliario", evidencia: "Anexo §3 de la Circular 1.835: contratos de leasing sobre bienes raíces"}
+  # --- Emitidos en el exterior ------------------------------------------------------------
+  BNEE:  {familia: "Bono emitido en el exterior", evidencia: "B.1/FFMM: nemotécnicos ISIN (USP58072…, CMPCCI, SQM045) de emisores chilenos"}
+  BBNEE: {familia: "Bono emitido en el exterior", evidencia: "B.1/FFMM: nemotécnicos ISIN de bancos (BANCOP, BCICI, US0597…)"}
+  # --- Renta variable y cuotas ------------------------------------------------------------
+  ACC: {familia: "Acción", evidencia: "FFMM: SQM-A, LTM, PAMPA; SP: Banco de Chile, Falabella, Empresas CMPC"}
+  CFI: {familia: "Cuota de fondo de inversión", evidencia: "FFMM: nemotécnicos CFILVP, CFIDHS, CFIBCH"}
+  CFM: {familia: "Cuota de fondo mutuo", evidencia: "FFMM: nemotécnicos CFMSRC, CFMEUR, CFMBCI"}

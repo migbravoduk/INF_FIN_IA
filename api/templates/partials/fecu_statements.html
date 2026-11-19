@@ -1,0 +1,26 @@
+{#
+  partials/fecu_statements.html — Fragmento HTMX con los estados de una entidad FECU
+  (seguros / intermediarios). meta = {company_name, rut, kind, periods, unit}.
+  statements = [{label, code, ev:{periods, accounts}}].
+  El título de cada estado lo pone `statement_matrix.html`; aquí solo se ancla para el índice.
+#}
+{% import "partials/_ui.html" as ui %}
+{% if meta %}
+<header class="page-head mt-0">
+    <h2 class="mb-3">{{ meta.company_name|nombre }}</h2>
+    <div class="page-acciones mt-0">
+        <span class="chip">RUT {{ meta.rut }}</span>
+        {% if meta.kind %}<span class="chip chip--acento">{{ meta.kind }}</span>{% endif %}
+        <span class="chip">cifras en {{ meta.unit }}</span>
+        <span class="chip">{{ meta.periods|length }} períodos</span>
+    </div>
+</header>
+
+{% for st in statements %}
+    <div id="grp-{{ st.code }}" class="fecu-grp">
+        {% include "partials/statement_matrix.html" %}
+    </div>
+{% endfor %}
+{% else %}
+{{ ui.vacio("No hay estados financieros para esa entidad.") }}
+{% endif %}

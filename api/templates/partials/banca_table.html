@@ -1,0 +1,102 @@
+{#
+  partials/banca_table.html — Balance o resultados de un banco.
+  Recibe `meta`, `rows` (registros), `report_type` ('balance'|'resultado').
+#}
+{% import "partials/_ui.html" as ui %}
+{% macro fmt(v) %}{{ v|es(0) if v not in (none, 0, 0.0) else "—" }}{% endmacro %}
+{# Celda numérica: negativos en rojo (provisiones, pérdidas, ajustes), resto en tinta. #}
+{% macro cell(v, extra="") %}<td class="num{{ ' fuerte' if extra == 'strong' }}{{ ' neg' if v and v < 0 }}">{{ fmt(v) }}</td>{% endmacro %}
+
+{% if meta %}
+<header class="page-head mt-0">
+    <h3 class="mb-3">{{ meta.bank_name|nombre }}</h3>
+    <div class="page-acciones mt-0">
+        <span class="chip">Ficha {{ meta.bank_code }}</span>
+        <span class="chip">período {{ meta.period }}</span>
+        <span class="chip chip--acento">{{ "Balance" if report_type == "balance" else "Estado de resultados" }}</span>
+        <span class="chip">cifras en pesos (el plan CMF anterior a 2022, que venía en millones, se homologa a pesos)</span>
+        <span class="chip">negativos en rojo</span>
+    </div>
+</header>
+
+{% if graph_accounts %}
+<form class="filtros" hx-get="/banca/serie" hx-target="#banca-serie" hx-trigger="change" hx-swap="innerHTML">
+    <input type="hidden" name="bank" value="{{ meta.bank_code }}">
+    <input type="hidden" name="type" value="{{ report_type }}">
+    <label class="ancho">Graficar cuenta (evolución por período)
+        <select name="account">
+            <option value="" selected>— elegir cuenta —</option>
+            {% for a in graph_accounts %}
+            <option value="{{ a }}">{{ a }}</option>
+            {% endfor %}
+        </select>
+    </label>
+</form>
+<div id="banca-serie"></div>
+{% endif %}
+
+<h3 class="sub-head">Desglose por moneda ({{ meta.period }})</h3>
+<div class="tbl-wrap tbl-wrap--alto">
+    <table class="tbl tbl--fija-1" aria-label="Desglose por moneda del período {{ meta.period }}">
+        <thead>
+            {% if report_type == "balance" %}
+            <tr>
+                <th>Cuenta</th>
+                <th class="num">CLP no reaj.</th>
+                <th class="num">Reaj. UF</th>
+                <th class="num">Reaj. USD</th>
+                <th class="num">M. extranjera</th>
+                <th class="num">Total ({{ meta.period }})</th>
+            </tr>
+            {% else %}
+            <tr>
+                <th>Cuenta</th>
+                <th class="num">Total ({{ meta.period }})</th>
+            </tr>
+            {% endif %}
+        </thead>
+        <tbody>
+        {% for r in rows %}
+            <tr class="{{ 'total' if r.is_total else '' }}">
+                <td class="ent">{{ r.account_name }}</td>
+                {% if report_type == "balance" %}
+                {{ cell(r.val_clp_no_reaj) }}
+                {{ cell(r.val_clp_reaj_ipc) }}
+                {{ cell(r.val_clp_reaj_tc) }}
+                {{ cell(r.val_extranjera) }}
+                {% endif %}
+                {{ cell(r.val_total, "strong") }}
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<h3 class="sub-head">Evolutivo histórico reciente (total consolidado)</h3>
+<div class="tbl-wrap tbl-wrap--alto">
+    <table class="tbl tbl--fija-1" aria-label="Evolutivo histórico reciente del total consolidado">
+        <thead>
+            <tr>
+                <th>Cuenta</th>
+                <th class="num">Total ({{ meta.period }})</th>
+                {% for p in history_periods %}
+                <th class="num">Hist. {{ p }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+        {% for r in rows %}
+            <tr class="{{ 'total' if r.is_total else '' }}">
+                <td class="ent">{{ r.account_name }}</td>
+                {{ cell(r.val_total, "strong") }}
+                {% for h in r.history %}
+                <td class="num muted{{ ' neg' if h and h < 0 }}">{{ fmt(h) }}</td>
+                {% endfor %}
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+{{ ui.vacio("No hay datos bancarios para esa combinación.") }}
+{% endif %}

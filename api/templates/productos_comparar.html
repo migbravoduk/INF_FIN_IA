@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% import "partials/_ui.html" as ui %}
+
+{% block title %}Comparar productos · INF_FIN_IA{% endblock %}
+
+{% block content %}
+{{ ui.page_head("Comparar productos", "Los productos elegidos, lado a lado, con las mismas métricas.", migas=[("Productos", "/productos")]) }}
+
+{% if not prods %}
+<p class="vacio">Elige hasta 4 productos en el <a href="/productos">explorador</a>.</p>
+{% else %}
+{% if mezcla_clases %}
+{% call ui.aviso("warn") %}Estás comparando productos de distintas clases de inversionista. Las series de
+Alto Patrimonio o APV tienen requisitos de entrada y costos distintos a las Retail.{% endcall %}
+{% endif %}
+
+<div class="tbl-wrap">
+<table class="tbl" aria-label="Comparación de productos">
+    <thead><tr><th><span class="sr-only">Métrica</span></th>{% for p in prods %}<th class="num"><a href="/producto/{{ p.producto_id | urlencode }}">{{ p.nombre|nombre }}</a>
+        <span class="sub">{{ (p.proveedor_corto|agf_corto) if p.proveedor_corto else '' }}{% if p.serie and p.tipo == 'ffmm' %} · serie {{ p.serie }}{% endif %}</span></th>{% endfor %}</tr></thead>
+    <tbody>
+    {% set filas = [
+        ('Categoría', 'categoria', 'txt'), ('Clase de inversionista', 'clase_inversionista', 'txt'),
+        ('Rentabilidad 12 meses', 'rent_nom_12m', 'pct'), ('Real 12 meses', 'rent_real_12m', 'pct'),
+        ('3 años, anual', 'rent_nom_36m_ann', 'pct'), ('5 años, anual', 'rent_nom_60m_ann', 'pct'),
+        ('Posición en su categoría', 'percentil_cat_12m', 'num'), ('Consistencia %', 'consistencia_12m', 'num'),
+        ('Volatilidad anual', 'volatilidad_ann', 'pct'), ('Peor caída', 'caida_maxima', 'pct'),
+        ('Escala de riesgo (1-7)', 'escala_riesgo', 'num'), ('Costo anual', 'costo_anual', 'pct2'),
+        ('Comisión de colocación', 'comision_colocacion', 'pct2'), ('Costo por $1 MM a 10 años', 'costo_10a_por_millon', 'num'),
+        ('Patrimonio MM$', 'patrimonio_clp_mm', 'num'), ('Flujo neto 12m MM$', 'flujo_neto_12m_mm', 'num')] %}
+    {% for label, key, fmt in filas %}
+    <tr><td class="ent">{{ label }}</td>
+        {% for p in prods %}{% set v = p[key] if fmt == 'txt' else p.m.get(key) %}
+        <td class="num{% if key.startswith('rent_') and v is not none %}{{ ' pos' if v > 0 else ' neg' if v < 0 }}{% endif %}">{% if fmt == 'txt' %}{{ v or '—' }}{% elif fmt == 'pct' %}{{ v|pct }}{% elif fmt == 'pct2' %}{{ v|pct(2, False) }}{% else %}{{ v|num }}{% endif %}</td>
+        {% endfor %}</tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+
+<section class="sec">
+    {% set tipos = prods|map(attribute="tipo")|unique|list %}
+    {{ ui.viz("cmp-chart", "Valor cuota en pesos de los productos elegidos", sub="base 100 en el primer mes común",
+              fuente=("CMF y Superintendencia de Pensiones" if tipos|length > 1 else ("CMF" if tipos[0] == "ffmm" else "Superintendencia de Pensiones")), alto="lg") }}
+</section>
+<script>
+(function () {
+  const series = {{ series | tojson }};
+  const nombres = {{ prods | map(attribute='nombre') | list | tojson }}.map(INF.nombre);
+  const ids = {{ prods | map(attribute='producto_id') | list | tojson }};
+  // Rebasar todas al primer mes común para que sean comparables en el mismo eje.
+  const comunes = ids.map(i => new Set(series[i].map(r => r.mes)));
+  const inicio = [...comunes[0]].filter(m => comunes.every(s => s.has(m))).sort()[0];
+  const fin = [];
+  const trazas = ids.map((id, k) => {
+    const s = series[id].filter(r => !inicio || r.mes >= inicio);
+    const b = s.length ? s[0].producto : 1;
+    const x = s.map(r => r.mes), y = s.map(r => 100 * r.producto / b);
+    const color = INF.PALETA[k % INF.PALETA.length];
+    const corto = nombres[k].length > 18 ? nombres[k].slice(0, 17) + "…" : nombres[k];
+    fin.push({x: x, y: y, texto: corto, color: color});
+    return {x: x, y: y, name: nombres[k], mode: 'lines', line: {color: color, width: 2}};
+  });
+  Plotly.newPlot('cmp-chart', trazas, {margin: {l: 48, r: 130, t: 10, b: 40}, hovermode: 'x unified',
+    showlegend: false, annotations: INF.etiquetasFinales(fin), shapes: [INF.refH(100).shape]});
+})();
+</script>
+
+{% if traslape %}
+<section class="sec">
+    {{ ui.sec_head("Traslape de cartera", arriba=none) }}
+    <p class="nota mt-0">Porcentaje de la cartera que dos fondos tienen en los mismos instrumentos (suma de los
+    pesos mínimos por nemotécnico). Un traslape alto significa que tener ambos diversifica poco.</p>
+    <div class="tbl-wrap">
+    <table class="tbl" aria-label="Traslape de cartera entre fondos">
+    <thead><tr><th>Par de fondos</th><th class="num">Traslape</th></tr></thead>
+    <tbody>
+    {% for a, b, t in traslape %}<tr><td class="ent">{{ a|nombre }} ↔ {{ b|nombre }}</td><td class="num fuerte">{{ t|es(1) if t is not none else '—' }}%{% if t is not none %}{{ ui.barra(t, 100) }}{% endif %}</td></tr>{% endfor %}
+    </tbody>
+    </table>
+    </div>
+</section>
+{% endif %}
+{% endif %}
+{% endblock %}

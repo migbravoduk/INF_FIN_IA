@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% import "partials/_ui.html" as ui %}
+
+{% block title %}Fondos · INF_FIN_IA{% endblock %}
+
+{% block content %}
+{{ ui.page_head("Fondos de pensiones: retornos y composición",
+    "Retorno de cada fondo por AFP en varios horizontes y en qué está invertido.") }}
+
+<form class="filtros"
+      hx-get="/fondos/panel"
+      hx-target="#fondos-panel"
+      hx-trigger="load, change"
+      hx-swap="innerHTML">
+    <label>Fondo
+        <select name="fund">
+            {% for f in funds %}<option value="{{ f }}">{{ f }}</option>{% endfor %}
+        </select>
+    </label>
+    <p class="ayuda">El selector se alimenta de los datos (los fondos generacionales aparecerán aquí cuando la SP los publique).</p>
+</form>
+
+<div id="fondos-panel">
+    <p class="loading">Cargando panel del fondo…</p>
+</div>
+{% endblock %}

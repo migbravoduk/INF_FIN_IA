@@ -10,6 +10,8 @@ import json
 from pathlib import Path
 import httpx
 
+from config.settings import settings
+
 logger = logging.getLogger(__name__)
 
 
@@ -17,8 +19,9 @@ class CMFBankCollector:
     """Colector para descargar y procesar balances y estados de resultados de bancos en Chile."""
 
     BASE_URL = "https://api.sbif.cl/api-sbifv3/recursos_api"
-    # API Key pública y oficial proveída en el frontend de la CMF
-    PUBLIC_API_KEY = "3a440ec14ceec35463beaf361631829c0ed9dc8d"
+    # API Key pública de la SBIFv3. Se lee de settings.CMF_SBIF_APIKEY (override por .env);
+    # el valor de respaldo es la clave pública ya usada históricamente.
+    PUBLIC_API_KEY = settings.CMF_SBIF_APIKEY or "3a440ec14ceec35463beaf361631829c0ed9dc8d"
 
     # Catálogo de los bancos principales en Chile y sus códigos SBIF estándar de 3 dígitos
     BANKS_CATALOG = {

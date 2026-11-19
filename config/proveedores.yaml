@@ -1,0 +1,22 @@
+# ============================================================
+# Canal de cada proveedor — destino del botón "Ir al sitio de la administradora".
+# Lo carga db/products.load_providers en la tabla `proveedor_canal`.
+#
+# Se cura A MANO y se verifica abriendo cada URL: un enlace equivocado manda al
+# inversionista a un sitio que no es el del proveedor. Sin URL verificada el botón no se
+# muestra y /ir/<producto> responde 404.
+#
+# Antes de activar derivaciones pagadas, revisar docs/PLAN_MEJORAS.md §8 (asesoría de
+# inversión, conflicto de interés, datos personales).
+#
+# Formato:
+# proveedores:
+#   - rut: "96767630"                 # RUT sin DV (el de dim_entidad)
+#     nombre: "Banchile AGF"
+#     url_sitio: "https://…"
+#     url_contratacion: "https://…"   # opcional: página donde se invierte
+#     canal: "web"                    # web | ejecutivo | app
+#     verificado_en: 2026-11-16       # fecha en que se abrió y comprobó la URL
+#     notas: ""
+# ============================================================
+proveedores: []

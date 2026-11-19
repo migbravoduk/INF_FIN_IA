@@ -1,0 +1,193 @@
+{#
+  partials/institucional_emisor_panel.html — Tenencias institucionales en un emisor.
+  h = db.cross.issuer_holdings(): {rut, nombre, razon, tipo_label, periodos,
+        seguros|ffmm|afp: {serie:[{period, mm, pos, tenedores}], tenedores:[...], ult, prev, hace12, sin_fx}}
+  Montos en MM$ en los datos; se muestran en MMM$ (miles de millones).
+#}
+{% import "partials/_ui.html" as ui %}
+{% macro per(p) %}{{ (p|string)[4:] }}/{{ (p|string)[:4] }}{% endmacro %}
+
+{% macro variacion(a, b) -%}
+  {%- if a is not none and b %}{% set v = (a / b - 1) * 100 %}
+    <span class="{{ 'pos' if v > 0 else 'neg' if v < 0 }}">{{ v|es(1, True) }}%</span>
+  {%- else %}—{% endif -%}
+{%- endmacro %}
+
+{% macro bloque(b, titulo, unidad, chart_id, tenedor_label, fuente, nota_tipos=none) %}
+{% set s = b.serie %}
+{% set ult = (s|selectattr('period', 'equalto', b.ult)|first) %}
+{% set prev = (s|selectattr('period', 'equalto', b.prev)|first) if b.prev else none %}
+{% set h12 = (s|selectattr('period', 'equalto', b.hace12)|first) if b.hace12 else none %}
+{% set v_prev = ((ult.mm / prev.mm - 1) * 100) if (prev and prev.mm and ult.mm is not none) else none %}
+{% set v_12 = ((ult.mm / h12.mm - 1) * 100) if (h12 and h12.mm and ult.mm is not none) else none %}
+<section class="bloque-emisor">
+    <h3 class="sub-head mt-0">{{ titulo }}</h3>
+    <div class="stats stats--compactas">
+        {{ ui.stat(unidad ~ " · " ~ per(b.ult), (ult.mm / 1000)|es(1)) }}
+        {{ ui.stat("vs mes anterior", (v_prev|es(1, True) ~ "%") if v_prev is not none else "—",
+                   tono=(none if v_prev is none else ('pos' if v_prev > 0 else 'neg' if v_prev < 0 else none))) }}
+        {{ ui.stat("vs 12 meses", (v_12|es(1, True) ~ "%") if v_12 is not none else "—",
+                   tono=(none if v_12 is none else ('pos' if v_12 > 0 else 'neg' if v_12 < 0 else none))) }}
+        {{ ui.stat(tenedor_label, ult.tenedores) }}
+        {{ ui.stat("posiciones", ult.pos|es(0)) }}
+    </div>
+    {{ ui.viz(chart_id, titulo, sub="MMM$ por mes · el último mes en color", fuente=fuente, alto="sm") }}
+    {% if b.por_tipo %}
+    <div class="tbl-wrap">
+    <table class="tbl tbl--compacta" aria-label="Tipo de instrumento: {{ tenedor_label }}">
+        <thead><tr><th>Tipo de instrumento ({{ per(b.ult) }})</th><th class="num">MMM$</th><th class="num">%</th></tr></thead>
+        <tbody>
+        {% for t in b.por_tipo %}
+        <tr><td class="ent">{{ t.etiqueta }}{% if t.familia %}<span class="sub">código {{ t.codigo }}</span>{% endif %}</td>
+            <td class="num">{{ (t.mm / 1000)|es(1) }}</td>
+            <td class="num">{{ (t.pct|es(1) ~ "%") if t.pct is not none else "—" }}</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    {% if nota_tipos %}<p class="nota">{{ nota_tipos }}</p>{% endif %}
+    {% endif %}
+</section>
+{% endmacro %}
+
+{% macro tabla(b, tenedor_label) %}
+<div class="tbl-wrap">
+<table class="tbl" aria-label="Tenedores: {{ tenedor_label }}">
+    <thead><tr>
+        <th>{{ tenedor_label }}</th>
+        <th>Instrumentos</th>
+        <th class="num">{{ per(b.ult) }} (MMM$)</th>
+        <th class="num">% del total</th>
+        <th class="num">Δ vs {{ per(b.prev) if b.prev else 'mes ant.' }}</th>
+        <th class="num">Δ vs {{ per(b.hace12) if b.hace12 else '12 meses' }}</th>
+    </tr></thead>
+    <tbody>
+    {% for f in b.tenedores[:25] %}
+    <tr>
+        <td class="ent">{{ f.nombre|nombre }}{% if f.sub %}<span class="sub">{{ f.sub }}</span>{% endif %}</td>
+        <td class="muted">{{ f.tipos or "—" }}</td>
+        <td class="num">{{ ((f.ult or 0) / 1000)|es(1) }}</td>
+        <td class="num">{{ f.peso|es(1) }}%</td>
+        <td class="num {{ 'pos' if (f.d_prev or 0) > 0 else 'neg' if (f.d_prev or 0) < 0 }}">
+            {% if f.d_prev is not none %}{{ (f.d_prev / 1000)|es(1, True) }}{% if f.prev is none %} <span class="muted">nuevo</span>{% elif f.ult is none %} <span class="muted">salió</span>{% endif %}{% else %}—{% endif %}</td>
+        <td class="num {{ 'pos' if (f.d_12 or 0) > 0 else 'neg' if (f.d_12 or 0) < 0 }}">
+            {% if f.d_12 is not none %}{{ (f.d_12 / 1000)|es(1, True) }}{% else %}—{% endif %}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+{% if b.tenedores|length > 25 %}<p class="nota">Se muestran los 25 mayores de {{ b.tenedores|length }}.</p>{% endif %}
+{% endmacro %}
+
+{% if not h %}
+{{ ui.vacio("No reconozco " ~ (("«" ~ q ~ "»") if q else "ese emisor") ~ ". Escribe un RUT o elige un nombre de la lista.") }}
+{% elif h.sucesor and not h.seguros and not h.ffmm and not h.afp %}
+{{ ui.vacio("El RUT " ~ h.rut ~ ((" (" ~ h.nombre ~ ")") if h.nombre else "") ~ " fue absorbido en una fusión: sus posiciones se suman a RUT " ~ h.sucesor ~ ".") }}
+<p class="nota"><a href="/inversion-institucional/emisor?rut={{ h.sucesor }}">Ver el emisor que lo absorbió (RUT {{ h.sucesor }})</a></p>
+{% elif not h.seguros and not h.ffmm and not h.afp %}
+{{ ui.vacio("RUT " ~ h.rut ~ ((" (" ~ h.nombre ~ ")") if h.nombre else "") ~ ": sin posiciones de seguros, fondos mutuos ni AFP en los últimos " ~ (h.periodos|length) ~ " meses.") }}
+{% else %}
+
+<header class="page-head mt-0">
+    <h2 class="mb-3">{{ (h.nombre or 'Emisor sin nombre en las fuentes')|nombre }}</h2>
+    <div class="page-acciones mt-0">
+        <span class="chip">RUT {{ h.rut }}</span>
+        {% if h.tipo_label %}<span class="chip chip--acento">{{ h.tipo_label }}</span>{% endif %}
+        {% if h.razon and (h.razon|nombre|lower) != ((h.nombre or '')|nombre|lower) %}<span class="chip">{{ h.razon|nombre }}</span>{% endif %}
+    </div>
+</header>
+
+<div class="grid-viz">
+    {% if h.seguros %}{{ bloque(h.seguros, "Compañías de seguros · renta fija (B.1 no incluye acciones)", "MMM$ valor par", "em-seg-chart", "compañías", "CMF, archivo B.1") }}{% endif %}
+    {% if h.ffmm %}{{ bloque(h.ffmm, "Fondos mutuos · cartera nacional", "MMM$ valor de mercado", "em-ffm-chart", "fondos", "CMF, cartera de fondos mutuos") }}{% endif %}
+    {% if h.afp %}{{ bloque(h.afp, "AFP · cartera nacional", "MMM$ valor de mercado", "em-afp-chart", "AFP", "Superintendencia de Pensiones",
+                      nota_tipos="La SP informa el monto total por emisor y el % del fondo en cada tipo de instrumento, no el monto por tipo: aquí el monto se reparte en proporción a esos porcentajes.") }}{% endif %}
+</div>
+
+{% if salud %}
+<p class="nota mt-0">Salud financiera (Z'' de Altman, {{ salud.periodo|string|mes_es }}):
+    <strong>{{ salud.z|es(2) }}</strong><span class="zona zona--{{ salud.zona }}">{{ salud.zona }}</span> ·
+    <a href="/ranking?metric=z_altman">ver el ranking de salud financiera</a></p>
+{% endif %}
+{% set ra = h.reasignados %}
+{% if h.absorbidos %}
+<p class="nota">Incluye las posiciones que las carteras siguen informando con {{ 'el RUT' if h.absorbidos|length == 1 else 'los RUT' }}
+    {{ (h.absorbidos[:-1]|join(', ') ~ ' y ' ~ h.absorbidos[-1]) if h.absorbidos|length > 1 else h.absorbidos[0] }}, de {{ 'una entidad absorbida' if h.absorbidos|length == 1 else 'entidades absorbidas' }} por este emisor en una fusión
+    {%- if ra and ra.fusion_pos %} (seguros, {{ ra.period|string|mes_es }}: {{ ra.fusion_pos|es(0) }} {{ 'posición' if ra.fusion_pos == 1 else 'posiciones' }}, {{ ra.fusion_mm|es(0) }} MM$){% endif %}.</p>
+{% endif %}
+{% if ra and ra.entran_pos %}
+<p class="nota">Seguros, {{ ra.period|string|mes_es }}: {{ ra.entran_pos|es(0) }} {{ 'posición' if ra.entran_pos == 1 else 'posiciones' }}
+    ({{ ra.entran_mm|es(0) }} MM$) que algunas compañías informaron con otro RUT se atribuyen a este emisor, porque es
+    el que informa la mayoría de los tenedores de ese instrumento ({{ ra.entran_nemos|join(', ') }}{{ '…' if ra.entran_nemos|length == 8 }}).</p>
+{% endif %}
+{% if ra and ra.salen_pos %}
+<p class="nota">Seguros, {{ ra.period|string|mes_es }}: {{ ra.salen_pos|es(0) }} {{ 'posición informada' if ra.salen_pos == 1 else 'posiciones informadas' }}
+    con este RUT ({{ ra.salen_mm|es(0) }} MM$) se {{ 'atribuye' if ra.salen_pos == 1 else 'atribuyen' }} a
+    {% for d in ra.salen_a %}{{ (d.nombre|nombre) if d.nombre else 'RUT ' ~ d.rut }}{{ ', ' if not loop.last }}{% endfor %},
+    que es el emisor que informa la mayoría de los tenedores de ese instrumento ({{ ra.salen_nemos|join(', ') }}{{ '…' if ra.salen_nemos|length == 8 }}).</p>
+{% endif %}
+
+{% if h.seguros %}
+<h3 class="sub-head">Compañías de seguros con posiciones</h3>
+{{ tabla(h.seguros, "Compañía") }}
+{% endif %}
+{% if h.ffmm %}
+<h3 class="sub-head">Fondos mutuos con posiciones</h3>
+{{ tabla(h.ffmm, "Fondo") }}
+{% endif %}
+{% if h.afp %}
+<h3 class="sub-head">AFP con posiciones (fondos A–E sumados)</h3>
+{{ tabla(h.afp, "AFP") }}
+{% endif %}
+
+{% call ui.metodo("Cómo leer los montos") %}
+<p>
+    Seguros: nominal vigente de la renta fija (archivo B.1 de la
+    Circular 1.835) pasado a pesos con la UF y el dólar del cierre de cada mes; es valor par, no de
+    mercado, y una variación puede venir de compras, ventas, amortizaciones o del reajuste de la UF.
+    {% if h.seguros and h.seguros.sin_fx %}{{ h.seguros.sin_fx }} posiciones en otras monedas (euro) se
+    cuentan como posiciones pero no se suman.{% endif %}
+    Fondos mutuos: valorización de mercado al cierre informada por cada fondo (cartera nacional; la
+    extranjera no trae RUT); fondos en dólares pasados a pesos con el dólar observado.
+    AFP: cartera desagregada de la Superintendencia de Pensiones (valorización de mercado, MM$),
+    que publica con ~4 meses de rezago y nombra al emisor sin RUT: se cruza por nombre
+    {%- if h.afp_glosas %} («{{ h.afp_glosas|join('», «') }}»){% endif %}.
+    Los montos no son sumables entre sí: miden cosas distintas y un mismo bono puede estar en
+    ambas carteras.
+</p>
+{% endcall %}
+
+<script>
+(function () {
+    var bloques = [
+        {% if h.seguros %}{id: "em-seg-chart", serie: {{ h.seguros.serie | tojson }}, label: "valor par"},{% endif %}
+        {% if h.ffmm %}{id: "em-ffm-chart", serie: {{ h.ffmm.serie | tojson }}, label: "valor de mercado"},{% endif %}
+        {% if h.afp %}{id: "em-afp-chart", serie: {{ h.afp.serie | tojson }}, label: "valor de mercado"},{% endif %}
+    ];
+    function etiqueta(p) { p = String(p); return p.slice(4) + "/" + p.slice(0, 4); }
+    function draw() {
+        if (!window.Plotly) { return setTimeout(draw, 100); }
+        bloques.forEach(function (b) {
+            var x = b.serie.map(function (s) { return etiqueta(s.period); });
+            var y = b.serie.map(function (s) { return s.mm === null ? null : s.mm / 1000; });
+            var txt = b.serie.map(function (s) {
+                return (s.mm === null ? "sin dato" : INF.fmt(s.mm / 1000, 1) + " MMM$ " + b.label) +
+                       "<br>" + s.tenedores + " tenedores · " + s.pos + " posiciones";
+            });
+            Plotly.newPlot(b.id, [{
+                x: x, y: y, type: "bar", text: txt, hoverinfo: "text", textposition: "none",
+                // El último mes en color y los anteriores atenuados: el ojo va al dato vigente.
+                marker: { color: b.serie.map(function (s, i) { return i === b.serie.length - 1 ? INF.COLOR.foco : INF.COLOR.contexto; }),
+                          line: { color: "#111a2c", width: 2 } }
+            }], {
+                margin: { t: 10, r: 10, b: 60, l: 60 }, bargap: 0.35, showlegend: false,
+                xaxis: { type: "category", tickangle: -45, automargin: true },
+                yaxis: { title: { text: "MMM$", font: { size: 11 } }, rangemode: "tozero" }
+            });
+        });
+    }
+    draw();
+})();
+</script>
+{% endif %}

@@ -1,0 +1,8 @@
+* text=auto eol=lf
+*.bat text eol=crlf
+*.docx binary
+*.pptx binary
+*.xlsx binary
+*.zip binary
+*.duckdb binary
+*.exe binary

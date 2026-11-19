@@ -1,0 +1,125 @@
+{#
+  partials/eeff_table.html — Vista de empresa (EEFF + Evolución fusionados).
+  Recibe: meta (con profile), ratios (último período), graph_accounts,
+  statements = [{label, code, ev:{periods, accounts}}].
+#}
+{% import "partials/_ui.html" as ui %}
+{% if meta %}
+<header class="page-head mt-0">
+    <h2 class="mb-3">{{ meta.company_name|nombre }}</h2>
+    <div class="page-acciones mt-0">
+        {% if meta.profile and meta.profile.macro_sector %}<span class="chip chip--acento">{{ meta.profile.macro_sector }}</span>{% endif %}
+        <span class="chip">RUT {{ meta.rut }}</span>
+        <span class="chip">{{ "Individual" if meta.report_type == "I" else "Consolidado" if meta.report_type == "C" else meta.report_type }}</span>
+        <span class="chip">cifras en {{ meta.currency }} (moneda de reporte)</span>
+        <span class="chip">{{ meta.periods|length }} períodos</span>
+    </div>
+    {% if meta.profile %}
+    <p class="resena">{{ meta.profile.text }}{% if meta.profile.source == "inferida" %} <span class="muted">· reseña inferida por tipo</span>{% endif %}</p>
+    {% endif %}
+</header>
+
+<nav class="toc" aria-label="Secciones de la empresa">
+    <span class="toc-label">Ir a</span>
+    {% if ratios %}<a href="#eeff-indicadores">Indicadores</a><a href="#eeff-dupont">Dupont</a>{% endif %}
+    {% if graph_accounts %}<a href="#eeff-graficos">Gráficos</a>{% endif %}
+    {% for st in statements %}<a href="#est-{{ st.code|replace(' ', '-')|replace('/', '-') }}">{{ st.label }}</a>{% endfor %}
+</nav>
+
+{% if ratios %}
+{# Cifra con color por signo (rentabilidades y márgenes) #}
+{% macro st_pct(label, v) %}{{ ui.stat(label, (v|es(1, True) if v is not none else "—"), unidad=("%" if v is not none else none), tono=(none if v is none else ('pos' if v >= 0 else 'neg'))) }}{% endmacro %}
+{# Razón en veces: sin color salvo que sea negativa #}
+{% macro st_x(label, v) %}{{ ui.stat(label, (v|es(2) if v is not none else "—"), unidad=("x" if v is not none else none), tono=('neg' if (v is not none and v < 0) else none)) }}{% endmacro %}
+<section class="sec">
+    {{ ui.sec_head("Indicadores financieros", id="eeff-indicadores", fecha=meta.latest, fuente="CMF", arriba=none) }}
+    <div class="stats stats--compactas">
+        {{ st_pct("ROE", ratios.roe) }}
+        {{ st_pct("ROA", ratios.roa) }}
+        {{ st_pct("Margen neto", ratios.margen_neto) }}
+        {{ st_pct("Margen bruto", ratios.margen_bruto) }}
+        {{ st_pct("Margen EBIT", ratios.margen_ebit) }}
+        {{ st_pct("Margen EBITDA", ratios.margen_ebitda) }}
+        {{ st_x("Liquidez corriente", ratios.liquidez) }}
+        {{ st_x("Test ácido", ratios.test_acido) }}
+        {{ st_x("Deuda / patrimonio", ratios.endeudamiento) }}
+        {{ st_x("Cobertura de intereses", ratios.cobertura_intereses) }}
+        {{ ui.stat("Capital de trabajo", (ratios.capital_trabajo|es(0) if ratios.capital_trabajo is not none else "—"), unidad=(meta.currency if ratios.capital_trabajo is not none else none),
+                   tono=(none if ratios.capital_trabajo is none else ('pos' if ratios.capital_trabajo >= 0 else 'neg'))) }}
+    </div>
+</section>
+
+<section class="sec">
+    {{ ui.sec_head("Descomposición Dupont", id="eeff-dupont", arriba=none) }}
+    <p class="nota mt-0">ROE = margen neto × rotación de activos × apalancamiento.</p>
+    <div class="dupont">
+        <div class="dupont-factor">
+            <span>Margen neto</span>
+            <b>{% if ratios.margen_neto is not none %}{{ ratios.margen_neto|es(2) ~ "%" }}{% else %}—{% endif %}</b>
+        </div>
+        <div class="dupont-op">&times;</div>
+        <div class="dupont-factor">
+            <span>Rotación de activos</span>
+            <b>{% if ratios.rotacion_activos is not none %}{{ ratios.rotacion_activos|es(2) ~ "x" }}{% else %}—{% endif %}</b>
+        </div>
+        <div class="dupont-op">&times;</div>
+        <div class="dupont-factor">
+            <span>Apalancamiento</span>
+            <b>{% if ratios.apalancamiento is not none %}{{ ratios.apalancamiento|es(2) ~ "x" }}{% else %}—{% endif %}</b>
+        </div>
+        <div class="dupont-op">=</div>
+        <div class="dupont-resultado">
+            <span>ROE</span>
+            <b>{% if ratios.roe is not none %}{{ ratios.roe|es(2) ~ "%" }}{% else %}—{% endif %}</b>
+        </div>
+    </div>
+</section>
+{% endif %}
+
+{% if graph_accounts %}
+<section class="sec">
+    {{ ui.sec_head("Evolución de una partida o un indicador", id="eeff-graficos", arriba=none) }}
+    <div class="grid-viz grid-viz--2 mt-0">
+        <form class="filtros mb-0" hx-get="/eeff/serie" hx-target="#eeff-serie" hx-trigger="change" hx-swap="innerHTML">
+            <input type="hidden" name="rut" value="{{ meta.rut }}">
+            <label class="ancho">Graficar partida
+                <select name="account">
+                    <option value="" selected>— elegir partida —</option>
+                    {% for a in graph_accounts %}<option value="{{ a }}">{{ a }}</option>{% endfor %}
+                </select>
+            </label>
+            <label class="chk" title="Para partidas de flujo (acumuladas en el año): variación intra-anual">
+                <input type="checkbox" name="delta" value="1"> Desacumular
+            </label>
+        </form>
+        <form class="filtros mb-0" hx-get="/eeff/ratios-serie" hx-target="#ratios-serie" hx-trigger="change" hx-swap="innerHTML">
+            <input type="hidden" name="rut" value="{{ meta.rut }}">
+            <label class="ancho">Graficar indicador
+                <select name="metric">
+                    <option value="" selected>— elegir —</option>
+                    <option value="roe">ROE</option>
+                    <option value="roa">ROA</option>
+                    <option value="margen_neto">Margen neto</option>
+                    <option value="margen_bruto">Margen bruto</option>
+                    <option value="margen_ebit">Margen EBIT</option>
+                    <option value="margen_ebitda">Margen EBITDA</option>
+                    <option value="liquidez">Liquidez corriente</option>
+                    <option value="test_acido">Test Ácido</option>
+                    <option value="endeudamiento">Deuda / Patrimonio</option>
+                    <option value="cobertura_intereses">Cobertura de Intereses</option>
+                    <option value="capital_trabajo">Capital de Trabajo</option>
+                </select>
+            </label>
+        </form>
+    </div>
+    <div id="eeff-serie"></div>
+    <div id="ratios-serie"></div>
+</section>
+{% endif %}
+
+{% for st in statements %}
+    {% include "partials/statement_matrix.html" %}
+{% endfor %}
+{% else %}
+{{ ui.vacio("No hay estados financieros para esa empresa.") }}
+{% endif %}

@@ -1,0 +1,71 @@
+{#
+  partials/banca_evolutiva.html — Evolución por período de una cuenta bancaria con desglose por moneda.
+  series = [{period, value, clp_no_reaj, clp_reaj_ipc, clp_reaj_tc, extranjera}], account = nombre de la partida.
+#}
+{% import "partials/_ui.html" as ui %}
+{% macro fmt(v) %}{{ v|es(0) if v not in (none, 0, 0.0) else "—" }}{% endmacro %}
+{% macro cell(v, extra="") %}<td class="num{{ ' fuerte' if extra == 'strong' }}{{ ' neg' if v and v < 0 }}">{{ fmt(v) }}</td>{% endmacro %}
+
+{% if series %}
+{{ ui.viz("banca-evolutiva-chart", account, sub="evolución por moneda · cifras en pesos", fuente="CMF", alto="md", clase="mt-3") }}
+
+<div class="tbl-wrap tbl-wrap--alto">
+    <table class="tbl tbl--fija-1" aria-label="{{ account }} por período y moneda">
+        <thead>
+            <tr>
+                <th>Período</th>
+                <th class="num">CLP no reaj.</th>
+                <th class="num">Reaj. UF</th>
+                <th class="num">Reaj. USD</th>
+                <th class="num">M. extranjera</th>
+                <th class="num">Total</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for r in series %}
+            <tr>
+                <td class="ent">{{ r.period }}</td>
+                {{ cell(r.clp_no_reaj) }}
+                {{ cell(r.clp_reaj_ipc) }}
+                {{ cell(r.clp_reaj_tc) }}
+                {{ cell(r.extranjera) }}
+                {{ cell(r.value, "strong") }}
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<script>
+(function () {
+    var data = {{ series | tojson }};
+    function draw() {
+        if (!window.Plotly) { return setTimeout(draw, 100); }
+
+        var periods = data.map(function(d) { return d.period; });
+        // Cuatro monedas = cuatro primeros colores de la paleta validada; el filete del color
+        // del panel separa los tramos.
+        var pal = INF.PALETA;
+        var borde = { color: "#111a2c", width: 1 };
+
+        var traces = [
+            { x: periods, y: data.map(function(d) { return d.clp_no_reaj; }), name: 'CLP no reaj.', type: 'bar', marker: { color: pal[0], line: borde } },
+            { x: periods, y: data.map(function(d) { return d.clp_reaj_ipc; }), name: 'Reaj. UF', type: 'bar', marker: { color: pal[1], line: borde } },
+            { x: periods, y: data.map(function(d) { return d.clp_reaj_tc; }), name: 'Reaj. USD', type: 'bar', marker: { color: pal[2], line: borde } },
+            { x: periods, y: data.map(function(d) { return d.extranjera; }), name: 'M. extranjera', type: 'bar', marker: { color: pal[3], line: borde } }
+        ];
+
+        Plotly.newPlot("banca-evolutiva-chart", traces, {
+            margin: { t: 10, r: 10, b: 40, l: 80 },
+            barmode: 'stack',
+            xaxis: { type: "category" },
+            hovermode: "x unified",
+            legend: { traceorder: "normal" }
+        });
+    }
+    draw();
+})();
+</script>
+{% elif account %}
+{{ ui.vacio("Sin serie para esa partida.") }}
+{% endif %}

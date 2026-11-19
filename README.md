@@ -1,417 +1,180 @@
-# 🇨🇱 Repositorio de Información Financiera — Chile
+# 🇨🇱 INF_FIN_IA — Información de inversiones de Chile
 
-> **Visión del proyecto**: Sistema que acumula datos financieros y macroeconómicos de Chile de forma continua, aplica procesamiento analítico (proyecciones de estados financieros con fundamento macro, detección de anomalías, comparación sectorial) y entrega la información procesada a través de herramientas de storytelling (dashboards, reportes narrativos, API consumible por otros sistemas).
+Repositorio de datos financieros y macroeconómicos de Chile con actualización automática,
+controles de calidad, métricas comparables de productos de inversión (fondos mutuos y
+fondos de pensiones) y una web local para consultarlos.
 
----
-
-## Arquitectura general
-
-```
-FUENTES (BCCh, CMF web, SII, Bolsa)
-        ↓ ingestión automática (scheduler)
-BASE DE DATOS (DuckDB local)
-        ↓ procesamiento + modelos
-CAPA ANALÍTICA (proyecciones, ratios, series derivadas)
-        ↓ entrega
-STORYTELLING (dashboard web, API REST, reportes Jules)
-```
+> **Guía de desarrollo**: [`CONTEXTO.md`](CONTEXTO.md) — arquitectura, fuentes, decisiones y
+> *gotchas*. **Leerla antes de tocar datos.** Plan vigente: [`docs/PLAN_MEJORAS.md`](docs/PLAN_MEJORAS.md)
+> y [`docs/wiki/Hoja-de-Ruta.md`](docs/wiki/Hoja-de-Ruta.md).
 
 ---
 
-## Estado actual
+## Qué contiene
 
-| Fase | Estado | Descripción |
-|------|--------|-------------|
-| **1 — Macro BCCh** | ✅ Activa | PIB, IPC, TPM, empleo, tipo de cambio |
-| **2 — Series adicionales BCCh + SII** | ✅ Activa | UF, UTM, IVP, IMACEC desde la API de la BDE |
-| **3 — CMF: Empresas y Mercados** | ✅ Activa | Ingesta de archivos trimestrales planos .txt de estados financieros corporativos |
-| **4 — CMF: Bancos e Inst. Financieras** | ✅ Activa | Ingesta mensual de balances y resultados con desglose por moneda desde la API REST SBIFv3 |
-| **SP — Fondos de Pensiones** | ✅ Activa | Valores cuota diarios (desde 2002), carteras mensuales XML, cinta de precios diaria |
-| **5 — Calendarios y Alertas** | ⏳ Planificada | Fechas de publicaciones, alertas automáticas |
-| **6 — Análisis y Proyecciones** | ⏳ Planificada | Proyecciones macrofundadas, ratios, anomalías |
-| **7 — API + Dashboard** | ⏳ Planificada | FastAPI + visualización web interactiva |
-| **8 — Storytelling / Jules** | ⏳ Planificada | Reportes narrativos automáticos con LLM |
-
----
-
-## Requisitos para retomar el proyecto
-
-### Entorno Python
-
-| Requisito | Versión | Notas |
+| Fuente | Datos | Frecuencia |
 |---|---|---|
-| Python | 3.11+ | Instalado en `C:\Users\mbrav\anaconda3\` |
-| Anaconda | Cualquiera | Se usa el Python del entorno base de Anaconda |
-| pip | — | Disponible en el entorno Anaconda |
+| Banco Central (API BDE) | Macro 1975→hoy, expectativas EEE/EOF, bonos soberanos, swaps cámara, compensación inflacionaria, depósitos, tasas de captación, IPSA/IGPA e índices globales | diaria / mensual / trimestral |
+| CMF | EEFF corporativos IFRS, bancos (con desglose por moneda), seguros e intermediarios (FECU) | mensual / trimestral |
+| CMF · Circular 1.835 | Cartera de inversiones de seguros: composición (B.8) y renta fija instrumento a instrumento (B.1) | mensual |
+| CMF · fondos mutuos | Valor cuota, patrimonio y partícipes por serie; cartera; comisiones; rentabilidades oficiales | mensual |
+| Superintendencia de Pensiones | Valor cuota y patrimonio por AFP y fondo; cartera; cinta de precios | diaria / mensual |
 
-> **Importante**: En este equipo, Python está en Anaconda. Usar siempre `C:\Users\mbrav\anaconda3\python.exe` en vez de `python` o `py` (los alias del sistema apuntan al Microsoft Store stub).
+Encima de las fuentes se construyen:
 
-### Dependencias
+- **Maestra de entidades** (`dim_entidad`): una fila por RUT (emisores, bancos, AGF,
+  aseguradoras, intermediarios) con su historia de razones sociales.
+- **Catálogo de productos** (`dim_producto`): cada serie de fondo mutuo y cada fondo AFP, con
+  su administradora, categoría y clase de inversionista.
+- **Métricas** (`fact_producto_metricas`): rentabilidad nominal y real, posición y consistencia
+  en la categoría, frente a un depósito a plazo, volatilidad, caída máxima, Sharpe, escala de
+  riesgo 1–7, costo anual y en pesos a 10 años, patrimonio, flujo neto, partícipes y, en renta
+  fija, duración efectiva.
+- **Curvas de tasas** (`curva_ajuste`): swap y soberana, nominal y real, ajustadas a diario desde
+  2005 con Nelson-Siegel-Svensson; de ellas salen la inflación implícita, la TPM que descuenta el
+  mercado y el spread de los depósitos bancarios.
+- **Controles de calidad** (`dq_results`): unicidad, identidad contable, completitud,
+  continuidad, rangos y cruces entre tablas.
+
+Base local: `data/finanzas_chile.duckdb` (DuckDB, no versionada): **~15,8 millones de filas,
+967 MB** al 16-11-2026.
+
+| Tabla | Filas | Cobertura |
+|---|---:|---|
+| `cmf_insurer_portfolio_fixed_income` | 8.216.035 | 2020-01 → 2026-09 |
+| `cmf_bank_statements` | 1.959.738 | 2019-01 → 2026-09 |
+| `cmf_financial_statements` | 1.534.346 | 2015-03 → 2026-06 |
+| `sp_instrument_prices` | 1.093.373 | 2016-11 → 2026-11 (diaria los últimos 5 años, semanal antes) |
+| `cmf_mutual_fund_portfolio` | 933.087 | 2024-07 → 2026-09 |
+| `cmf_insurer_statements` | 736.622 | 2015-03 → 2026-06 (trimestral + anual auditada) |
+| `sp_portfolio_holdings` | 356.177 | 2015-01 → 2026-06 |
+| `cmf_mutual_fund_quota_values` | 308.973 | 2018-01 → 2026-10 (corte mensual) |
+| `cmf_broker_statements` | 213.325 | 2015-03 → 2026-06 |
+| `sp_quota_values` | 212.600 | 2008-04 → 2026-11 |
+| `observations` (97 series BCCh) | 282.775 | 1975 → 2026-11 |
+| `cmf_insurer_portfolio_control` | 75.045 | 2020-01 → 2026-09 |
+| `cmf_mutual_fund_fees` | 65.897 | 2024-07 → 2026-09 |
+| `cmf_mutual_fund_returns` | 3.963 | cortes 2026-03 y 2026-06 |
+| `dim_producto` / `fact_producto_metricas` | 2.868 vigentes | métricas al 31-10-2026 |
+
+---
+
+## Instalación
+
+Requiere Python 3.11. En Windows, `python` suele apuntar al stub de la Microsoft Store:
+**usar siempre el intérprete del venv**.
 
 ```powershell
-C:\Users\mbrav\anaconda3\python.exe -m pip install -r requirements.txt
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt   # o requirements.lock para versiones exactas
+copy .env.example .env    # completar BCENTRAL_USER y BCENTRAL_PASS
+.\.venv\Scripts\python.exe main.py status
 ```
 
-### Credenciales y accesos
+Credenciales: solo el Banco Central las exige (registro gratuito en
+<https://si3.bcentral.cl/estadisticas/Principal1/Web_Services/index.htm>). CMF y SP se leen
+de sus portales públicos.
 
-| Servicio | Variable en `.env` | Cómo obtenerla | Estado |
-|---|---|---|---|
-| **Banco Central Chile — BDE API** | `BCENTRAL_USER` / `BCENTRAL_PASS` | Registro gratuito en [si3.bcentral.cl/estadisticas/Principal1/Web_Services](https://si3.bcentral.cl/estadisticas/Principal1/Web_Services/index.htm) → luego iniciar sesión en la misma página para **activar** las credenciales (paso obligatorio) | ✅ Configurada |
-| **CMF Chile** | — | Sin credenciales — acceso por scraping del portal web [cmfchile.cl](https://www.cmfchile.cl) | Sin API pública |
-| **SII Chile** | — | Sin credenciales — scraping HTML público [sii.cl](https://www.sii.cl/valores_y_fechas/uf/) | Sin API pública |
-| **Bolsa de Santiago** | — | Sin credenciales — scraping (Fase futura) | Pendiente |
+---
 
-> **Nota sobre la activación del BCCh**: El registro en si3.bcentral.cl crea la cuenta, pero las credenciales para la API REST BDE requieren un **segundo paso manual**: iniciar sesión en [si3.bcentral.cl/Siete/es/Siete/API](https://si3.bcentral.cl/Siete/es/Siete/API) y hacer clic en "Activar credenciales". Sin este paso, la API devuelve `Invalid username or password` aunque las credenciales sean correctas.
+## Actualizar los datos
 
-### Archivo `.env`
+Un solo mecanismo, el **catch-up por frescura**: sondea cada fuente, baja lo que falta (o lo
+que quedó incompleto), reconstruye entidades, productos y métricas, y corre los controles.
 
 ```powershell
-# Copiar la plantilla y editar
-copy .env.example .env
+.\.venv\Scripts\python.exe main.py catchup --dry-run     # qué está pendiente y por qué
+.\.venv\Scripts\python.exe main.py catchup               # actualizar todo
+.\.venv\Scripts\python.exe main.py catchup --source cmf_fm_cuotas
+.\.venv\Scripts\python.exe main.py validate              # controles de calidad (sale con 1 si hay errores)
+.\.venv\Scripts\python.exe main.py build-productos       # solo reconstruir capas derivadas
 ```
 
-Contenido esperado del `.env`:
+Para usuarios sin consola: **`Actualizar_Datos.exe`** (menú por fuente; se compila con
+`build_actualizador.py`) y `actualizar.py --todo` en modo desatendido.
 
-```env
-BCENTRAL_USER=tu_email@ejemplo.com
-BCENTRAL_PASS=tu_contraseña_bde
-CMF_API_KEY=
-DB_PATH=data/finanzas_chile.duckdb
-DAILY_FETCH_TIME=08:00
-TIMEZONE=America/Santiago
-LOG_LEVEL=INFO
-LOG_FILE=logs/app.log
-```
+Con el servidor web corriendo con `--with-scheduler`, el catch-up corre solo cada hora hábil
+y una vez al mes se reingestan los dos últimos períodos de la CMF (que corrige datos ya
+publicados).
 
-### Verificar que todo está en orden
+> DuckDB admite **un solo proceso escritor**: no actualizar mientras la web sirve en modo
+> lectura desde otro proceso.
+
+Comandos de carga histórica por fuente: `fetch`, `fetch-cmf`, `fetch-banks`, `fetch-seguros`,
+`fetch-intermediarios`, `fetch-cartera-seguros`, `fetch-ffmm-cuotas`, `fetch-ffmm`,
+`fetch-ffmm-comisiones`, `fetch-ffmm-comparador`, `fetch-sp-cuotas`, `fetch-sp-cartera`,
+`fetch-sp-precios`. Cada uno documenta sus opciones con `--help`.
+
+**Eficiencia de disco** (automático):
+
+- Después de cada carga exitosa (catch-up, comandos `fetch-*`/`import-*`, actualizador) se
+  **borran las descargas crudas** de `data/*_raw`: ya están en la base y se pueden volver a
+  bajar. Si una carga falla, se conservan para reintentar.
+- Las capas derivadas y los controles solo se recalculan si llegaron filas nuevas.
+- `dq_results` guarda las últimas 30 corridas y `fetch_log` un año.
+
+A mano: `clean-cache [--dry-run]`, `compactar` (recupera el espacio que dejan las reingestas;
+cerrar la web antes), `respaldar --keep N` (copia la base a `data/backups/`, conserva N) y
+`export-parquet` (renta fija de seguros a Parquet).
+
+---
+
+## Web
 
 ```powershell
-C:\Users\mbrav\anaconda3\python.exe main.py status
+.\.venv\Scripts\python.exe main.py serve            # http://127.0.0.1:8000
 ```
 
-Salida esperada:
-```
-✅ Banco Central API
-⚠️  (Fase 2) CMF API
-```
+o doble clic en `iniciar_web.bat`.
+
+| Ruta | Contenido |
+|---|---|
+| `/` | Panel multi-fuente y estado de la calidad de datos |
+| `/curvas` | Curvas de tasas, inflación implícita, TPM implícita frente a encuestas, spread bancario |
+| `/productos` | Explorador de fondos mutuos y AFP por categoría y clase de inversionista |
+| `/producto/{id}` | Ficha: rentabilidad, riesgo, costo, flujos, cartera y comparación con su categoría |
+| `/productos/comparar` | Hasta 4 productos lado a lado, con traslape de cartera |
+| `/metodologia` | Fuentes, unidades, fórmulas, limitaciones y último control de calidad |
+| `/banco-central` | Explorador de series macro |
+| `/eeff` | EEFF por clasificación: corporativos, AGF, seguros, intermediarios, bancos |
+| `/comparar`, `/ranking`, `/salud`, `/proyecciones` | Análisis de EEFF |
+| `/inversion-institucional` | Cartera de seguros, AFP, fondos de pensiones y emisores en común |
+| `/fondos-mutuos` | Rendimientos y carteras de fondos mutuos |
+| `/docs` | API REST (`/api/v1/...`) |
+
+Cada vista indica la fecha de sus datos y avisa si la fuente está atrasada.
+
+**Aviso**: la información es de carácter informativo y no constituye asesoría ni
+recomendación de inversión. Ver `docs/PLAN_MEJORAS.md` §8 antes de publicar el sitio.
 
 ---
 
-## Instalación desde cero
+## Tests
 
 ```powershell
-cd c:\Users\mbrav\Desktop\INF_FIN_IA
-
-# Instalar dependencias en Anaconda
-C:\Users\mbrav\anaconda3\python.exe -m pip install -r requirements.txt
-
-# Copiar y editar credenciales
-copy .env.example .env
-# (editar .env con tus datos)
-
-# Verificar estado
-C:\Users\mbrav\anaconda3\python.exe main.py status
-
-# Backfill inicial (descarga histórico de todas las series)
-C:\Users\mbrav\anaconda3\python.exe main.py fetch --all
+.\.venv\Scripts\python.exe -m pytest -q
 ```
+
+Los tests que necesitan la base se saltan solos si no existe o si otro proceso la tiene
+abierta en escritura. CI: `.github/workflows/tests.yml`.
 
 ---
 
-## Uso de la CLI
-
-```powershell
-# Ver estado del sistema y credenciales
-C:\Users\mbrav\anaconda3\python.exe main.py status
-
-# Backfill inicial — descarga todas las series del catálogo
-C:\Users\mbrav\anaconda3\python.exe main.py fetch --all
-
-# Descargar una serie por nombre (búsqueda en catálogo local)
-C:\Users\mbrav\anaconda3\python.exe main.py fetch --series IPC
-C:\Users\mbrav\anaconda3\python.exe main.py fetch --series "tipo de cambio"
-C:\Users\mbrav\anaconda3\python.exe main.py fetch --series cobre
-
-# Descargar por código exacto BDE (verificar código en si3.bcentral.cl primero)
-C:\Users\mbrav\anaconda3\python.exe main.py fetch --id F032.PIB.FLU.R.CLP.EP18.Z.Z.0.T
-
-# Descargar con rango de fechas
-C:\Users\mbrav\anaconda3\python.exe main.py fetch --series PIB --from-date 2010-01-01 --to-date 2025-12-31
-
-# Consultar datos almacenados
-C:\Users\mbrav\anaconda3\python.exe main.py query --series PIB
-C:\Users\mbrav\anaconda3\python.exe main.py query --series PIB --format csv
-C:\Users\mbrav\anaconda3\python.exe main.py query --series PIB --format json
-
-# ============================================================
-# Ingesta y Consulta Corporativa (Fase 3 — CMF de Chile)
-# ============================================================
-
-# Descargar e ingestar estados financieros trimestrales corporativos (ej. 202512)
-C:\Users\mbrav\anaconda3\python.exe main.py fetch-cmf --period 202512
-
-# Consultar estados financieros corporativos de forma interactiva (ej. Correos de Chile)
-C:\Users\mbrav\anaconda3\python.exe main.py query-cmf --rut 60503000 --period 202512
-
-# Consultar estados financieros filtrando por nombre de empresa en formato JSON
-C:\Users\mbrav\anaconda3\python.exe main.py query-cmf --company "CORREOS" --period 202512 --limit 5 --format json
-
-# ============================================================
-# Ingesta y Consulta Bancaria (Fase 4 — CMF Bancos)
-# ============================================================
-
-# Descargar e ingestar reportes mensuales bancarios para un banco específico (ej. Banco de Chile 001, Dic 2025)
-C:\Users\mbrav\anaconda3\python.exe main.py fetch-banks --year 2025 --month 12 --bank 001
-
-# Descargar automáticamente todos los bancos de la plaza para un mes específico (Nov 2025)
-C:\Users\mbrav\anaconda3\python.exe main.py fetch-banks --year 2025 --month 11
-
-# Realizar un backfill histórico completo de todos los bancos principales desde 2024 de forma automatizada
-C:\Users\mbrav\anaconda3\python.exe main.py fetch-banks --history
-
-# Consultar activos u otras cuentas bancarias (ej. Total Activos 100000000 de Banco de Chile)
-C:\Users\mbrav\anaconda3\python.exe main.py query-banks --bank 001 --account 100000000
-
-# Exportar en formato JSON de alta precisión (limitado a 2 registros)
-C:\Users\mbrav\anaconda3\python.exe main.py query-banks --bank 001 --account 100000000 --format json --limit 2
-
-# ============================================================
-# Ingesta y Consulta de Pensiones (Superintendencia de Pensiones — SP)
-# ============================================================
-
-# Descargar e ingestar valores cuota de multifondos (ej. histórico completo desde 2002 para todos los fondos)
-C:\Users\mbrav\anaconda3\python.exe main.py fetch-sp-cuotas --year-start 2002
-
-# Descargar valores cuota para un fondo y rango específico (ej. Fondo A entre 2025 y 2026)
-C:\Users\mbrav\anaconda3\python.exe main.py fetch-sp-cuotas --year-start 2025 --year-end 2026 --fund A
-
-# Descargar la cartera de inversión mensual desagregada para un período específico (ej. Enero 2026)
-C:\Users\mbrav\anaconda3\python.exe main.py fetch-sp-cartera --period 202601
-
-# Descargar la cinta diaria de precios de instrumentos financieros para una fecha específica (ej. 2026-01-02)
-C:\Users\mbrav\anaconda3\python.exe main.py fetch-sp-precios --date 2026-01-02
-
-# Realizar un backfill completo de precios diarios (últimos 5 años diarios, y anteriores 5 años los miércoles)
-C:\Users\mbrav\anaconda3\python.exe main.py fetch-sp-precios --history
-
-# Consultar valores cuota y patrimonio en terminal
-C:\Users\mbrav\anaconda3\python.exe main.py query-sp-cuotas --afp CAPITAL --fund A --limit 5
-
-# Consultar precios diarios de instrumentos (ej. nemotécnico o RUT)
-C:\Users\mbrav\anaconda3\python.exe main.py query-sp-precios --instrument AESANDES --limit 5
-
-# ============================================================
-# Listar y Scheduler
-# ============================================================
-
-# Listar series macroeconómicas registradas en la base de datos local
-C:\Users\mbrav\anaconda3\python.exe main.py list
-
-# Iniciar scheduler automático (bloqueante — corre indefinidamente)
-C:\Users\mbrav\anaconda3\python.exe main.py run-scheduler
-```
-
----
-
-## Estructura del proyecto
+## Estructura
 
 ```
-INF_FIN_IA/
-├── collectors/
-│   ├── bcentral.py          # ✅ Cliente BDE API del Banco Central (Fases 1 y 2)
-│   ├── cmf.py               # ✅ Ingestionador plano de Estados Financieros CMF (Fase 3)
-│   ├── cmf_banks.py         # ✅ Cliente API REST de Estados Financieros Bancos CMF (Fase 4)
-│   ├── sp_pensions.py       # ✅ Scraping de valores cuota, carteras y precios SP
-│   └── sii.py               # 🔜 Scraping SII alternativo (Fase 2)
-├── processors/
-│   ├── normalizer.py        # ✅ Normalización y limpieza de datos macro
-│   ├── standardizer.py      # 🔜 Mapeo XBRL → esquema estándar (Fase 3)
-│   ├── xbrl_parser.py       # 🔜 Parseo XBRL con arelle (Fase 3)
-│   └── pdf_extractor.py     # 🔜 Extracción de tablas de PDFs (Fase 3)
-├── db/
-│   ├── database.py          # ✅ Capa de acceso DuckDB
-│   └── schema.py            # ✅ Definición de tablas (series, observations, cmf, fetch_log)
-├── scheduler/
-│   └── jobs.py              # ✅ APScheduler: daily/monthly/quarterly/annual
-├── config/
-│   ├── settings.py          # ✅ Configuración centralizada (pydantic-settings)
-│   └── series_catalog.yaml  # ✅ Catálogo de series a ingestar
-├── api/                     # ⏳ FastAPI REST (Fase 6)
-├── dashboard/               # ⏳ Frontend web (Fase 6)
-├── data/
-│   ├── cmf_raw/             # Caché local de archivos planos trimestrales (.txt) de la CMF
-│   ├── bank_raw/            # Caché local de respuestas JSON de la API CMF Bancos (Fase 4)
-│   └── finanzas_chile.duckdb  # Base de datos DuckDB (generado automáticamente)
-├── logs/                    # Logs de ejecución (generado automáticamente)
-├── main.py                  # ✅ CLI entry point
-├── .env                     # Credenciales (NO subir a git)
-├── .env.example             # Plantilla de variables
-├── requirements.txt         # ✅ Dependencias Python
-└── README.md
+main.py               CLI (Click)            actualizar.py   menú / modo desatendido
+collectors/           descarga y parseo por fuente
+scheduler/sources.py  registro único de fuentes (sonda + descarga + reingesta)
+scheduler/jobs.py     catch-up y scheduler
+db/database.py        fachada Database; métodos por dominio en db/repos/
+db/migrations.py      tablas derivadas y vistas v_* (numeradas)
+db/entities.py        maestra de entidades       db/products.py  productos y métricas
+db/curves.py          curvas de tasas (NSS)
+db/quality.py         controles de calidad       db/cross.py     cruce de carteras
+api/                  FastAPI: routers/web/* (HTML por dominio), productos, api_v1
+models/               proyecciones de EEFF (híbrido + SARIMAX) y backtest
+config/               catálogo BCCh, entidades curadas, canales de proveedores, perfiles
+docs/                 plan, wiki, informe de la Circular 1.835
+tests/                pytest
 ```
-
----
-
-## Series configuradas (Fase 1 y Fase 2 — BCCh BDE API)
-
-| Categoría | Serie | Código BDE | Frecuencia |
-|---|---|---|---|
-| **Actividad** | PIB Real (encadenado 2018) | `F032.PIB.FLU.R.CLP.EP18.Z.Z.0.T` | Trimestral |
-| **Precios** | IPC General (base dic. 2023) | `G073.IPC.IND.2023.M` | Mensual |
-| **Precios** | Variación mensual IPC | `G073.IPC.VAR.2023.M` | Mensual |
-| **Precios** | Inflación 12 meses (anual) | `G073.IPC.V12.2023.M` | Mensual |
-| **Política Monetaria** | TPM nominal | `F022.TPM.TIN.D001.NO.Z.D` | Diario |
-| **Laboral** | Tasa de desempleo | `F049.DES.TAS.INE.10.M` | Mensual |
-| **Tipo de Cambio** | CLP/USD observado diario | `F073.TCO.PRE.Z.D` | Diario |
-| **Tipo de Cambio** | CLP/USD promedio mensual | `F073.TCO.PRE.HIST.M` | Mensual |
-| **Sector Externo** | Cuenta corriente BoP | `F068.A.FLU.Z.0.S.N.Z.Z.Z.Z.6.0.T` | Trimestral |
-| **Fiscal** | Deuda Gobierno Central (% PIB) | `F051.D7.PPB.C.Z.Z.T` | Trimestral |
-| **Materias Primas** | Precio del cobre (BML) | `F019.PPB.PRE.40.M` | Mensual |
-| **Fase 2: UF** | Unidad de Fomento | `F073.UFF.PRE.Z.D` | Diario |
-| **Fase 2: IVP** | Índice de Valor Promedio | `F073.IVP.PRE.Z.D` | Diario |
-| **Fase 2: UTM** | Unidad Tributaria Mensual | `F073.UTR.PRE.Z.M` | Mensual |
-| **Fase 2: IMACEC** | IMACEC mensual (Base 2018) | `F032.ICF.IND.Z.Z.EP18.Z.Z.0.M` | Mensual |
-
-Para agregar más series, editar `config/series_catalog.yaml`.
-
----
-
-## Scheduler automático
-
-| Job | Trigger | Series |
-|---|---|---|
-| `daily_fetch` | Lun–Vie a las 08:00 (Santiago) | Tipo de cambio diario |
-| `monthly_fetch` | Día 6 de cada mes, 09:00 | IPC, TPM, desempleo, etc. |
-| `quarterly_fetch` | Día 10 (ene/abr/jul/oct), 09:30 | PIB, balanza de pagos |
-| `annual_fetch` | 15 de febrero, 10:00 | Balance fiscal |
-| `sp_daily_fetch` | Lun–Vie a las 18:30 (Santiago) | Cinta de precios e ingesta de valores cuota SP |
-| `sp_monthly_fetch` | Día 15 de cada mes, 20:00 | Cartera desagregada mensual del mes anterior SP |
-
-Para correrlo como servicio persistente en Windows:
-- Usar el **Programador de Tareas** de Windows (Task Scheduler)
-- O instalar `nssm` (Non-Sucking Service Manager) para gestionar el proceso
-
----
-
-## Base de datos
-
-Se usa **DuckDB** (`data/finanzas_chile.duckdb`), ideal para análisis OLAP local sin servidor.
-
-### Consulta de Series Macroeconómicas
-
-```python
-import duckdb
-conn = duckdb.connect("data/finanzas_chile.duckdb")
-
-# Ver todas las series disponibles
-df = conn.execute("SELECT id, name, frequency FROM series").fetchdf()
-
-# Últimos datos del PIB
-df = conn.execute("""
-    SELECT date, value
-    FROM observations
-    WHERE series_id = 'F032.PIB.FLU.R.CLP.EP18.Z.Z.0.T'
-    ORDER BY date DESC LIMIT 10
-""").fetchdf()
-print(df)
-```
-
-### Consulta de Estados Financieros CMF (Empresas)
-
-```python
-import duckdb
-conn = duckdb.connect("data/finanzas_chile.duckdb")
-
-# Consultar cuentas del balance de una empresa específica (ej. 2025-12)
-df = conn.execute("""
-    SELECT period, company_name, account_name, value, statement_group
-    FROM cmf_financial_statements
-    WHERE rut = '60503000' AND period = 202512
-    LIMIT 10
-""").fetchdf()
-print(df)
-```
-
-### Consulta de Estados Financieros de Bancos (Desglose de Moneda)
-
-```python
-import duckdb
-conn = duckdb.connect("data/finanzas_chile.duckdb")
-
-# Consultar la cuenta de Total Activos (100000000) mostrando la distribución de monedas en Banco de Chile
-df = conn.execute("""
-    SELECT 
-        period, 
-        bank_name, 
-        account_name, 
-        val_clp_no_reaj AS clp_no_reajustable,
-        val_clp_reaj_ipc AS reajustable_uf,
-        val_clp_reaj_tc AS reajustable_usd,
-        val_extranjera AS moneda_extranjera,
-        val_total AS total_consolidado
-    FROM cmf_bank_statements
-    WHERE bank_code = '001' AND account_code = '100000000'
-    ORDER BY period DESC
-""").fetchdf()
-print(df)
-```
-
-### Consulta de Fondos de Pensiones (SP)
-
-```python
-import duckdb
-conn = duckdb.connect("data/finanzas_chile.duckdb")
-
-# Valores cuota diarios de AFP Habitat para el Fondo A (últimos 10 registros)
-df = conn.execute("""
-    SELECT date, fund_type, quota_value, equity_value
-    FROM sp_quota_values
-    WHERE afp_name = 'HABITAT' AND fund_type = 'A'
-    ORDER BY date DESC LIMIT 10
-""").fetchdf()
-print(df)
-
-# Distribución de portafolio mensual (Glosa / Activos con mayor porcentaje en Ene 2026)
-df = conn.execute("""
-    SELECT period, fund_type, instrument_glosa, porcentaje
-    FROM sp_portfolio_holdings
-    WHERE afp_name = 'TOTAL' AND period = '2026-01'
-    ORDER BY porcentaje DESC LIMIT 10
-""").fetchdf()
-print(df)
-
-# Consulta de nemotécnicos en la cinta de precios diaria (ej. AESANDES)
-df = conn.execute("""
-    SELECT date, instrument_id, instrument_type, currency, price
-    FROM sp_instrument_prices
-    WHERE instrument_id = 'AESANDES'
-    ORDER BY date DESC LIMIT 5
-""").fetchdf()
-print(df)
-```
-
----
-
-## Roadmap de procesamiento analítico
-
-Una vez que la base de datos tenga cobertura histórica, se incorporarán:
-
-| Capacidad | Descripción | Dependencias |
-|---|---|---|
-| **Proyecciones macro** | Modelos de proyección de variables macro (VAR, ARIMA, Kalman) usando los datos del BCCh | Fase 1–2 completas |
-| **Proyecciones de EEFF** | Proyecciones de estados financieros de empresas ancladas al escenario macro | Fase 3 completa |
-| **Ratios y comparación sectorial** | Cálculo automático de ROE, ROA, EV/EBITDA por empresa y sector | Fase 3 completa |
-| **Detección de anomalías** | Alertas cuando una empresa o indicador se desvía de su comportamiento histórico | Fase 3 + datos históricos |
-| **Informes narrativos (Jules)** | Integración con el agente Jules para generación automática de reportes Word/PPT | Fase 6 |
-
----
-
-## Roadmap de storytelling
-
-| Herramienta | Descripción | Estado |
-|---|---|---|
-| **CLI** | Consulta de datos por terminal | ✅ Operativa |
-| **API REST** (FastAPI) | Endpoints para consumir los datos desde cualquier app | ⏳ Fase 6 |
-| **Dashboard web** | Visualizaciones interactivas (Chart.js / Plotly) | ⏳ Fase 6 |
-| **Reportes automáticos** | Documentos Word/PPT generados por Jules a partir de la BD | ⏳ Fase 7 |
-| **Alertas** | Notificaciones cuando se acercan publicaciones o hay datos nuevos | ⏳ Fase 4 |

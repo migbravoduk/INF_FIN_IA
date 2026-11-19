@@ -1,0 +1,126 @@
+{#
+  partials/proyecciones_simple.html — Fan charts SARIMAX para las clasificaciones sin
+  modelo estructural calibrado (bancos, seguros, intermediarios).
+  results = [{account, unit_note, history:[{period,value}], forecast:[{period,mean,lo80,hi80,lo95,hi95}]}]
+  meta = {entity_name, rut, kind, unit, cadence, spec, n_obs}
+#}
+{% import "partials/_ui.html" as ui %}
+{% if results %}
+<header class="page-head mt-0">
+    <h2 class="mb-3">{{ meta.entity_name|nombre }}</h2>
+    <div class="page-acciones mt-0">
+        <span class="chip">{{ meta.rut }}</span>
+        {% if meta.kind %}<span class="chip chip--acento">{{ meta.kind }}</span>{% endif %}
+        <span class="chip">cifras en {{ meta.unit }}</span>
+        <span class="chip">serie {{ meta.cadence }}</span>
+    </div>
+</header>
+
+{% call ui.aviso("warn") %}
+    {% if results | selectattr("calibradas") | list | length == results | length %}
+    <strong>Bandas calibradas fuera de muestra.</strong> Los intervalos 80% y 95% son los
+    cuantiles del error real del mismo modelo en un backtest de esta clasificación (orígenes
+    móviles, nov-2026), escalados por la variabilidad propia de la serie. Un horizonte no
+    medido usa el cuantil del horizonte medido inmediatamente superior. El modelo es
+    univariante: no usa el ancla macro (EEE/EOF).
+    {% else %}
+    ⚠ <strong>Bandas no calibradas.</strong> Los intervalos vienen del propio SARIMAX
+    (gaussianos), no de un backtest de esta clasificación. A diferencia de la vista
+    corporativa —cuyas bandas son cuantiles del error real fuera de muestra— aquí no se ha
+    medido el desempeño histórico, así que trátalos como referencia y no como probabilidad
+    calibrada. Tampoco se usa el ancla macro (EEE/EOF): el modelo es univariante.
+    {% endif %}
+    <br>
+    <strong>Quiebres estructurales no modelados.</strong> Fusiones y adquisiciones aparecen
+    como saltos de nivel en la historia (ej. BICE absorbe a Security en nov-2025, con los
+    activos pasando de 11,9 a 21,5 billones) e inflan la tendencia estimada. Revisa la serie
+    histórica antes de leer la proyección de una entidad que haya cambiado de perímetro.
+{% endcall %}
+
+{% for r in results %}
+{{ ui.viz("proys-chart-" ~ loop.index, r.account, sub=(r.unit_note ~ " · " ~ r.spec ~ " · " ~ r.n_obs ~ " obs."), fuente="CMF (historia) · proyección propia", alto="lg", clase="mt-5") }}
+{% if r.uf_note %}<p class="nota">{{ r.uf_note }}</p>{% endif %}
+{% if r.atipicos %}<p class="nota">
+    {{ r.atipicos | length }} dato(s) atípico(s) en la historia
+    ({% for a in r.atipicos %}{{ a.period }}{% if not loop.last %}, {% endif %}{% endfor %}, marcados con ✕).
+    {% if r.atipicos_usados %}El modelo usa tendencia + estacionalidad en su lugar.
+    {% else %}Solo se informan: eliminarlos antes de calibrar se midió en esta clasificación
+    y no pasó la regla de adopción.{% endif %}</p>{% endif %}
+{% if r.acotado %}{% call ui.aviso("warn") %}
+    El SARIMAX salió fuera del rango histórico y se reemplazó por
+    {{ "el último valor" if r.stock else "el naive estacional" }}.{% endcall %}{% endif %}
+{% endfor %}
+
+<script>
+(function () {
+    var results = {{ results | tojson }};
+    function draw() {
+        if (!window.Plotly) { return setTimeout(draw, 100); }
+        results.forEach(function (r, i) {
+            var el = "proys-chart-" + (i + 1);
+            var maxAbs = Math.max.apply(null, r.history.map(function (d) { return Math.abs(d.value || 0); }));
+            var esc = maxAbs >= 1e10 ? 1e9 : (maxAbs >= 1e7 ? 1e6 : 1);
+            var unidad = esc === 1e9 ? "miles de millones" : (esc === 1e6 ? "millones" : "");
+            function k(v) { return v === null || v === undefined ? v : v / esc; }
+            var hx = r.history.map(function (d) { return d.period; });
+            var hy = r.history.map(function (d) { return k(d.value); });
+            var fx = r.forecast.map(function (d) { return d.period; });
+            var lastP = hx[hx.length - 1], lastV = hy[hy.length - 1];
+            var fxc = [lastP].concat(fx);
+            function serie(c) { return [lastV].concat(r.forecast.map(function (d) { return k(d[c]); })); }
+            var mean = serie("mean"), lo80 = serie("lo80"), hi80 = serie("hi80"),
+                lo95 = serie("lo95"), hi95 = serie("hi95");
+
+            var allCats = [];
+            hx.forEach(function (c) { if (allCats.indexOf(c) < 0) { allCats.push(c); } });
+            fx.forEach(function (c) { if (allCats.indexOf(c) < 0) { allCats.push(c); } });
+            // Un rótulo por año: enero (series mensuales '2026-01') o T1 (trimestrales '2026 T1').
+            var anuales = allCats.filter(function (c) { return /(-01| T1)$/.test(c); });
+
+            var hov = "%{x}<br><b>%{y:,.1f}</b> " + unidad;
+            var traces = [
+                { x: fxc, y: hi95, mode: "lines", line: { width: 0 }, showlegend: false, hoverinfo: "skip" },
+                { x: fxc, y: lo95, mode: "lines", line: { width: 0 }, fill: "tonexty",
+                  fillcolor: "rgba(56,189,248,0.10)", name: "IC 95%", hoverinfo: "skip", legendrank: 4 },
+                { x: fxc, y: hi80, mode: "lines", line: { width: 0 }, showlegend: false, hoverinfo: "skip" },
+                { x: fxc, y: lo80, mode: "lines", line: { width: 0 }, fill: "tonexty",
+                  fillcolor: "rgba(56,189,248,0.22)", name: "IC 80%", hoverinfo: "skip", legendrank: 3 },
+                { x: hx, y: hy, mode: "lines+markers", name: "Historia", legendrank: 1,
+                  line: { color: INF.COLOR.foco, width: 2 }, marker: { size: 3 }, hovertemplate: hov + "<extra>historia</extra>" },
+                { x: fxc, y: mean, mode: "lines+markers", name: "Proyección", legendrank: 2,
+                  line: { color: INF.PALETA[4], width: 2, dash: "dash" }, marker: { size: 4 },
+                  hovertemplate: hov + "<extra>proyección</extra>" }
+            ];
+            if (r.atipicos && r.atipicos.length) {
+                traces.push({ x: r.atipicos.map(function (a) { return a.period; }),
+                    y: r.atipicos.map(function (a) { return k(a.valor); }),
+                    customdata: r.atipicos.map(function (a) { return k(a.limpio); }),
+                    mode: "markers", name: "Atípico aislado", legendrank: 5,
+                    marker: { symbol: "x", size: 11, color: INF.PALETA[3], line: { width: 2 } },
+                    hovertemplate: "%{x}<br>dato: %{y:,.1f}<br>calibrado con: %{customdata:,.1f}<extra>atípico</extra>" });
+            }
+
+            var hoy = INF.hoy(lastP, "proyección");
+            // Celular: últimos 24 períodos de historia, para que la proyección no quede aplastada.
+            var angosto = document.getElementById(el).clientWidth < 520;
+            var rango = angosto ? [Math.max(-0.5, allCats.length - 24 - fx.length - 0.5), allCats.length - 0.5] : undefined;
+            Plotly.newPlot(el, traces, {
+                margin: { t: 30, r: 16, b: 40, l: 70 },
+                xaxis: { type: "category", categoryorder: "array", categoryarray: allCats, range: rango,
+                         tickvals: anuales, ticktext: anuales.map(function (c) { return c.slice(0, 4); }) },
+                yaxis: { title: { text: ("{{ meta.unit if meta else '' }} " + (unidad ? "· " + unidad : "")).trim() } },
+                shapes: [hoy.shape],
+                annotations: [hoy.annotation],
+                legend: { orientation: "h", y: 1, yanchor: "bottom", x: 0, traceorder: "normal" }
+            });
+        });
+    }
+    draw();
+})();
+</script>
+{% elif meta %}
+<p class="vacio">
+    No hay serie suficiente para proyectar {{ meta.entity_name }}
+    (se requieren al menos 16 observaciones).
+</p>
+{% endif %}

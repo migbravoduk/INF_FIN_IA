@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% import "partials/_ui.html" as ui %}
+
+{% block title %}Estados Financieros · INF_FIN_IA{% endblock %}
+
+{% block content %}
+{{ ui.page_head("Estados financieros", "Elige el tipo de entidad: cada una tiene su plan de cuentas y su fuente.") }}
+
+<div class="hub-grid">
+    {% for c in classes %}
+    <a class="hub-card" href="{{ c.url }}">
+        <span class="hub-ico ico-{{ c.icon }}" aria-hidden="true"></span>
+        <h3>{{ c.title }}</h3>
+        <p>{{ c.desc }}</p>
+        <span class="hub-meta">{{ c.meta }}</span>
+    </a>
+    {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,94 @@
+{#
+  partials/eeff_static.html — Estados financieros de UNA empresa/período (export estático).
+  Recibe `meta` (con profile) y `groups` (de build_statement_groups) + `ratios`.
+#}
+{% import "partials/_ui.html" as ui %}
+{% if meta %}
+<header class="page-head mt-0">
+    <h2 class="mb-3">{{ meta.company_name|nombre }}</h2>
+    <div class="page-acciones mt-0">
+        {% if meta.profile and meta.profile.macro_sector %}<span class="chip chip--acento">{{ meta.profile.macro_sector }}</span>{% endif %}
+        <span class="chip">RUT {{ meta.rut }}</span>
+        <span class="chip">período {{ meta.period }}</span>
+        <span class="chip">{{ "Individual" if meta.report_type == "I" else "Consolidado" if meta.report_type == "C" else meta.report_type }}</span>
+        <span class="chip">cifras en {{ meta.currency }} (moneda de reporte, no en miles)</span>
+    </div>
+    {% if meta.profile %}
+    <p class="resena">{{ meta.profile.text }}{% if meta.profile.source == "inferida" %} <span class="muted">· reseña inferida por tipo</span>{% endif %}</p>
+    {% endif %}
+</header>
+
+{% if ratios %}
+{% macro st_pct(label, v) %}{{ ui.stat(label, (v|es(1, True) if v is not none else "—"), unidad=("%" if v is not none else none), tono=(none if v is none else ('pos' if v >= 0 else 'neg'))) }}{% endmacro %}
+{% macro st_x(label, v) %}{{ ui.stat(label, (v|es(2) if v is not none else "—"), unidad=("x" if v is not none else none), tono=('neg' if (v is not none and v < 0) else none)) }}{% endmacro %}
+<section class="sec">
+    {{ ui.sec_head("Indicadores financieros", fecha=meta.period, fuente="CMF", arriba=none) }}
+    <div class="stats stats--compactas">
+        {{ st_pct("ROE", ratios.roe) }}
+        {{ st_pct("ROA", ratios.roa) }}
+        {{ st_pct("Margen neto", ratios.margen_neto) }}
+        {{ st_pct("Margen bruto", ratios.margen_bruto) }}
+        {{ st_pct("Margen EBIT", ratios.margen_ebit) }}
+        {{ st_pct("Margen EBITDA", ratios.margen_ebitda) }}
+        {{ st_x("Liquidez corriente", ratios.liquidez) }}
+        {{ st_x("Test ácido", ratios.test_acido) }}
+        {{ st_x("Deuda / patrimonio", ratios.endeudamiento) }}
+        {{ st_x("Cobertura de intereses", ratios.cobertura_intereses) }}
+        {{ ui.stat("Capital de trabajo", (ratios.capital_trabajo|es(0) if ratios.capital_trabajo is not none else "—"), unidad=(meta.currency if ratios.capital_trabajo is not none else none),
+                   tono=(none if ratios.capital_trabajo is none else ('pos' if ratios.capital_trabajo >= 0 else 'neg'))) }}
+    </div>
+</section>
+
+<section class="sec">
+    {{ ui.sec_head("Descomposición Dupont", arriba=none) }}
+    <p class="nota mt-0">ROE = margen neto × rotación de activos × apalancamiento.</p>
+    <div class="dupont">
+        <div class="dupont-factor">
+            <span>Margen neto</span>
+            <b>{% if ratios.margen_neto is not none %}{{ ratios.margen_neto|es(2) ~ "%" }}{% else %}—{% endif %}</b>
+        </div>
+        <div class="dupont-op">&times;</div>
+        <div class="dupont-factor">
+            <span>Rotación de activos</span>
+            <b>{% if ratios.rotacion_activos is not none %}{{ ratios.rotacion_activos|es(2) ~ "x" }}{% else %}—{% endif %}</b>
+        </div>
+        <div class="dupont-op">&times;</div>
+        <div class="dupont-factor">
+            <span>Apalancamiento</span>
+            <b>{% if ratios.apalancamiento is not none %}{{ ratios.apalancamiento|es(2) ~ "x" }}{% else %}—{% endif %}</b>
+        </div>
+        <div class="dupont-op">=</div>
+        <div class="dupont-resultado">
+            <span>ROE</span>
+            <b>{% if ratios.roe is not none %}{{ ratios.roe|es(2) ~ "%" }}{% else %}—{% endif %}</b>
+        </div>
+    </div>
+</section>
+{% endif %}
+
+{% for grp in groups %}
+<section class="sec">
+    {{ ui.sec_head(grp.group, arriba=none) }}
+    <span class="chip mb-3">{{ grp.code }}</span>
+    <div class="tbl-wrap">
+    <table class="tbl tbl--densa" aria-label="{{ grp.group }}">
+        <tbody>
+        {% set ns = namespace(sec=None) %}
+        {% for row in grp.rows %}
+            {% if row.section and row.section != ns.sec %}
+            <tr class="grupo"><td colspan="2">{{ row.section }}</td></tr>
+            {% set ns.sec = row.section %}
+            {% endif %}
+            <tr class="{{ 'total' if row.is_total else '' }}">
+                <td class="ent">{{ row.account_name }}</td>
+                <td class="num">{{ row.value|es(0) if row.value is not none else "—" }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</section>
+{% endfor %}
+{% else %}
+{{ ui.vacio("No hay estados financieros para esa combinación.") }}
+{% endif %}

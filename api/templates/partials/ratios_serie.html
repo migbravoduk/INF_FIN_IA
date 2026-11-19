@@ -1,0 +1,33 @@
+{#
+  partials/ratios_serie.html — Evolución de un indicador por período.
+  series = [{period, value}], label, is_pct.
+#}
+{% import "partials/_ui.html" as ui %}
+{% if series %}
+{{ ui.viz("ratios-serie-chart", label,
+          sub=("evolución por período" ~ (" · del período: income acumulado en el año" if is_pct else "")), fuente="CMF", alto="md", clase="mt-3") }}
+<script>
+(function () {
+    var data = {{ series | tojson }};
+    var isPct = {{ 'true' if is_pct else 'false' }};
+    function draw() {
+        if (!window.Plotly) { return setTimeout(draw, 100); }
+        var ref = INF.refH(0);
+        Plotly.newPlot("ratios-serie-chart", [{
+            x: data.map(function (d) { return d.period; }),
+            y: data.map(function (d) { return d.value; }),
+            type: "scatter", mode: "lines+markers", line: { color: INF.COLOR.foco, width: 2 },
+            connectgaps: false
+        }], {
+            margin: { t: 10, r: 10, b: 40, l: 55 },
+            xaxis: { type: "category" },
+            yaxis: { ticksuffix: isPct ? "%" : "x" },
+            shapes: [ref.shape]
+        });
+    }
+    draw();
+})();
+</script>
+{% elif label %}
+{{ ui.vacio("Sin serie para ese indicador.") }}
+{% endif %}

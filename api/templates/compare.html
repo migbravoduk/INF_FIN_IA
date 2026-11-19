@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% import "partials/_ui.html" as ui %}
+
+{% block title %}Comparar empresas · INF_FIN_IA{% endblock %}
+
+{% block content %}
+{{ ui.page_head("Comparar empresas", "Hasta tres empresas en la misma partida y los mismos indicadores.") }}
+<p class="nota mt-0">La partida se normaliza a base 100 en el primer período de cada empresa.</p>
+
+{# .eeff-form se conserva: compare-ratios la usa en hx-include. #}
+<form class="filtros eeff-form"
+      hx-get="/comparar/chart"
+      hx-target="#compare-result"
+      hx-trigger="change"
+      hx-swap="innerHTML">
+
+    <label class="ancho">Partida
+        <select name="account">
+            <option value="" selected>— elegir partida —</option>
+            {% for p in partidas %}
+            <option value="{{ p }}">{{ p }}</option>
+            {% endfor %}
+        </select>
+    </label>
+
+    <div class="filtros-grupo">
+        <strong class="filtros-titulo">Opción A: libre (hasta 3)</strong>
+        {% for slot in ["c1", "c2", "c3"] %}
+        <label>Empresa {{ loop.index }}
+            <input list="cmp-companies" name="{{ slot }}" autocomplete="off" placeholder="Buscar…">
+        </label>
+        {% endfor %}
+    </div>
+
+    <div class="filtros-grupo">
+        <strong class="filtros-titulo">Opción B: sectorial (top 5)</strong>
+        <label class="ancho">Sector / actividad
+            <select name="sector">
+                <option value="" selected>— No usar —</option>
+                {% for s in sectors %}
+                <option value="{{ s }}">{{ s }}</option>
+                {% endfor %}
+            </select>
+        </label>
+    </div>
+
+    <datalist id="cmp-companies">
+        {% for c in companies %}<option value="{{ c.company_name }}"></option>{% endfor %}
+    </datalist>
+</form>
+
+<div id="compare-result">
+    {{ ui.vacio("Elige una partida y 2–3 empresas para comparar.") }}
+</div>
+
+<div id="compare-ratios"
+         hx-get="/comparar/ratios"
+         hx-trigger="change from:.eeff-form"
+         hx-include=".eeff-form"
+         hx-swap="innerHTML"></div>
+{% endblock %}

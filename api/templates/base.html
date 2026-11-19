@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}INF_FIN_IA — Dashboard Financiero Chile{% endblock %}</title>
+
+    <!-- HTMX y Plotly servidos localmente (api/static/vendor): la web grafica sin internet -->
+    <script src="/static/vendor/htmx-2.0.4.min.js"></script>
+    <script src="/static/vendor/plotly-2.35.2.min.js" charset="utf-8"></script>
+    <!-- Tema común de gráficos: leyenda arriba, formato chileno, paleta validada -->
+    <script src="/static/charts.js?v={{ asset_version }}"></script>
+
+    <link rel="preload" href="/static/vendor/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+    <meta name="theme-color" content="#0b1220">
+    <link rel="stylesheet" href="/static/app.css?v={{ asset_version }}">
+</head>
+<body>
+<a class="skip" href="#contenido">Saltar al contenido</a>
+<header class="app-bar">
+    <div class="app-bar-in">
+        <a class="marca" href="/" aria-label="INF_FIN_IA, inicio">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="13" width="4" height="9" rx="1"/><rect x="10" y="8" width="4" height="14" rx="1"/><rect x="18" y="3" width="4" height="19" rx="1"/></svg>
+            <span>INF_FIN_IA</span><span class="marca-tag">Chile</span>
+        </a>
+        <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="nav-principal">Menú</button>
+        <nav id="nav-principal" class="nav" aria-label="Principal">
+            {% set ruta = request.url.path %}
+            {% for g in NAV %}
+                {% if g.url %}
+                <a class="nav-a{{ ' is-activo' if nav_activo(ruta, g.url) }}" href="{{ g.url }}"{% if nav_activo(ruta, g.url) %} aria-current="page"{% endif %}>{{ g.t }}</a>
+                {% else %}
+                <details class="nav-g{{ ' is-activo' if nav_grupo_activo(ruta, g) }}">
+                    <summary>{{ g.t }}</summary>
+                    <div class="nav-pop">
+                        {% for h in g['hijos'] %}
+                        <a href="{{ h.url }}"{% if nav_activo(ruta, h.url) %} aria-current="page"{% endif %}>{{ h.t }}<small>{{ h.d }}</small></a>
+                        {% endfor %}
+                    </div>
+                </details>
+                {% endif %}
+            {% endfor %}
+            <a class="nav-a nav-ext" href="/docs" target="_blank" rel="noopener">API ↗</a>
+        </nav>
+    </div>
+</header>
+
+    <main class="container" id="contenido">
+        {{ asof_banner(request.url.path) }}
+        {% block content %}{% endblock %}
+    </main>
+
+    <script>
+    /* Chequeo de diseño para scripts/ui_capturas.py: con ?chequeo_ui=1 marca en <body> si la
+       página desborda en horizontal, qué elementos se salen y cuántos textos miden < 12 px. */
+    (function () {
+        if (location.search.indexOf("chequeo_ui=1") < 0) { return; }
+        window.addEventListener("load", function () {
+            setTimeout(function () {
+                var w = document.documentElement.clientWidth, malos = [], chicos = 0;
+                document.querySelectorAll("body *").forEach(function (el) {
+                    if (el.closest(".js-plotly-plot, svg, script, style")) { return; }
+                    var r = el.getBoundingClientRect();
+                    if (r.width && r.right > w + 1 && !el.closest(".table-scroll, .tbl-wrap")) {
+                        var c = (typeof el.className === "string" && el.className) ? "." + el.className.split(" ")[0] : "";
+                        malos.push(el.tagName.toLowerCase() + (el.id ? "#" + el.id : "") + c);
+                    }
+                    var tieneTexto = [].some.call(el.childNodes, function (n) { return n.nodeType === 3 && n.textContent.trim(); });
+                    if (tieneTexto && parseFloat(getComputedStyle(el).fontSize) < 12) { chicos++; }
+                });
+                document.body.setAttribute("data-ui-desborde", String(document.documentElement.scrollWidth > w));
+                document.body.setAttribute("data-ui-culpables", malos.slice(0, 12).join(" "));
+                document.body.setAttribute("data-ui-letra-chica", String(chicos));
+                document.body.setAttribute("data-ui-ancho", String(window.innerWidth));
+            }, 3000);
+        });
+    })();
+    </script>
+
+    <footer class="footer">
+        <span>Fuentes: Banco Central de Chile, CMF y Superintendencia de Pensiones · v0.2.0</span>
+        <span class="disclaimer">Información de carácter informativo, no constituye asesoría ni
+        recomendación de inversión. Las rentabilidades pasadas no garantizan rentabilidades
+        futuras; los valores cuota son variables. Ver la fuente y la fecha de cada dato.</span>
+    </footer>
+<script>
+/* Menú: botón en celular, un solo desplegable abierto, cierre con clic afuera o Escape.
+   Índice de página (.toc): marca la sección visible. */
+(function () {
+    var nav = document.getElementById("nav-principal"), btn = document.querySelector(".nav-toggle");
+    if (btn && nav) {
+        btn.addEventListener("click", function () {
+            var abierto = nav.classList.toggle("is-abierto");
+            btn.setAttribute("aria-expanded", String(abierto));
+        });
+    }
+    var grupos = [].slice.call(document.querySelectorAll(".nav-g"));
+    grupos.forEach(function (g) {
+        g.addEventListener("toggle", function () {
+            if (g.open) { grupos.forEach(function (o) { if (o !== g) { o.open = false; } }); }
+        });
+    });
+    document.addEventListener("click", function (e) {
+        if (!e.target.closest(".nav-g")) { grupos.forEach(function (g) { g.open = false; }); }
+    });
+    document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape") { grupos.forEach(function (g) { g.open = false; }); }
+    });
+
+    var links = [].slice.call(document.querySelectorAll(".toc a[href^='#'], .banca-minimap a[href^='#'], .toc-lateral a[href^='#']"));
+    if (!links.length || !("IntersectionObserver" in window)) { return; }
+    var mapa = {};
+    links.forEach(function (a) {
+        var el = document.getElementById(a.getAttribute("href").slice(1));
+        if (el) { mapa[el.id] = a; }
+    });
+    var obs = new IntersectionObserver(function (entradas) {
+        entradas.forEach(function (e) {
+            if (e.isIntersecting && mapa[e.target.id]) {
+                links.forEach(function (l) { l.classList.remove("is-activo"); });
+                mapa[e.target.id].classList.add("is-activo");
+            }
+        });
+    }, { rootMargin: "-30% 0px -60% 0px" });
+    Object.keys(mapa).forEach(function (id) { obs.observe(document.getElementById(id)); });
+})();
+</script>
+</body>
+</html>

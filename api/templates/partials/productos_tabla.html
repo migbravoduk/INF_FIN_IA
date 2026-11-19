@@ -1,0 +1,55 @@
+{#
+  partials/productos_tabla.html — Listado de productos con sus métricas del último corte.
+  Rentabilidades ya netas de remuneración y gastos (están dentro del valor cuota); la
+  comisión de colocación se muestra aparte y no se resta.
+#}
+{% import "partials/_ui.html" as ui %}
+{% if not rows %}
+{{ ui.vacio("Ningún producto con esos filtros.") }}
+{% else %}
+<div class="res-barra">
+    <div class="nota mt-0 mb-0">
+        {{ total|num }} productos · ordenados por <strong>{{ orden_label }}</strong>
+        {% if total > rows|length %} · mostrando los primeros {{ rows|length }}{% endif %}
+        · marca hasta 4 para compararlos
+    </div>
+    <form id="cmp-form" action="/productos/comparar" method="get"
+          onsubmit="const ids=[...document.querySelectorAll('.cmp-chk:checked')].map(c=>c.value).slice(0,4);this.ids.value=ids.join(',');">
+        <input type="hidden" name="ids">
+        <button class="btn" type="submit">Comparar seleccionados</button>
+    </form>
+</div>
+{% if clase == '' %}{% call ui.aviso("warn") %}Ojo: la lista mezcla clases de inversionista (Alto Patrimonio y APV no son para cualquiera).{% endcall %}{% endif %}
+<div class="tbl-wrap tbl-wrap--alto">
+<table class="tbl tbl--fija-1" aria-label="Productos de inversión con sus métricas">
+    <thead><tr>
+        <th><span class="sr-only">Comparar</span></th><th>Producto</th><th>Categoría</th>
+        <th class="num">12 meses (%)</th>
+        <th class="num">Real 12m (%)</th>
+        <th class="num">3 años anual (%)</th>
+        <th title="Percentil dentro de su categoría a 12 meses (100 = mejor)" class="num">Posición (0–100)</th>
+        <th title="Volatilidad anualizada (36 meses)" class="num">Volatilidad (%)</th>
+        <th title="Remuneración + gasto operacional anual, ya descontados del valor cuota" class="num">Costo anual (%)</th>
+        <th class="num">Patrimonio (MM$)</th>
+    </tr></thead>
+    <tbody>
+    {% for r in rows %}
+    <tr>
+        <td><input type="checkbox" class="cmp-chk" value="{{ r.producto_id }}" form="cmp-form" aria-label="Comparar {{ r.nombre|nombre }}"></td>
+        <td class="ent"><a href="/producto/{{ r.producto_id | urlencode }}">{{ r.nombre|nombre }}</a>
+            {% if r.serie and r.tipo == 'ffmm' %} <span class="chip">serie {{ r.serie }}</span>{% endif %}
+            <span class="sub">{{ (r.proveedor_corto|agf_corto) if r.proveedor_corto else '—' }}{% if r.moneda == 'USD' %} · en dólares{% endif %}</span></td>
+        <td class="muted">{{ r.categoria or '—' }}</td>
+        <td class="num {{ 'pos' if (r.rent_nom_12m or 0) > 0 else 'neg' if (r.rent_nom_12m or 0) < 0 }}">{{ r.rent_nom_12m|pct }}</td>
+        <td class="num {{ 'pos' if (r.rent_real_12m or 0) > 0 else 'neg' if (r.rent_real_12m or 0) < 0 }}">{{ r.rent_real_12m|pct }}</td>
+        <td class="num {{ 'pos' if (r.rent_nom_36m_ann or 0) > 0 else 'neg' if (r.rent_nom_36m_ann or 0) < 0 }}">{{ r.rent_nom_36m_ann|pct }}</td>
+        <td class="num">{{ r.percentil_cat_12m|num }}{% if r.percentil_cat_12m is not none %}{{ ui.barra(r.percentil_cat_12m, 100) }}{% endif %}</td>
+        <td class="num">{{ r.volatilidad_ann|pct(1, False) }}</td>
+        <td class="num">{{ r.costo_anual|pct(2, False) }}</td>
+        <td class="num">{{ r.patrimonio_clp_mm|num }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+{% endif %}

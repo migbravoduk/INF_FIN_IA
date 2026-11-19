@@ -1,0 +1,51 @@
+{#
+  partials/afp_chart.html — Evolución de fondos de pensiones (unificado).
+  multi = [{name, points:[{date,value}]}]; title; normalized (bool); metric_label;
+  latest (solo modo simple); note (mensaje si falta elegir).
+#}
+{% import "partials/_ui.html" as ui %}
+{% if note %}
+{{ ui.vacio(note) }}
+{% elif multi %}
+{% if latest %}
+<div class="stats stats--compactas">
+    {{ ui.stat("Valor cuota", latest.quota_value|es(2), unidad="$", fecha=latest.date[:10], fuente="Superintendencia de Pensiones") }}
+    {{ ui.stat("Patrimonio", (latest.equity_value / 1e9)|es(0), unidad="MMM$") }}
+</div>
+{% endif %}
+
+{{ ui.viz("afp-chart", title.split(" · ")|map("nombre")|join(" · "), sub=("base 100 = inicio" if normalized else metric_label), fuente="Superintendencia de Pensiones", alto="lg") }}
+<script>
+(function () {
+    var multi = {{ multi | tojson }};
+    function legible(n) { return String(n).split(" · ").map(INF.nombre).join(" · "); }
+    function color(name, i) {
+        // Fondos: A→E de cálido (riesgoso) a frío (conservador); AFP: un color fijo por administradora.
+        var f = /^Fondo ([A-E])$/.exec(name);
+        // Modo simple: "CAPITAL · Fondo A" -> el color es el de la AFP
+        return f ? INF.FONDO[f[1]] : INF.colorAFP(name.split(" · ")[0]);
+    }
+    function draw() {
+        if (!window.Plotly) { return setTimeout(draw, 100); }
+        var directas = multi.length <= 5;
+        var traces = multi.map(function (s, i) {
+            return { x: s.points.map(function (p) { return p.date; }),
+                     y: s.points.map(function (p) { return p.value; }),
+                     type: "scatter", mode: "lines", name: legible(s.name),
+                     line: { color: color(s.name, i), width: 2 } };
+        });
+        var layout = { margin: { t: 10, r: directas ? 90 : 10, b: 30, l: 60 }, hovermode: "x unified",
+                       showlegend: !directas };
+        if (directas) {
+            layout.annotations = INF.etiquetasFinales(traces.map(function (t) {
+                return { x: t.x, y: t.y, texto: t.name, color: t.line.color };
+            }));
+        }
+        Plotly.newPlot("afp-chart", traces, layout);
+    }
+    draw();
+})();
+</script>
+{% else %}
+{{ ui.vacio("Sin datos para esa combinación.") }}
+{% endif %}

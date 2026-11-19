@@ -1,0 +1,45 @@
+{#
+  partials/compare_ratios.html — Tabla comparativa de ratios entre empresas.
+  cols = [{name, period, ratios}]. Ratios "del período" (último de cada empresa).
+  El mejor valor de cada fila (td.lider): el más alto, salvo deuda/patrimonio, donde es el más bajo.
+#}
+{% import "partials/_ui.html" as ui %}
+{% if cols %}
+{% macro fila(label, key, suf="%", menor=False) %}
+{% set vals = [] %}
+{% for c in cols %}{% set v = c.ratios[key] %}{% if v is not none %}{% set _ = vals.append(v) %}{% endif %}{% endfor %}
+{% set mejor = ((vals|min) if menor else (vals|max)) if vals|length > 1 else none %}
+<tr><td class="ent">{{ label }}</td>
+{% for c in cols %}{% set v = c.ratios[key] %}
+{% if v is none %}<td class="num">—</td>
+{% else %}<td class="num{{ ' lider' if mejor is not none and v == mejor }}{{ ' pos' if suf == '%' and v > 0 }}{{ ' neg' if v < 0 }}">{{ (v|es(1, True)) if suf == "%" else (v|es(2)) }}{{ suf }}</td>{% endif %}
+{% endfor %}</tr>
+{% endmacro %}
+<section class="sec">
+    {{ ui.sec_head("Comparación de indicadores financieros", arriba=none) }}
+    <p class="nota mt-0">Último período de cada empresa. El punto ● marca el mejor valor de cada fila.</p>
+    <div class="tbl-wrap">
+        <table class="tbl" aria-label="Comparación de indicadores financieros entre empresas">
+            <thead>
+                <tr>
+                    <th>Indicador</th>
+                    {% for c in cols %}<th class="num">{{ c.name|nombre }}<span class="sub">{{ c.period }}</span></th>{% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {{ fila("ROE", "roe") }}
+                {{ fila("ROA", "roa") }}
+                {{ fila("Margen neto", "margen_neto") }}
+                {{ fila("Margen bruto", "margen_bruto") }}
+                {{ fila("Margen EBIT", "margen_ebit") }}
+                {{ fila("Margen EBITDA", "margen_ebitda") }}
+                {{ fila("Liquidez corriente", "liquidez", "x") }}
+                {{ fila("Test ácido", "test_acido", "x") }}
+                {{ fila("Deuda / patrimonio (menor es mejor)", "endeudamiento", "x", True) }}
+                {{ fila("Cobertura de intereses", "cobertura_intereses", "x") }}
+            </tbody>
+        </table>
+    </div>
+    <p class="nota">Comparar ratios entre empresas de distinta moneda es indicativo (ROE y márgenes son adimensionales).</p>
+</section>
+{% endif %}

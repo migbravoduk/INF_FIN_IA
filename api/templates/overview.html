@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% import "partials/_ui.html" as ui %}
+
+{% block title %}Panel de mercado · INF_FIN_IA{% endblock %}
+
+{% block content %}
+{% call ui.page_head("Panel de mercado", "Lo último en actividad, inflación, tasas, dólar, AFP y bancos, con la fecha y la fuente de cada cifra.") %}
+    <!--
+      Las tarjetas se renderizan server-side (datos reales) en la carga inicial.
+      El botón refresca el fragmento vía HTMX sin recargar la página.
+    -->
+    <button class="btn btn--sec" hx-get="/api/kpi/overview/cards" hx-target="#kpi-cards" hx-swap="innerHTML">
+        ↻ Actualizar indicadores
+    </button>
+    {% if dq %}
+    <a class="chip{{ ' chip--acento' if dq.errores }}" href="/metodologia" title="Resultado de los controles de calidad de datos">
+        Calidad de datos ({{ dq.run_at.strftime('%d/%m/%Y %H:%M') }}): {{ dq.total }} controles · {{ dq.errores }} errores · {{ dq.avisos }} avisos
+    </a>
+    {% endif %}
+{% endcall %}
+
+<section id="kpi-cards">
+    {% include "partials/kpi_cards.html" %}
+</section>
+
+<div class="grid-viz grid-viz--2">
+    {{ ui.viz("chart-uf", "Unidad de Fomento", sub="pesos por UF · últimos 12 meses", fuente="Banco Central", alto="sm") }}
+    {{ ui.viz("chart-tpm", "Tasa de Política Monetaria (TPM)", sub="% anual · últimos 12 meses", fuente="Banco Central", alto="sm") }}
+</div>
+
+<script>
+    var ufSeries = {{ uf_series | tojson }};
+    var tpmSeries = {{ tpm_series | tojson }};
+
+    function lineChart(divId, series, color, escalon) {
+        if (!series || !series.length) {
+            document.getElementById(divId).innerHTML = "<p class='vacio'>Sin datos en el rango.</p>";
+            return;
+        }
+        var x = series.map(function (r) { return r.date; });
+        var y = series.map(function (r) { return r.value; });
+        var ult = y[y.length - 1];
+        Plotly.newPlot(divId, [{
+            x: x, y: y, type: "scatter", mode: "lines", showlegend: false,
+            line: { color: color, width: 2, shape: escalon ? "hv" : "linear" },
+            hovertemplate: "%{x|%d %b %Y}: %{y:,.2f}<extra></extra>"
+        }], {
+            margin: { t: 10, r: 70, b: 30, l: 55 },
+            hovermode: "x unified",
+            annotations: INF.etiquetasFinales([{ x: x, y: y, texto: "<b>" + INF.fmt(ult, 2) + "</b>", color: color }])
+        });
+    }
+
+    lineChart("chart-uf", ufSeries, INF.COLOR.foco, false);
+    lineChart("chart-tpm", tpmSeries, INF.PALETA[3], true);
+</script>
+{% endblock %}

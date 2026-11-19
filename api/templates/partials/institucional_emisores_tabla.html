@@ -1,0 +1,51 @@
+{#
+  partials/institucional_emisores_tabla.html — Emisores en común entre seguros, fondos mutuos y AFP.
+  rows = [{rut, emisor, tipo, fuentes, mm_seg, cias_seg, mm_ffm, fondos_ffm, mm_afp, afps, mm_total}]
+  per_seg, per_ffm, per_afp, min_fuentes, n_emisores, cobertura_afp = {emisores_total, emisores_ok, pct_monto}
+#}
+{% import "partials/_ui.html" as ui %}
+<p class="nota mt-0">Último mes de cada fuente: seguros {{ per_seg|mes_es if per_seg else '—' }}; fondos mutuos
+    {{ per_ffm|mes_es if per_ffm else '—' }}; AFP {{ per_afp|mes_es if per_afp else '—' }} (la Superintendencia de
+    Pensiones publica con unos 4 meses de rezago).
+    {% if rows %}Se muestran los {{ rows|length }} mayores de {{ n_emisores|es(0) }} emisores.{% endif %}</p>
+
+{% call ui.metodo("Cómo leer los montos") %}
+<p>Montos en MM$ expuestos a cada emisor. <strong>Seguros:</strong> renta fija a valor par (saldo vigente cuando la
+compañía lo informa; si no, monto de origen), pasada a pesos con la UF y el dólar del cierre; no es valor de mercado y
+excluye los mutuos hipotecarios y el leasing, cuyos «emisores» son originadores. <strong>Fondos mutuos:</strong>
+valorización de mercado de la cartera nacional (fondos en dólares, al dólar del mes). <strong>AFP:</strong> valor de
+mercado de la cartera desagregada por emisor de la Superintendencia de Pensiones, que nombra al emisor sin RUT y se
+cruza por nombre. Las tres miden distinto, así que el total es solo referencial.</p>
+<p>Los tenedores son <em>distintos</em>: una compañía con dos bonos del mismo emisor cuenta una vez.</p>
+{% endcall %}
+
+{% if not rows %}
+{{ ui.vacio("Sin emisores en común para los períodos cargados.") }}
+{% else %}
+<div class="tbl-wrap tbl-wrap--alto">
+<table class="tbl tbl--fija-1" aria-label="Emisores en común entre seguros, fondos mutuos y AFP">
+    <thead><tr>
+        <th>Emisor</th>
+        <th class="num">Seguros (MM$)</th>
+        <th class="num">Fondos mutuos (MM$)</th>
+        <th class="num">AFP (MM$)</th>
+        <th class="num">Total (MM$)</th>
+    </tr></thead>
+    <tbody>
+    {% for r in rows %}
+    <tr>
+        <td class="ent"><a href="/inversion-institucional/emisor?rut={{ r.rut }}">{{ (r.emisor or 'Sin nombre en las fuentes')|nombre }}</a><span class="sub">RUT {{ r.rut }}{% if r.tipo %} · {{ r.tipo|replace('_', ' ') }}{% endif %} · {{ r.fuentes }} fuentes</span></td>
+        <td class="num">{{ r.mm_seg|es(0) if r.mm_seg is not none else "—" }}{% if r.cias_seg %}<span class="sub">{{ r.cias_seg|es(0) }} {{ 'compañía' if r.cias_seg == 1 else 'compañías' }}</span>{% endif %}</td>
+        <td class="num">{{ r.mm_ffm|es(0) if r.mm_ffm is not none else "—" }}{% if r.fondos_ffm %}<span class="sub">{{ r.fondos_ffm|es(0) }} {{ 'fondo' if r.fondos_ffm == 1 else 'fondos' }}</span>{% endif %}</td>
+        <td class="num">{{ r.mm_afp|es(0) if r.mm_afp is not none else "—" }}{% if r.afps %}<span class="sub">{{ r.afps }} AFP</span>{% endif %}</td>
+        <td class="num fuerte">{{ r.mm_total|es(0) }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+{% if cobertura_afp %}
+<p class="nota">Cruce de la cartera de las AFP: {{ cobertura_afp.emisores_ok|es(0) }} de {{ cobertura_afp.emisores_total|es(0) }}
+    emisores de la SP con RUT identificado{% if cobertura_afp.pct_monto is not none %} ({{ cobertura_afp.pct_monto|es(1) }}% del monto){% endif %}.</p>
+{% endif %}
+{% endif %}

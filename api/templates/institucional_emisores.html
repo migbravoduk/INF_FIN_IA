@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% import "partials/_ui.html" as ui %}
+
+{% block title %}Emisores en común · INF_FIN_IA{% endblock %}
+
+{% block content %}
+{{ ui.page_head("Emisores en común: seguros, fondos mutuos y AFP",
+    "Emisores que tienen inversión a la vez de varios inversionistas institucionales, cruzados por RUT del emisor y con el monto expuesto en cada fuente.",
+    migas=[("Inversión institucional", "/inversion-institucional")]) }}
+
+<form class="filtros" hx-get="/inversion-institucional/emisores/tabla" hx-target="#emisores-tabla"
+      hx-trigger="change" hx-swap="innerHTML">
+    <label>Presente en
+        <select name="min_fuentes">
+            <option value="2" {{ "selected" if min_fuentes != 3 }}>2 o más fuentes</option>
+            <option value="3" {{ "selected" if min_fuentes == 3 }}>las 3 fuentes</option>
+        </select>
+    </label>
+</form>
+
+<div id="emisores-tabla">
+    {% include "partials/institucional_emisores_tabla.html" %}
+</div>
+{% endblock %}

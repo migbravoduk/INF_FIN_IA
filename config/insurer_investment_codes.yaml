@@ -1,0 +1,265 @@
+# Codificación oficial CMF de TIPO_DE_INVERSION (Circular 1.835, archivo B.8 de Control).
+#
+# FUENTE de `glosa`: tabla oficial "Codificación SVS | Tipos de Inversión" de la CMF,
+#   https://www.cmfchile.cl/sitio/seil/certificacion_cir1835_tinver.php  (consultada jul-2026)
+# Los Anexos Técnicos de la circular NO traen esta tabla: el campo TIPO_DE_INVERSION remite a
+# "la codificación definida en SEIL, Codificación CMF, Tipo de Inversión". Las glosas de abajo
+# se transcribieron programáticamente de esa página; NO editarlas a mano salvo que la CMF las
+# cambie.
+#
+# `label` (etiqueta corta), `clase` y `geo` son AGREGACIONES PROPIAS de este proyecto, no de la
+# CMF: existen para poder leer el asset allocation por clase de activo económica y por
+# exposición geográfica. Son el único punto a tocar si se quiere reagrupar la cartera.
+#
+# Criterio de `geo`:
+#   - extranjero = el subyacente/emisor está fuera de Chile. Incluye H62/H64 (fondos
+#     constituidos EN Chile pero invertidos en valores extranjeros): para medir exposición
+#     manda el subyacente, no el domicilio del vehículo.
+#   - E20 (bonos de empresas NACIONALES emitidos en el extranjero) queda como `nacional`:
+#     el riesgo de crédito es chileno, solo cambia la plaza de emisión.
+#
+# Códigos LEGADOS presentes en los datos pero ausentes de la tabla vigente de la CMF: `K00`
+# (2020-01 a 2022-01) y `Z40` (2020-06 a 2022-02), ambos descontinuados y de monto marginal
+# (~3 y ~0 MMM$ acumulados). No se inventa glosa: `insurer_glossary.describe()` los muestra con
+# su propio código bajo la clase "Otros", de modo que siguen sumando en los totales.
+
+clases:
+  rf_estatal:     {label: "RF Estatal",            orden: 1}
+  rf_bancaria:    {label: "RF Bancaria",           orden: 2}
+  rf_corporativa: {label: "RF Corporativa",        orden: 3}
+  rf_hipotecaria: {label: "Mutuos hipotecarios",   orden: 4}
+  rv:             {label: "Renta variable",        orden: 5}
+  fondos:         {label: "Fondos",                orden: 6}
+  inmobiliario:   {label: "Inmobiliario",          orden: 7}
+  creditos:       {label: "Créditos y préstamos",  orden: 8}
+  filiales:       {label: "Filiales y coligadas",  orden: 9}
+  derivados:      {label: "Derivados y pactos",    orden: 10}
+  caja:           {label: "Caja y equivalentes",   orden: 11}
+  otros:          {label: "Otros",                 orden: 12}
+
+codigos:
+  A00:
+    glosa: "Total títulos emitidos o garantizados por el estado o emitidos por el Banco Central de Chile"
+    label: "Estado / Banco Central"
+    clase: rf_estatal
+    geo: nacional
+  B10:
+    glosa: "Total depósitos o títulos representativos de captaciones emitidos por bancos e instituciones financieras"
+    label: "Depósitos bancarios"
+    clase: rf_bancaria
+    geo: nacional
+  B20:
+    glosa: "Total bonos bancarios emitidos por bancos e instituciones financieras"
+    label: "Bonos bancarios"
+    clase: rf_bancaria
+    geo: nacional
+  C00:
+    glosa: "Total letras de créditos emitidas por bancos e instituciones financieras"
+    label: "Letras de crédito"
+    clase: rf_bancaria
+    geo: nacional
+  D10:
+    glosa: "Total mutuos hipotecarios emitidos por bancos"
+    label: "Mutuos hipot. (bancos)"
+    clase: rf_hipotecaria
+    geo: nacional
+  D20:
+    glosa: "Total mutuos hipotecarios emitidos por agentes administradores"
+    label: "Mutuos hipot. (agentes)"
+    clase: rf_hipotecaria
+    geo: nacional
+  E10:
+    glosa: "Total bonos, pagarés y debentures u otros títulos de deuda emitidos por empresas públicas o privadas"
+    label: "Bonos de empresas"
+    clase: rf_corporativa
+    geo: nacional
+  E20:
+    glosa: "Bonos Empresas Nacionales Emitidos en el Extranjero"
+    label: "Bonos empresas nac. emitidos fuera"
+    clase: rf_corporativa
+    geo: nacional
+  F11:
+    glosa: "Total fondos de inversión cuyos activos se encuentren invertidos en valores o activos nacionales"
+    label: "Fondos de inversión nac."
+    clase: fondos
+    geo: nacional
+  F31:
+    glosa: "Total fondos mutuos cuyos activos se encuentren invertidos en valores o activos nacionales"
+    label: "Fondos mutuos nac."
+    clase: fondos
+    geo: nacional
+  G10:
+    glosa: "Total acciones de S.A. abiertas"
+    label: "Acciones S.A. abiertas"
+    clase: rv
+    geo: nacional
+  H10:
+    glosa: "Total títulos emitidos o garantizados por estados o Bancos Centrales extranjeros"
+    label: "Estados extranjeros"
+    clase: rf_estatal
+    geo: extranjero
+  H30:
+    glosa: "Total depósitos, bonos, pagarés y otros títulos de deuda o crédito emitidos o garantizados por títulos representativos de captaciones emitidos o garantizados por inst. financieras extranjeras o intern"
+    label: "Bancos extranjeros"
+    clase: rf_bancaria
+    geo: extranjero
+  H40:
+    glosa: "Total bonos, pagarés y otros títulos de deuda o crédito emitidos por empresas o corporaciones extranjeras o internacionales"
+    label: "Empresas extranjeras"
+    clase: rf_corporativa
+    geo: extranjero
+  H50:
+    glosa: "Total de acciones de sociedades o corporaciones constituidas fuera del país"
+    label: "Acciones extranjeras"
+    clase: rv
+    geo: extranjero
+  H61:
+    glosa: "Total fondos de inversión extranjeros"
+    label: "Fondos de inversión ext."
+    clase: fondos
+    geo: extranjero
+  H62:
+    glosa: "Total fondos de inversión constituidos en el país cuyos activos estén invertidos en valores extranjeros"
+    label: "FI nac. con activos ext."
+    clase: fondos
+    geo: extranjero
+  H63:
+    glosa: "Total fondos mutuos extranjeros"
+    label: "Fondos mutuos ext."
+    clase: fondos
+    geo: extranjero
+  H64:
+    glosa: "Total fondos mutuos constituidos en el país cuyos activos estén invertidos en valores extranjeros"
+    label: "FM nac. con activos ext."
+    clase: fondos
+    geo: extranjero
+  H65:
+    glosa: "Títulos Representativos de Índices Extranjeros (ETF)"
+    label: "ETF extranjeros"
+    clase: fondos
+    geo: extranjero
+  H80:
+    glosa: "Filial Extranjera"
+    label: "Filial extranjera"
+    clase: filiales
+    geo: extranjero
+  H91:
+    glosa: "Total saldos de cuenta corriente extranjera"
+    label: "Cuenta corriente ext."
+    clase: caja
+    geo: extranjero
+  I00:
+    glosa: "Total participación en convenios de créditos sindicados"
+    label: "Créditos sindicados"
+    clase: rf_corporativa
+    geo: nacional
+  J00:
+    glosa: "Siniestros por cobrar no vencidos"
+    label: "Siniestros por cobrar"
+    clase: otros
+    geo: nacional
+  J10:
+    glosa: "Siniestros por cobrar por coaseguro"
+    label: "Siniestros coaseguro"
+    clase: otros
+    geo: nacional
+  L00:
+    glosa: "Crédito no vencido (D.L. Nº 3.500)"
+    label: "Crédito D.L. 3.500"
+    clase: creditos
+    geo: nacional
+  LL0:
+    glosa: "Total avances tenedores de pólizas"
+    label: "Avances a tenedores de pólizas"
+    clase: creditos
+    geo: nacional
+  M10:
+    glosa: "Total productos derivados financieros"
+    label: "Derivados"
+    clase: derivados
+    geo: nacional
+  M20:
+    glosa: "Total pactos"
+    label: "Pactos"
+    clase: derivados
+    geo: nacional
+  N10:
+    glosa: "Préstamos a Personas Naturales o Jurídicas."
+    label: "Préstamos"
+    clase: creditos
+    geo: nacional
+  N20:
+    glosa: "Préstamos a Pensionados"
+    label: "Préstamos a pensionados"
+    clase: creditos
+    geo: nacional
+  O00:
+    glosa: "Total otras inversiones renta variable"
+    label: "Otras renta variable"
+    clase: rv
+    geo: nacional
+  P00:
+    glosa: "Primas por cobrar por coaseguro"
+    label: "Primas coaseguro"
+    clase: otros
+    geo: nacional
+  X10:
+    glosa: "Total bienes raíces de inversión"
+    label: "Bienes raíces de inversión"
+    clase: inmobiliario
+    geo: nacional
+  X20:
+    glosa: "Total bienes raíces de uso propio"
+    label: "Bienes raíces uso propio"
+    clase: inmobiliario
+    geo: nacional
+  X41:
+    glosa: "Total Participación en Sociedades Filiales"
+    label: "Sociedades filiales"
+    clase: filiales
+    geo: nacional
+  X42:
+    glosa: "Total Participación en Sociedades Coligadas"
+    label: "Sociedades coligadas"
+    clase: filiales
+    geo: nacional
+  Z10:
+    glosa: "Total saldos de cuenta corriente"
+    label: "Cuenta corriente"
+    clase: caja
+    geo: nacional
+  Z20:
+    glosa: "Total acciones de sociedades anónimas cerradas"
+    label: "Acciones S.A. cerradas"
+    clase: rv
+    geo: nacional
+  Z30:
+    glosa: "Total caja"
+    label: "Caja"
+    clase: caja
+    geo: nacional
+  Z50:
+    glosa: "Total inversiones mobiliarias"
+    label: "Inversiones mobiliarias"
+    clase: otros
+    geo: nacional
+  Z60:
+    glosa: "Total otras inversiones financieras"
+    label: "Otras inversiones financieras"
+    clase: otros
+    geo: nacional
+  Z70:
+    glosa: "Total bienes raíces en leasing"
+    label: "Bienes raíces en leasing"
+    clase: inmobiliario
+    geo: nacional
+  Z81:
+    glosa: "Otras Inversiones extranjeras depositadas (Número 7. NGC N° 152)"
+    label: "Otras inv. extranjeras"
+    clase: otros
+    geo: extranjero
+  Z82:
+    glosa: "Otras Inversiones nacionales depositadas (Número 7. NGC N° 152)"
+    label: "Otras inv. nacionales"
+    clase: otros
+    geo: nacional

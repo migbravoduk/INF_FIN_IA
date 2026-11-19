@@ -182,10 +182,19 @@ class BCentralCollector:
 
     @staticmethod
     def _parse_value(raw: str) -> Optional[float]:
-        """Convierte el valor string a float, manejando puntos de miles y comas decimales."""
+        """
+        Convierte el valor string a float.
+
+        La API BDE del Banco Central entrega los números en formato inglés:
+        `.` como separador DECIMAL y sin separadores de miles (ej. '40610.69',
+        '3.954177598027160'). Por eso se parsea directamente con float().
+        Si alguna vez llega coma decimal (sin punto), se normaliza a punto.
+        """
         if not raw or raw.strip() in ("", "NaN", "N/A", "-"):
             return None
-        cleaned = raw.strip().replace(".", "").replace(",", ".")
+        cleaned = raw.strip()
+        if "," in cleaned and "." not in cleaned:
+            cleaned = cleaned.replace(",", ".")
         try:
             return float(cleaned)
         except ValueError:
