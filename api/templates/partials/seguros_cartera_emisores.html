@@ -2,10 +2,12 @@
   partials/seguros_cartera_emisores.html — Concentración por emisor (renta fija, archivo B.1), por MONTO.
   rows = [{rut, name, mm, pct, posiciones, companias, tipo, tipo_code, solo_un_tipo,
            sin_emisor_inscrito, pct_origen, sin_fx, leasing_propio}]
-  El monto es valor PAR en pesos (saldo vigente si existe; si no, monto de origen). No es valor de
-  mercado. Cada emisor se abre para ver quién lo tiene (seguros_cartera_emisor_detalle.html).
+  base = 'valor_final' | 'par'. valor_final: valor final de cada posición (contable, reconciliado con el B.8);
+  par: nominal vigente (o de origen) a pesos. Ninguno es valor de mercado. Cada emisor se abre para ver
+  quién lo tiene (seguros_cartera_emisor_detalle.html).
 #}
 {% import "partials/_ui.html" as ui %}
+{% set vf = (base == 'valor_final') %}
 {% if rows %}
 
 {# El alcance va primero y explícito: los mismos emisores aparecen tanto en el agregado del
@@ -33,7 +35,7 @@
         <tr>
             <th>Emisor (ábrelo para ver quién lo tiene)</th>
             <th>Tipo principal</th>
-            <th class="num">MM$ (valor par)</th>
+            <th class="num">MM$ ({{ 'valor final' if vf else 'valor par' }})</th>
             <th class="num">% de la renta fija</th>
             <th class="num">Posiciones</th>
             {% if not sel_rut %}<th class="num">Compañías</th>{% endif %}
@@ -84,17 +86,28 @@
 </table>
 </div>
 
+{% if vf %}
+<p class="nota">Valor final: el valor de cada posición que informa la compañía en el archivo B.1 (valor contable, a costo
+    amortizado o razonable según su clasificación), en pesos. Cuadra con la renta fija nacional del archivo de cartera
+    (B.8). No es valor de mercado ni incluye la renta fija extranjera, que no viene en este archivo.</p>
+{% else %}
 <p class="nota">Valor par: saldo vigente cuando la compañía lo informa; si no, monto de origen, que sobrestima lo
-    expuesto en leasing y letras hipotecarias porque ya amortizaron. No es valor de mercado.</p>
+    expuesto en leasing y letras hipotecarias porque ya amortizaron. No es valor de mercado. Este período aún no trae el
+    valor final de cada posición.</p>
+{% endif %}
 
 {% call ui.metodo("Cómo se mide y por qué muchas filas no traen nombre") %}
 <p>
-    <strong>Monto.</strong> Es el valor par de cada posición del archivo B.1 pasado a pesos con la UF y el
-    dólar del cierre del mes (otras monedas, como el euro, se cuentan como posiciones pero no se suman).
-    Usa el saldo vigente cuando la compañía lo informa; para leasing, letras hipotecarias y muchos
-    bonos lo informa en cero, y entonces se usa el monto de origen. El emisor es el que informa la
-    mayoría de las compañías para ese nemotécnico, y así se corrigen RUT mal digitados o de bancos
-    absorbidos.
+    <strong>Monto.</strong>
+    {% if vf %}Es el valor final de cada posición del archivo B.1 (miles de pesos), que cuadra con el valor final de la
+    renta fija nacional del archivo de cartera B.8: al peso en la mayoría de las compañías y a ±1% en 61 de 63 (sep-2026).
+    Reemplaza al valor par, que sobrestimaba el leasing y las letras porque la CMF informa su saldo vigente en cero y
+    el monto de origen ya amortizó.
+    {% else %}Es el valor par de cada posición del archivo B.1 pasado a pesos con la UF y el dólar del cierre del mes (otras
+    monedas, como el euro, se cuentan como posiciones pero no se suman). Usa el saldo vigente cuando la compañía lo
+    informa; para leasing, letras hipotecarias y muchos bonos lo informa en cero, y entonces se usa el monto de origen.{% endif %}
+    El emisor es el que informa la mayoría de las compañías para ese nemotécnico, y así se corrigen RUT mal digitados o de
+    bancos absorbidos.
 </p>
 <p>
     <strong>Nombres.</strong> El archivo B.1 identifica al emisor solo por RUT, y el nombre se resuelve

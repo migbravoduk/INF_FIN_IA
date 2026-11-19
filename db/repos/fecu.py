@@ -318,7 +318,7 @@ class FecuRepo:
                 "item_operacion", "fecha_compra", "fecha_pago", "rut_emisor",
                 "tipo_instrumento", "nemotecnico", "fecha_emision", "num_inscripcion",
                 "fecha_inscripcion", "serie", "pais", "valor_nominal", "valor_nominal_vig",
-                "unidad_monetaria"]
+                "unidad_monetaria", "valor_final_m"]
 
     def insert_insurer_portfolio_fixed_income(self, period: int, insurance_type: str,
                                               records: list[dict]) -> int:
@@ -461,6 +461,18 @@ class FecuRepo:
             ORDER BY period ASC
         """, params).fetchdf()
 
+    def get_insurer_monto_base(self, period: int) -> str:
+        """
+        Con qué monto se mide la renta fija (B.1) de un período: 'valor_final' si TODAS sus posiciones
+        traen el valor final (columna `valor_final_m`, reconciliada con el B.8; solo en los períodos
+        recargados), o 'par' (nominal vigente u origen a pesos) si no. Así un período no recargado
+        sigue mostrándose como antes y no se mezclan dos medidas dentro de una misma vista.
+        """
+        n, nn = self.conn.execute(
+            "SELECT COUNT(*), COUNT(valor_final_m) FROM cmf_insurer_portfolio_fixed_income WHERE period = ?",
+            [int(period)]).fetchone()
+        return "valor_final" if n and nn == n else "par"
+
     def get_insurer_issuer_exposure(self, period: int, insurance_type: str = "vida",
                                     rut: Optional[str] = None, limit: int = 20):
         """
@@ -484,7 +496,9 @@ class FecuRepo:
         RUT de emisor que cada compañía informa distinto para un mismo instrumento.
         """
         from db.cross import (_fx_cte, canon_join, emisor_canonico_cte, emisor_efectivo,
-                              monto_par_sql, vigente_sql)
+                              monto_par_sql, monto_final_sql, vigente_sql)
+        base = self.get_insurer_monto_base(period)
+        monto = monto_final_sql() if base == "valor_final" else monto_par_sql()
         where = "WHERE fi.period = ? AND fi.insurance_type = ? AND fi.rut_emisor IS NOT NULL"
         params: list = [int(period), str(insurance_type)]
         if rut:
@@ -497,7 +511,7 @@ class FecuRepo:
             b AS (
                 SELECT fi.rut AS tenedor, fi.tipo_instrumento, fi.unidad_monetaria,
                        {emisor_efectivo()} AS rut_emisor,
-                       {vigente_sql()} AS vigente, {monto_par_sql()} AS mm
+                       {vigente_sql()} AS vigente, {monto} AS mm
                 FROM cmf_insurer_portfolio_fixed_income fi
                 JOIN fx ON fx.period = fi.period
                 {canon_join()}
@@ -533,8 +547,9 @@ class FecuRepo:
             )
             SELECT a.rut_emisor, d.nombre, a.mm, SUM(a.mm) OVER () AS total_mm,
                    a.posiciones, a.companias, t.tipo_principal, t.n_tipos,
-                   CASE WHEN a.mm > 0 THEN coalesce(a.mm_origen, 0) / a.mm * 100 END AS pct_origen,
-                   a.sin_fx, a.n_propio
+                   CASE WHEN a.mm > 0 AND {'FALSE' if base == 'valor_final' else 'TRUE'}
+                        THEN coalesce(a.mm_origen, 0) / a.mm * 100 END AS pct_origen,
+                   a.sin_fx, a.n_propio, '{base}' AS base
             FROM agg a
             LEFT JOIN directorio d ON d.rut = a.rut_emisor
             LEFT JOIN tipos t ON t.rut_emisor = a.rut_emisor
@@ -554,7 +569,10 @@ class FecuRepo:
         Mismas reglas de monto y de emisor que `get_insurer_issuer_exposure`.
         """
         from db.cross import (_fx_cte, canon_join, emisor_canonico_cte, emisor_efectivo,
-                              monto_par_sql, nominal_sql, vigente_sql)
+                              monto_par_sql, monto_final_sql, nominal_sql, vigente_sql)
+        base = self.get_insurer_monto_base(period)
+        monto = monto_final_sql() if base == "valor_final" else monto_par_sql()
+        solo_par = "FALSE" if base == "valor_final" else "TRUE"       # el % de origen solo existe con el valor par
         emisor = str(emisor).strip().lstrip("0")
         if not emisor.isdigit():
             return self.conn.execute("SELECT 1 WHERE FALSE").fetchdf()
@@ -568,7 +586,7 @@ class FecuRepo:
                 SELECT fi.rut AS tenedor, fi.tipo_instrumento, fi.unidad_monetaria,
                        upper(trim(fi.nemotecnico)) AS nemotecnico,
                        {emisor_efectivo()} AS rut_emisor, ({nominal_sql()}) AS nominal,
-                       {vigente_sql()} AS vigente, {monto_par_sql()} AS mm
+                       {vigente_sql()} AS vigente, {monto} AS mm
                 FROM cmf_insurer_portfolio_fixed_income fi
                 JOIN fx ON fx.period = fi.period
                 {canon_join()}
@@ -577,16 +595,16 @@ class FecuRepo:
             ),
             e AS (SELECT * FROM b WHERE rut_emisor = ?)"""
         if rut:
-            return self.conn.execute(base + """
+            return self.conn.execute(base + f"""
                 SELECT nemotecnico, tipo_instrumento, unidad_monetaria, SUM(nominal) AS nominal,
                        SUM(mm) AS mm, COUNT(*) AS posiciones,
-                       CASE WHEN SUM(mm) > 0 THEN coalesce(SUM(mm) FILTER (WHERE NOT vigente), 0)
+                       CASE WHEN SUM(mm) > 0 AND {solo_par} THEN coalesce(SUM(mm) FILTER (WHERE NOT vigente), 0)
                                                   / SUM(mm) * 100 END AS pct_origen
                 FROM e GROUP BY 1, 2, 3 ORDER BY mm DESC NULLS LAST, posiciones DESC""", params).fetchdf()
-        return self.conn.execute(base + """
+        return self.conn.execute(base + f"""
             SELECT tenedor, SUM(mm) AS mm, COUNT(*) AS posiciones,
                    arg_max(tipo_instrumento, coalesce(mm, 0)) AS tipo_principal,
-                   CASE WHEN SUM(mm) > 0 THEN coalesce(SUM(mm) FILTER (WHERE NOT vigente), 0)
+                   CASE WHEN SUM(mm) > 0 AND {solo_par} THEN coalesce(SUM(mm) FILTER (WHERE NOT vigente), 0)
                                               / SUM(mm) * 100 END AS pct_origen,
                    COUNT(*) FILTER (WHERE mm IS NULL) AS sin_fx,
                    COUNT(*) FILTER (WHERE tenedor = rut_emisor) AS n_propio

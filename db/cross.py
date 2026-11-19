@@ -80,6 +80,13 @@ def monto_par_sql(alias: str = "fi", fx: str = "fx") -> str:
     return convertir_sql(f"({nominal_sql(alias)})", f"{alias}.unidad_monetaria", fx)
 
 
+def monto_final_sql(alias: str = "fi") -> str:
+    """Valor FINAL de una posición de B.1 en MM$: la columna `valor_final_m` (M$, reconciliada con el B.8,
+    ver collectors/seguros_cartera.py) ÷ 1.000. No depende de la moneda del instrumento ni de la UF.
+    Solo existe en los períodos recargados; ver `get_insurer_monto_base`."""
+    return f"{alias}.valor_final_m / 1e3"
+
+
 MONEDAS_CON_FX = ("UF", "$$", "PROM")
 
 

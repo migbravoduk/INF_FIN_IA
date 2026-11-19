@@ -154,14 +154,18 @@ def _ultimo_b1(db, ramo="vida"):
     return int(per)
 
 
-def test_exposicion_suma_el_monto_par_del_alcance(db):
-    """La suma de las filas (todos los emisores) = suma directa del valor par del alcance."""
-    from db.cross import _fx_cte, monto_par_sql
+def test_exposicion_suma_el_monto_del_alcance(db):
+    """La suma de las filas (todos los emisores) = suma directa del monto del alcance, con la medida del período
+    (valor final si el período lo trae completo; si no, valor par)."""
+    from db.cross import _fx_cte, monto_final_sql, monto_par_sql
     per = _ultimo_b1(db)
+    base = db.get_insurer_monto_base(per)
     df = db.get_insurer_issuer_exposure(per, "vida", None, limit=500)
+    assert set(df.base) == {base}
+    monto = monto_final_sql() if base == "valor_final" else monto_par_sql()
     directo = db.conn.execute(f"""
         WITH {_fx_cte(f"SELECT {per} AS period")}
-        SELECT SUM({monto_par_sql()}) FROM cmf_insurer_portfolio_fixed_income fi JOIN fx USING (period)
+        SELECT SUM({monto}) FROM cmf_insurer_portfolio_fixed_income fi JOIN fx USING (period)
         WHERE fi.period = ? AND fi.insurance_type = 'vida' AND fi.rut_emisor IS NOT NULL""", [per]).fetchone()[0]
     assert len(df) == db.count_insurer_issuers(per, "vida")        # limit=500 cubre a todos
     assert abs(df.mm.sum() - directo) / directo < 0.005
@@ -283,3 +287,78 @@ def test_pagina_emisores_en_comun(real_db_readonly):
         assert c.get(url).status_code == 200, url
     assert c.get("/inversion-institucional/emisores/tabla?min_fuentes=9").status_code == 422
     assert 'name="min_fuentes"' in c.get("/inversion-institucional/emisores").text
+
+
+# --- Valor final por posición de B.1 (plan 19-nov, F11) -----------------------------------------
+
+def _linea_b1(valor_final: int, largo: int = 970) -> str:
+    """Registro tipo 2 de B.1 mínimo: emisor, tipo, nemotécnico, nominal, unidad y, si es de 970, el valor final."""
+    l = [" "] * largo
+    l[0] = "2"
+
+    def poner(off, txt):
+        l[off:off + len(txt)] = list(txt)
+    poner(33, "096596540"); poner(43, "BE"); poner(53, "BCMPC-S"); poner(116, "00000000245000000")
+    poner(133, "00000000245000000"); poner(150, "UF")
+    if largo == 970:
+        poner(893, f"{valor_final:013d}")
+    return "".join(l)
+
+
+def _zip_b1(tmp_path, lineas):
+    import zipfile
+    ruta = tmp_path / "202609v.zip"
+    cab = "1" + "099279000" + "0" + "EUROAMERICA".ljust(60) + "202609"
+    with zipfile.ZipFile(ruta, "w") as z:
+        z.writestr("i202609v.99279000", "\n".join([cab, *lineas]) + "\n")
+    return ruta
+
+
+def test_parser_b1_lee_el_valor_final_solo_en_registros_de_970(tmp_path):
+    from collectors.seguros_cartera import parse_zip_fixed_income
+    r970, r930 = parse_zip_fixed_income(_zip_b1(tmp_path, [_linea_b1(3_500_000), _linea_b1(0, 930)]))
+    assert r970["valor_final_m"] == 3_500_000.0                      # M$, 13 dígitos, sin decimales
+    assert r970["tipo_instrumento"] == "BE" and r970["valor_nominal"] == 24500.0 and r970["pais"] is None
+    assert r930["valor_final_m"] is None and r930["tipo_instrumento"] == "BE"   # el formato antiguo otro orden: no se lee
+
+
+def test_migracion_agrega_valor_final_m(mem_db):
+    cols = [r[0] for r in mem_db.conn.execute("DESCRIBE cmf_insurer_portfolio_fixed_income").fetchall()]
+    assert "valor_final_m" in cols
+    assert "valor_final_m" in [r[0] for r in mem_db.conn.execute("DESCRIBE v_insurer_fixed_income").fetchall()]
+
+
+def test_base_de_monto_por_periodo(mem_db):
+    ins = lambda per, vf: mem_db.conn.execute("""INSERT INTO cmf_insurer_portfolio_fixed_income
+        (insurance_type, period, rut, rut_emisor, tipo_instrumento, nemotecnico, valor_nominal, unidad_monetaria, valor_final_m)
+        VALUES ('vida', ?, '1', '2', 'BE', 'X', 10, 'UF', ?)""", [per, vf])
+    ins(202601, None); ins(202601, None)                  # período sin recargar
+    ins(202602, 5.0); ins(202602, 7.0)                    # período completo
+    ins(202603, 5.0); ins(202603, None)                   # período a medias: no se mezclan medidas
+    assert mem_db.get_insurer_monto_base(202601) == "par"
+    assert mem_db.get_insurer_monto_base(202602) == "valor_final"
+    assert mem_db.get_insurer_monto_base(202603) == "par"
+    assert mem_db.get_insurer_monto_base(209912) == "par"  # sin filas
+
+
+def test_valor_final_reconcilia_con_el_b8(db):
+    """Criterio de F11: la suma del valor final de los tipos de renta fija nacional por compañía coincide (±1%) con el
+    valor final de la renta fija nacional del B.8, en ≥ 90% de las compañías (medido en sep-2026: 61 de 63)."""
+    from api.insurer_glossary import describe
+    per = _ultimo_b1(db)
+    if db.get_insurer_monto_base(per) != "valor_final":
+        pytest.skip("el último período no está recargado con valor_final_m")
+    tipos = ("AFROIND", "BB", "BBP", "BBPNEE", "BCU", "BE", "BEC", "BNEE", "BS", "BTP", "BTU", "BU", "CS", "DPC", "DPL",
+             "LH", "MHA", "MHB", "PDBC")
+    f = {(r[0], r[1]): r[2] for r in db.conn.execute(
+        f"SELECT insurance_type, rut, SUM(valor_final_m) FROM cmf_insurer_portfolio_fixed_income WHERE period = ? "
+        f"AND tipo_instrumento IN ({','.join('?' * len(tipos))}) GROUP BY 1, 2", [per, *tipos]).fetchall()}
+    rf = {"rf_estatal", "rf_bancaria", "rf_corporativa", "rf_hipotecaria"}
+    b8 = {}
+    for t, rut, cod, v in db.conn.execute("SELECT insurance_type, rut, investment_code, valor_final "
+                                          "FROM cmf_insurer_portfolio_control WHERE period = ?", [per]).fetchall():
+        d = describe(cod)
+        if d["clase"] in rf and d["geo"] == "nacional":
+            b8[(t, rut)] = b8.get((t, rut), 0) + v
+    ok = [abs(f.get(k, 0) / v - 1) < 0.01 for k, v in b8.items() if v > 0]
+    assert len(ok) >= 20 and sum(ok) / len(ok) >= 0.90

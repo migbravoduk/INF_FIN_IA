@@ -107,6 +107,20 @@ B1_FIELDS = [
 # de 2020. Se aceptan los dos largos; la valoración de mercado sigue sin reconciliar.
 B1_RECORD_LENS = frozenset({930, 970})
 
+# VALOR FINAL por posición (M$), reconciliado el 19-nov-2026 (plan de observaciones, F11): en el registro
+# de 970 caracteres, las posiciones 893-905 (13 dígitos, sin decimales) traen el valor final de la
+# inversión en miles de pesos. Contra el B.8 del mismo período (sep-2026, vida), la suma de este campo
+# por compañía, en los tipos de renta fija NACIONAL (A00, B10, B20, C00, D10, D20, E10, E20, I00 y
+# afines: BTP/BTU/BCU/PDBC, DPC/DPL, BB/BU/BS, LH, MHA/MHB, BE, BNEE, CS, AFROIND, BEC, BBP, BBPNEE),
+# coincide con la suma del B.8 de la renta fija nacional (valor_final) a ±1% en 32 de 33 compañías y
+# al peso en 25 de ellas. Correspondencia exacta por código: A00 = BTP+BTU(+PDBC), B10 = DPC/DPL,
+# B20 = BB+BU, C00 = LH, D10 = MHB, D20 = MHA, E10 = BE, E20 = BNEE, I00 = CS, Z70 (leasing) = CLEAS.
+# La renta fija EXTRANJERA del B.8 (H10, H30, H40: 19,5% del total) no está en el archivo B.1.
+# Es valor FINAL (contable, a costo amortizado o razonable según la clasificación), no necesariamente
+# de mercado. Solo vale para registros de 970 caracteres: el formato de 930 tiene otro orden.
+B1_VALOR_FINAL = (893, 13)
+B1_VALOR_FINAL_LEN = 970
+
 
 def _field(raw: str, kind: str):
     """Convierte un campo de ancho fijo según su tipo."""
@@ -115,6 +129,8 @@ def _field(raw: str, kind: str):
         return s.lstrip("0") or None
     if kind == "dec4":
         return (int(s) / 1e4) if s.isdigit() else None
+    if kind == "int":
+        return float(int(s)) if s.isdigit() else None
     return s or None
 
 
@@ -298,6 +314,9 @@ def parse_zip_fixed_income(zip_path: str | Path) -> list[dict]:
                            "rut": rut or rut_from_name}
                     for name, off, width, kind in B1_FIELDS:
                         rec[name] = _field(line[off:off + width], kind)
+                    off, width = B1_VALOR_FINAL
+                    rec["valor_final_m"] = (_field(line[off:off + width], "int")
+                                            if len(line) == B1_VALOR_FINAL_LEN else None)
                     out.append(rec)
             if skipped:
                 logger.warning(f"{fname}: {skipped} registros con largo fuera de "

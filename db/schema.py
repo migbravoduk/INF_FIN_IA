@@ -218,7 +218,8 @@ CREATE TABLE IF NOT EXISTS cmf_insurer_portfolio_fixed_income (
     valor_nominal      DOUBLE,               -- 4 decimales implícitos, en la unidad monetaria
     valor_nominal_vig  DOUBLE,               -- valor nominal vigente
     unidad_monetaria   VARCHAR,              -- UF, $$, EUR, PROM, …
-    fetched_at         TIMESTAMP DEFAULT now()
+    fetched_at         TIMESTAMP DEFAULT now(),
+    valor_final_m      DOUBLE                -- valor final de la posición, M$ (pos. 893-905); NULL si el período no se ha recargado
 );
 
 -- Sin índices secundarios, por el mismo bug de DuckDB 1.5.1 que en la tabla de control (ver

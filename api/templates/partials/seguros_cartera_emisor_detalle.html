@@ -4,13 +4,14 @@
   por_compania=False (una compañía): filas = [{nemotecnico, tipo, tipo_code, unidad, nominal, mm, posiciones, pct_origen}]
 #}
 {% import "partials/_ui.html" as ui %}
+{% set unid = 'valor final' if base == 'valor_final' else 'valor par' %}
 {% if not filas %}
 {{ ui.vacio("Sin posiciones de ese emisor en el período.") }}
 {% elif por_compania %}
 <table class="tbl tbl--compacta" aria-label="Compañías con renta fija de este emisor">
     <thead><tr>
         <th>Compañía</th><th>Tipo principal</th>
-        <th class="num">MM$ (valor par)</th><th class="num">% del emisor</th><th class="num">Posiciones</th>
+        <th class="num">MM$ ({{ unid }})</th><th class="num">% del emisor</th><th class="num">Posiciones</th>
     </tr></thead>
     <tbody>
     {% for f in filas %}
@@ -32,7 +33,7 @@
 <table class="tbl tbl--compacta" aria-label="Instrumentos de este emisor en la cartera de la compañía">
     <thead><tr>
         <th>Nemotécnico</th><th>Tipo</th><th>Moneda</th>
-        <th class="num">Nominal (en su moneda)</th><th class="num">MM$ (valor par)</th><th class="num">Posiciones</th>
+        <th class="num">Nominal (en su moneda)</th><th class="num">MM$ ({{ unid }})</th><th class="num">Posiciones</th>
     </tr></thead>
     <tbody>
     {% for f in filas %}

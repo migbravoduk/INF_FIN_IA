@@ -347,6 +347,7 @@ def seguros_cartera_emisores(request: Request, ramo: str = Query("vida"),
         rut = ""   # RUT que no existe en el período: se cae al mercado en vez de mostrar vacío
 
     df = db.get_insurer_issuer_exposure(period, ramo, rut or None, limit=limit)
+    base = db.get_insurer_monto_base(period)
     rows = []
     for r in df.itertuples():
         tipo_code = (r.tipo_principal or "")
@@ -365,7 +366,7 @@ def seguros_cartera_emisores(request: Request, ramo: str = Query("vida"),
         })
     total_emisores = db.count_insurer_issuers(period, ramo, rut or None)
     return templates.TemplateResponse(request, "partials/seguros_cartera_emisores.html", {
-        "rows": rows, "period": period, "ramo_label": _RAMOS[ramo], "ramo": ramo,
+        "rows": rows, "period": period, "ramo_label": _RAMOS[ramo], "ramo": ramo, "base": base,
         "opciones": opciones, "sel_rut": rut,
         "sel_nombre": sel["name"] if sel else None,
         "total_emisores": total_emisores, "limit": limit,
@@ -418,5 +419,5 @@ def seguros_cartera_emisor_detalle(request: Request, ramo: str = Query("vida"),
         filas.append(f)
     return templates.TemplateResponse(request, "partials/seguros_cartera_emisor_detalle.html", {
         "filas": filas, "por_compania": not rut, "total": total, "period": period,
-        "emisor": emisor, "ramo": ramo,
+        "emisor": emisor, "ramo": ramo, "base": db.get_insurer_monto_base(period),
     })

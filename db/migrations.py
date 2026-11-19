@@ -360,6 +360,22 @@ CREATE TABLE IF NOT EXISTS sp_cartera_detalle (
 """
 
 
+# ------------------------------------------------------------------
+# 014 · B.1: valor final por posición (M$). Reconciliado contra el B.8 (collectors/seguros_cartera.py).
+# Los períodos ya cargados quedan en NULL hasta recargarlos con `main.py import-cartera-seguros`.
+# La vista se recrea aquí para que `SELECT *` incluya la columna nueva (la 005 corre antes que esta).
+# ------------------------------------------------------------------
+M014 = """
+ALTER TABLE cmf_insurer_portfolio_fixed_income ADD COLUMN IF NOT EXISTS valor_final_m DOUBLE;
+CREATE OR REPLACE VIEW v_insurer_fixed_income AS
+SELECT *,
+       CAST(try_strptime(fecha_compra, '%Y%m%d') AS DATE)      AS fecha_compra_d,
+       CAST(try_strptime(fecha_pago, '%Y%m%d') AS DATE)        AS fecha_pago_d,
+       CAST(try_strptime(fecha_emision, '%Y%m%d') AS DATE)     AS fecha_emision_d,
+       CAST(try_strptime(fecha_inscripcion, '%Y%m%d') AS DATE) AS fecha_inscripcion_d
+FROM cmf_insurer_portfolio_fixed_income;
+"""
+
 MIGRATIONS: list[tuple[str, str, str]] = [
     ("001", "dq_results: controles de calidad", M001),
     ("002", "dim_dataset: metadatos de unidades, frecuencia y fuente", M002),
@@ -374,6 +390,7 @@ MIGRATIONS: list[tuple[str, str, str]] = [
     ("011", "v_mutual_fund_derivatives: derivados FFMM tipados", M011),
     ("012", "cmf_insurer_derivatives: derivados de seguros (B.7)", M012),
     ("013", "sp_cartera_detalle: cartera desagregada SP (emisores, swaps, forwards)", M013),
+    ("014", "cmf_insurer_portfolio_fixed_income.valor_final_m: valor final por posición (B.1)", M014),
 ]
 
 # Migraciones que se reaplican siempre (contenido de referencia o vistas): son idempotentes.
