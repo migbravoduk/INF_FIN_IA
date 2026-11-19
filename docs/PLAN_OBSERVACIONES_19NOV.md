@@ -20,7 +20,7 @@ vuelvas a investigar desde cero**: confírmalo con las consultas de control indi
 | F9 | Vincular ranking y exposición por emisor | hecha | 00c6385 |
 | F10 | Panel de portada: indicadores de mercado | hecha | 5a5dac4 |
 | F11 | Investigación: valor de mercado de B.1 (con tope de tiempo) | hecha: valor final reconciliado | 99883ab |
-| F12 | Cierre: documentación y registros | hecha | F12_HASH |
+| F12 | Cierre: documentación y registros | hecha | 7c02a0e |
 
 ## Nota de cierre (Sonnet, 19-nov-2026)
 
