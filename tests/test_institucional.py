@@ -44,13 +44,14 @@ def test_emisor_canonico_mayoria(mem_db):
 
 def test_emisor_canonico_empate_y_originadores(mem_db):
     # Empate 1 a 1: decide el RUT que usa la cartera de fondos mutuos para ese nemotécnico.
-    _b1(mem_db, [("1", "97018000", "BB", "DES-1"), ("2", "97051000", "BB", "DES-1"),
+    # (RUT ficticios: los de bancos fusionados ya se unifican antes de votar.)
+    _b1(mem_db, [("1", "11111111", "BB", "BX-1"), ("2", "22222222", "BB", "BX-1"),
                  # Mutuos y leasing: el nemotécnico es del originador; nunca se reasignan.
                  ("1", "111", "MHA", "MHA-1"), ("2", "222", "MHA", "MHA-1"), ("3", "222", "MHA", "MHA-1")])
     mem_db.conn.execute("""INSERT INTO cmf_mutual_fund_portfolio
         (period_year, period_month, portfolio_type, fund_run, fund_name, raw_data)
-        VALUES (2026, 9, 'NACI', '9000', 'F', '{"FFM_6010100": "DES-1", "FFM_6010211": "97051000"}')""")
-    assert _canon(mem_db) == {"DES-1": "97051000"}
+        VALUES (2026, 9, 'NACI', '9000', 'F', '{"FFM_6010100": "BX-1", "FFM_6010211": "22222222"}')""")
+    assert _canon(mem_db) == {"BX-1": "22222222"}
 
 
 @pytest.fixture(scope="module")
@@ -69,6 +70,7 @@ def test_fusiones_config():
     from db.cross import fusion_sql, fusiones, ruts_equivalentes
     f = fusiones()
     assert f["76645030"] == "97023000" and f["97053000"] == "97080000"   # Itaú–Corpbanca, BICE–Security
+    assert f["97032000"] == f["97051000"] == "97018000"                  # ex BBVA y ex Desarrollo → Scotiabank
     assert set(ruts_equivalentes("97023000")) >= {"97023000", "76645030", "97041000"}
     assert "WHEN '76645030' THEN '97023000'" in fusion_sql("x")
 

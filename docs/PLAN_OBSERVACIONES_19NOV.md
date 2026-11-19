@@ -237,9 +237,9 @@ señala la forma de la curva.
   | 89900400 | 76000739 ESVAL | 104.125 MM$ | |
   | 96920010 | 76496130 Costanera Norte | 95.253 MM$ | |
   | 96579330 | 76833300 ESSBIO | 75.381 MM$ | |
-  | 97032000 (ex BBVA) | 97018000 Scotiabank | 62.530 MM$ | banco absorbido |
+  | 97032000 (ex BBVA) | 97018000 Scotiabank | 62.530 MM$ | ya unificado por fusión |
   | 76411321 CGE | 90042000 CGE | 42.751 MM$ | los dos RUT de CGE |
-  | 97018000 Scotiabank | 97051000 y 97032000 | 29.206 y 25.866 MM$ | bonos `DES…` y `UBBV…` cuyos tenedores siguen informando el RUT antiguo |
+  | 97018000 Scotiabank | 97051000 y 97032000 | 29.206 y 25.866 MM$ | bonos `DES…` y `UBBV…`; ya unificados por fusión |
 
 - **Fusiones** (`config/entidades.yaml`, sección `fusiones:`, RUT absorbido → sucesor):
   - 76645030 y 97041000 → 97023000 (Itaú–Corpbanca; sobrevive Itaú Chile, confirmado por el usuario el 19-nov). Itaú suma 113 posiciones de seguros (539.870 MM$) que venían con los RUT antiguos.
@@ -247,7 +247,7 @@ señala la forma de la curva.
   - Se aplican en `emisor_efectivo` y también en la votación de mayoría, en los fondos mutuos (`issuer_options`, `issuer_holdings`) y en el cruce de nombres de la SP (`mapa_emisores_sp`).
   - Funciones: `fusiones()`, `fusion_sql(expr)` y `ruts_equivalentes(rut)`.
   - El panel de un RUT absorbido remite al sucesor; el del sucesor dice qué RUT absorbidos incluye.
-  - **Por confirmar con el usuario:** Scotiabank (97018000) y los RUT 97032000 (ex BBVA) y 97051000 (ex Banco del Desarrollo). Sus bonos `UBBV…` y `DES…` se informan con los dos RUT. No se agrega la fusión sin su confirmación.
+  - 97032000 (ex BBVA) y 97051000 (ex Banco del Desarrollo) → 97018000 Scotiabank (confirmado por el usuario el 19-nov). Scotiabank suma 394 posiciones de seguros (207.086 MM$).
 
 **Originadores de mutuos sin nombre** (para preguntar al usuario en la nota de cierre). Son 25 RUT
 de `MHA`/`MHB`; los de leasing (`CLEAS`) ya tienen nombre. Los mayores en 202609, con número de
@@ -623,7 +623,7 @@ una fecha (`class="corte"` aparece al menos 4 veces más que antes).
 ## F12 — Cierre
 
 1. Este archivo: tabla de estado con commits y una «Nota de cierre» con:
-   - las preguntas al usuario de la sección «Ya hecho»: originadores de mutuos sin nombre y fusiones de Scotiabank por confirmar;
+   - las preguntas al usuario de la sección «Ya hecho»: originadores de mutuos sin nombre;
    - la cobertura de seguros antes y después (F7);
    - el número de empresas con Z'' (F8);
    - el resultado de F11.

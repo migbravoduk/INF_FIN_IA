@@ -61,6 +61,10 @@ fusiones:
   # con 97023000. En B.1 202609, 76645030 solo trae nemotécnicos BITA…/UITA…/BCOR…, los mismos de 97023000.
   "76645030": {sucesor: "97023000", evidencia: "usuario 19-nov-2026 (fusión Itaú–Corpbanca); nemotécnicos BITA/UITA/BCOR"}
   "97041000": {sucesor: "97023000", evidencia: "nemotécnicos BITA…/FNIT…/BCOR… iguales a 97023000 (ver emisores)"}
+  # Scotiabank absorbió a BBVA Chile y al Banco del Desarrollo: sus bonos UBBV…/BBBV… y DES… se
+  # informan a veces con el RUT antiguo y a veces con el de Scotiabank (B.1 202609).
+  "97032000": {sucesor: "97018000", evidencia: "usuario 19-nov-2026 (ex BBVA Chile); nemotécnicos UBBV/BBBV también con 97018000"}
+  "97051000": {sucesor: "97018000", evidencia: "usuario 19-nov-2026 (ex Banco del Desarrollo); nemotécnicos DES… también con 97018000"}
   # BICE absorbió a Security (nov-2025): ver la nota del banco 028 arriba.
   "97053000": {sucesor: "97080000", evidencia: "fusión BICE–Security nov-2025; bonos BSEC… vigentes con el RUT de BICE"}
 
