@@ -85,6 +85,19 @@ def test_fusion_itau(db):
     assert "76645030" in itau["absorbidos"] and itau["seguros"]
 
 
+def test_originadores_con_nombre(db):
+    """Todo originador de mutuos y leasing del último B.1 tiene nombre (curados el 19-nov-2026)."""
+    per = db.conn.execute("SELECT MAX(period) FROM cmf_insurer_portfolio_fixed_income").fetchone()[0]
+    if per is None:
+        pytest.skip("sin B.1")
+    faltan = db.conn.execute("""
+        SELECT DISTINCT ltrim(fi.rut_emisor, '0') FROM cmf_insurer_portfolio_fixed_income fi
+        LEFT JOIN dim_entidad e ON e.rut = ltrim(fi.rut_emisor, '0')
+        WHERE fi.period = ? AND fi.tipo_instrumento IN ('MHA', 'MHB', 'CLEAS') AND e.rut IS NULL""",
+        [per]).fetchall()
+    assert not faltan, f"originadores sin nombre en {per}: {[r[0] for r in faltan]} (agregarlos a config/entidades.yaml)"
+
+
 def test_cmpc_renta_fija_va_a_inversiones_cmpc(db):
     """Empresas CMPC no emite bonos: el BCMPC-S que EuroAmerica le atribuyó es de Inversiones CMPC."""
     from db.cross import issuer_holdings

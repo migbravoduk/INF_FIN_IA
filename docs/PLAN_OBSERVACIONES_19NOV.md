@@ -47,7 +47,7 @@ No hay F3: lo hizo Opus antes del plan (sección «Ya hecho»); la numeración s
 5. **Contrato de plantillas:** `scripts/ui_guard.py check` debe decir «Contrato intacto».
    - Si una fase agrega ids, `name=` o `hx-*` nuevos, regenera la línea base con `scripts/ui_guard.py snapshot` en esa misma fase y dilo en el commit.
    - No se borra ni se renombra nada existente.
-6. **Tests:** `pytest -q` debe pasar entero. Hoy son 106; cada fase suma los suyos. Puedes
+6. **Tests:** `pytest -q` debe pasar entero. Hoy son 107; cada fase suma los suyos. Puedes
    editar `tests/`. Los tests que leen la base real usan el fixture `real_db_readonly`, que se
    salta si la base está tomada.
 7. **Presentación:**
@@ -133,7 +133,7 @@ aparezca expuesta en renta fija a Empresas CMPC?»**
 ## F0 — Preparación y línea base
 
 1. `git status` limpio y en `feature/web-api-skeleton`.
-2. Levanta `:8001`. Corre `pytest -q` (106 tests) y `ui_guard.py check`.
+2. Levanta `:8001`. Corre `pytest -q` (107 tests) y `ui_guard.py check`.
 3. Toma la línea base:
 
    ```
@@ -223,7 +223,7 @@ señala la forma de la curva.
   - `issuer_options`, `issuer_holdings` (bloque seguros) y `common_issuers`;
   - `get_insurer_issuer_exposure` y `count_insurer_issuers` (`db/repos/fecu.py`).
 - `issuer_holdings` devuelve `reasignados` (`entran_*` / `salen_*` del último mes de seguros). `partials/institucional_emisor_panel.html` lo dice en una nota.
-- Tests en `tests/test_institucional.py`: regla de mayoría, empate por fondos mutuos, originadores, nombres curados, caso CMPC y fusiones. En total 106 tests.
+- Tests en `tests/test_institucional.py`: regla de mayoría, empate por fondos mutuos, originadores, nombres curados, caso CMPC, fusiones y originadores con nombre. En total 107 tests.
 
 **Medición (202609).**
 - Se reasignan 612 posiciones de 177 nemotécnicos: 1,23 billones de pesos a valor par, el 2,4% de los 52 billones de B.1.
@@ -249,12 +249,13 @@ señala la forma de la curva.
   - El panel de un RUT absorbido remite al sucesor; el del sucesor dice qué RUT absorbidos incluye.
   - 97032000 (ex BBVA) y 97051000 (ex Banco del Desarrollo) → 97018000 Scotiabank (confirmado por el usuario el 19-nov). Scotiabank suma 394 posiciones de seguros (207.086 MM$).
 
-**Originadores de mutuos sin nombre** (para preguntar al usuario en la nota de cierre). Son 25 RUT
-de `MHA`/`MHB`; los de leasing (`CLEAS`) ya tienen nombre. Los mayores en 202609, con número de
-posiciones y de compañías tenedoras:
+**Originadores de mutuos: ya tienen nombre.**
+- Los 25 RUT de `MHA`/`MHB` que no tenían nombre se cargaron en `config/entidades.yaml` con la razón social que entregó el usuario el 19-nov. Por ejemplo: BICE Hipotecaria, Hipotecaria Security, Hipotecaria La Construcción, Evoluciona, Creditú, Penta Hipotecario y Citibank N.A. (`MHB`, tipo banco).
+- Tipo `administradora_mutuos`.
+- En 202609 no queda ningún originador de mutuos ni de leasing sin nombre.
+- Los emisores de B.1 con nombre suben de 207 a 232 de 330.
 
-| RUT | Posiciones | Compañías |
-|---|---|---|
+---|---|---|
 | 96777060 | 14.413 | 11 |
 | 96538310 | 8.980 | 15 |
 | 96546470 | 3.682 | 9 |
@@ -623,12 +624,11 @@ una fecha (`class="corte"` aparece al menos 4 veces más que antes).
 ## F12 — Cierre
 
 1. Este archivo: tabla de estado con commits y una «Nota de cierre» con:
-   - las preguntas al usuario de la sección «Ya hecho»: originadores de mutuos sin nombre;
    - la cobertura de seguros antes y después (F7);
    - el número de empresas con Z'' (F8);
    - el resultado de F11.
 2. `docs/wiki/Hoja-de-Ruta.md`: marca lo hecho y agrega lo pendiente:
-   - fusiones por confirmar;
+   - emisor canónico, fusiones (Itaú, BICE, Scotiabank) y originadores ya nombrados (sección «Ya hecho»), como hechos;
    - diccionario de códigos SP;
    - fuentes descartadas en F10.
 3. `api/templates/metodologia.html`:

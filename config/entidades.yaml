@@ -50,6 +50,35 @@ emisores:
   "99514870": {nombre: "MetLife Chile Administradora de Mutuos Hipotecarios S.A.",
                corto: "MetLife Mutuos Hipotecarios", tipo: "administradora_mutuos",
                evidencia: "usuario 19-nov-2026; 17.179 mutuos MHA en B.1 202609 (3 compañías)"}
+  # Originadores de mutuos hipotecarios endosables de B.1 (MHA; Citibank: MHB). No reportan EEFF
+  # a la CMF. Razón social entregada por el usuario el 19-nov-2026, pareada por RUT con los 25
+  # originadores sin nombre de B.1 202609 (ver docs/PLAN_OBSERVACIONES_19NOV.md).
+  "96777060": {nombre: "BICE Hipotecaria Administradora de Mutuos Hipotecarios S.A.", corto: "BICE Hipotecaria", tipo: "administradora_mutuos", evidencia: "usuario 19-nov-2026; MHA en B.1"}
+  "96538310": {nombre: "Hipotecaria Security S.A.", corto: "Hipotecaria Security", tipo: "administradora_mutuos", evidencia: "usuario 19-nov-2026; MHA en B.1"}
+  "96546470": {nombre: "Hipotecaria La Construcción S.A.", corto: "Hipotecaria La Construcción", tipo: "administradora_mutuos", evidencia: "usuario 19-nov-2026; MHA en B.1"}
+  "76090605": {nombre: "Administradora de Mutuos Hipotecarios M y V S.A.", corto: "Mutuos M y V", tipo: "administradora_mutuos", evidencia: "usuario 19-nov-2026; MHA en B.1"}
+  "96786870": {nombre: "Mutuos Hipotecarios Renta Nacional S.A.", corto: "Mutuos Renta Nacional", tipo: "administradora_mutuos", evidencia: "usuario 19-nov-2026; MHA en B.1"}
+  "76697522": {nombre: "Evoluciona Administradora de Mutuos Hipotecarios S.A.", corto: "Evoluciona", tipo: "administradora_mutuos", evidencia: "usuario 19-nov-2026; MHA en B.1"}
+  # "No vigente" según el usuario: sus mutuos siguen en las carteras.
+  "96559030": {nombre: "Principal Créditos Hipotecarios S.A.", corto: "Principal Créditos Hipotecarios", tipo: "administradora_mutuos", evidencia: "usuario 19-nov-2026 (no vigente); MHA en B.1"}
+  "76594721": {nombre: "Creditú Administradora de Mutuos Hipotecarios S.A.", corto: "Creditú", tipo: "administradora_mutuos", evidencia: "usuario 19-nov-2026; MHA en B.1"}
+  "96778070": {nombre: "Penta Hipotecario Administradora de Mutuos Hipotecarios S.A.", corto: "Penta Hipotecario", tipo: "administradora_mutuos", evidencia: "usuario 19-nov-2026; MHA en B.1"}
+  "96542350": {nombre: "Consorcio Créditos Hipotecarios S.A.", corto: "Consorcio Créditos Hipotecarios", tipo: "administradora_mutuos", evidencia: "usuario 19-nov-2026; MHA en B.1"}
+  "96539080": {nombre: "CG Mutuos Hipotecarios S.A.", corto: "CG Mutuos Hipotecarios", tipo: "administradora_mutuos", evidencia: "usuario 19-nov-2026; MHA en B.1"}
+  "76965638": {nombre: "Central Hipotecaria S.A.", corto: "Central Hipotecaria", tipo: "administradora_mutuos", evidencia: "usuario 19-nov-2026; MHA en B.1"}
+  "96656420": {nombre: "Cimenta Mutuo Hipotecario S.A.", corto: "Cimenta Mutuo Hipotecario", tipo: "administradora_mutuos", evidencia: "usuario 19-nov-2026; MHA en B.1"}
+  "96781330": {nombre: "Contempora Créditos Hipotecarios S.A.", corto: "Contempora", tipo: "administradora_mutuos", evidencia: "usuario 19-nov-2026; MHA en B.1"}
+  "76136663": {nombre: "Agente Administrador de Mutuos Hipotecarios Andes S.A.", corto: "Mutuos Andes", tipo: "administradora_mutuos", evidencia: "usuario 19-nov-2026; MHA en B.1"}
+  "96598280": {nombre: "Administradora de Mutuos Hipotecarios del Centro S.A.", corto: "Mutuos del Centro", tipo: "administradora_mutuos", evidencia: "usuario 19-nov-2026; MHA en B.1"}
+  "77971124": {nombre: "4 Life Crédito Hipotecario S.A.", corto: "4 Life Crédito Hipotecario", tipo: "administradora_mutuos", evidencia: "usuario 19-nov-2026; MHA en B.1"}
+  "96795510": {nombre: "Hipotecaria Concreces S.A.", corto: "Concreces", tipo: "administradora_mutuos", evidencia: "usuario 19-nov-2026; MHA en B.1"}
+  "96722710": {nombre: "Administradora de Mutuos Hipotecarios Hogar y Mutuo S.A.", corto: "Hogar y Mutuo", tipo: "administradora_mutuos", evidencia: "usuario 19-nov-2026; MHA en B.1"}
+  "97008000": {nombre: "Citibank N.A.", corto: "Citibank", tipo: "banco", evidencia: "usuario 19-nov-2026; mutuos MHB (emitidos por banco) en B.1"}
+  "96722190": {nombre: "Hipotecaria Valoriza S.A.", corto: "Valoriza", tipo: "administradora_mutuos", evidencia: "usuario 19-nov-2026; MHA en B.1"}
+  "96810900": {nombre: "Procrédito S.A.", corto: "Procrédito", tipo: "administradora_mutuos", evidencia: "usuario 19-nov-2026; MHA en B.1"}
+  "99594170": {nombre: "Vive Mutuos Hipotecarios S.A.", corto: "Vive Mutuos Hipotecarios", tipo: "administradora_mutuos", evidencia: "usuario 19-nov-2026; MHA en B.1"}
+  "96700050": {nombre: "Suiza Mutuo Leasing S.A.", corto: "Suiza Mutuo Leasing", tipo: "administradora_mutuos", evidencia: "usuario 19-nov-2026; MHA en B.1"}
+  "96669240": {nombre: "Credycasa Créditos Hipotecarios S.A.", corto: "Credycasa", tipo: "administradora_mutuos", evidencia: "usuario 19-nov-2026; MHA en B.1"}
   # PENDIENTE: 77844703 (bonos BTBD… y depósitos FNTBD…). Parece un banco nuevo, pero no está
   # en cmf_bank_statements; confirmar en el registro de la CMF antes de nombrarlo.
 
