@@ -9,7 +9,7 @@ vuelvas a investigar desde cero**: confírmalo con las consultas de control indi
 | Fase | Contenido | Estado | Commit |
 |---|---|---|---|
 | F0 | Preparación y línea base | hecha (sin cambios de código) | — |
-| F1 | Proyecciones: línea real/proyectado dentro del gráfico | hecha | F1_HASH |
+| F1 | Proyecciones: línea real/proyectado dentro del gráfico | hecha | 11588d3 |
 | F2 | Curvas: mini explicación bajo cada gráfico | pendiente | — |
 | — | (Nombres y emisor canónico: hecho por Opus antes del plan, ver sección «Ya hecho») | hecha | d5e4b73 |
 | F4 | Concentración por emisor de seguros: monto expuesto y filas expandibles | pendiente | — |
