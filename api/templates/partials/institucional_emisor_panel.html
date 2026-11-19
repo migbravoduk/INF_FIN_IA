@@ -13,7 +13,7 @@
   {%- else %}—{% endif -%}
 {%- endmacro %}
 
-{% macro bloque(b, titulo, unidad, chart_id, tenedor_label, fuente) %}
+{% macro bloque(b, titulo, unidad, chart_id, tenedor_label, fuente, nota_tipos=none) %}
 {% set s = b.serie %}
 {% set ult = (s|selectattr('period', 'equalto', b.ult)|first) %}
 {% set prev = (s|selectattr('period', 'equalto', b.prev)|first) if b.prev else none %}
@@ -32,6 +32,21 @@
         {{ ui.stat("posiciones", ult.pos|es(0)) }}
     </div>
     {{ ui.viz(chart_id, titulo, sub="MMM$ por mes · el último mes en color", fuente=fuente, alto="sm") }}
+    {% if b.por_tipo %}
+    <div class="tbl-wrap">
+    <table class="tbl tbl--compacta" aria-label="Tipo de instrumento: {{ tenedor_label }}">
+        <thead><tr><th>Tipo de instrumento ({{ per(b.ult) }})</th><th class="num">MMM$</th><th class="num">%</th></tr></thead>
+        <tbody>
+        {% for t in b.por_tipo %}
+        <tr><td class="ent">{{ t.etiqueta }}{% if t.familia %}<span class="sub">código {{ t.codigo }}</span>{% endif %}</td>
+            <td class="num">{{ (t.mm / 1000)|es(1) }}</td>
+            <td class="num">{{ (t.pct|es(1) ~ "%") if t.pct is not none else "—" }}</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    {% if nota_tipos %}<p class="nota">{{ nota_tipos }}</p>{% endif %}
+    {% endif %}
 </section>
 {% endmacro %}
 
@@ -40,6 +55,7 @@
 <table class="tbl" aria-label="Tenedores: {{ tenedor_label }}">
     <thead><tr>
         <th>{{ tenedor_label }}</th>
+        <th>Instrumentos</th>
         <th class="num">{{ per(b.ult) }} (MMM$)</th>
         <th class="num">% del total</th>
         <th class="num">Δ vs {{ per(b.prev) if b.prev else 'mes ant.' }}</th>
@@ -49,6 +65,7 @@
     {% for f in b.tenedores[:25] %}
     <tr>
         <td class="ent">{{ f.nombre|nombre }}{% if f.sub %}<span class="sub">{{ f.sub }}</span>{% endif %}</td>
+        <td class="muted">{{ f.tipos or "—" }}</td>
         <td class="num">{{ ((f.ult or 0) / 1000)|es(1) }}</td>
         <td class="num">{{ f.peso|es(1) }}%</td>
         <td class="num {{ 'pos' if (f.d_prev or 0) > 0 else 'neg' if (f.d_prev or 0) < 0 }}">
@@ -82,9 +99,10 @@
 </header>
 
 <div class="grid-viz">
-    {% if h.seguros %}{{ bloque(h.seguros, "Compañías de seguros · renta fija", "MMM$ valor par", "em-seg-chart", "compañías", "CMF, archivo B.1") }}{% endif %}
+    {% if h.seguros %}{{ bloque(h.seguros, "Compañías de seguros · renta fija (B.1 no incluye acciones)", "MMM$ valor par", "em-seg-chart", "compañías", "CMF, archivo B.1") }}{% endif %}
     {% if h.ffmm %}{{ bloque(h.ffmm, "Fondos mutuos · cartera nacional", "MMM$ valor de mercado", "em-ffm-chart", "fondos", "CMF, cartera de fondos mutuos") }}{% endif %}
-    {% if h.afp %}{{ bloque(h.afp, "Fondos de pensiones · AFP", "MMM$ valor de mercado", "em-afp-chart", "AFP", "Superintendencia de Pensiones") }}{% endif %}
+    {% if h.afp %}{{ bloque(h.afp, "AFP · cartera nacional", "MMM$ valor de mercado", "em-afp-chart", "AFP", "Superintendencia de Pensiones",
+                      nota_tipos="La SP informa el monto total por emisor y el % del fondo en cada tipo de instrumento, no el monto por tipo: aquí el monto se reparte en proporción a esos porcentajes.") }}{% endif %}
 </div>
 
 {% set ra = h.reasignados %}

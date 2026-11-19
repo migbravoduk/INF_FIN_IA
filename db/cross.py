@@ -84,6 +84,47 @@ MONEDAS_CON_FX = ("UF", "$$", "PROM")
 
 
 # ---------------------------------------------------------------------------------------
+# Familia de cada código de instrumento (B.1, fondos mutuos y SP). `config/tipos_instrumento.yaml`
+# trae solo los códigos con evidencia; el resto se muestra crudo, «(sin glosa)».
+# ---------------------------------------------------------------------------------------
+_TIPOS: dict = {}
+
+
+def tipos_instrumento() -> dict[str, dict]:
+    """{código: {familia, evidencia}} de config/tipos_instrumento.yaml (cacheado)."""
+    if "mapa" not in _TIPOS:
+        import yaml
+        from config.settings import config_path
+        f = config_path("tipos_instrumento.yaml")
+        data = yaml.safe_load(f.read_text(encoding="utf-8")) if f.exists() else {}
+        _TIPOS["mapa"] = {str(k).upper(): v for k, v in (data or {}).get("codigos", {}).items()}
+    return _TIPOS["mapa"]
+
+
+def familia_de(codigo: str | None) -> str | None:
+    """Familia del código (p. ej. 'BE' → 'Bono corporativo'), o None si no está documentado."""
+    return (tipos_instrumento().get(str(codigo or "").strip().upper()) or {}).get("familia")
+
+
+def etiqueta_tipo(codigo: str | None) -> str:
+    """Texto para mostrar: la familia, o el código crudo con «(sin glosa)»."""
+    c = codigo.strip() if isinstance(codigo, str) else ""
+    if not c:
+        return "sin tipo informado"
+    return familia_de(c) or f"{c} (sin glosa)"
+
+
+def _por_tipo(montos: dict) -> list[dict]:
+    """{código: MM$} → [{codigo, familia, etiqueta, mm, pct}] de mayor a menor. Una misma familia
+    en varios códigos (p. ej. DPC y DPL) se mantiene separada: el código es lo que informa la fuente."""
+    montos = {(k if isinstance(k, str) else ""): float(v) for k, v in montos.items() if v == v and v is not None}
+    total = sum(montos.values())
+    return [{"codigo": c, "familia": familia_de(c), "etiqueta": etiqueta_tipo(c), "mm": m,
+             "pct": (m / total * 100) if total else None}
+            for c, m in sorted(montos.items(), key=lambda kv: -kv[1])]
+
+
+# ---------------------------------------------------------------------------------------
 # Emisor canónico por nemotécnico (B.1).
 #
 # Las compañías no siempre informan el mismo RUT de emisor para un mismo instrumento: en
@@ -295,14 +336,14 @@ def issuer_holdings(db, rut: str, n_periods: int = 13) -> dict:
         b AS (
             SELECT fi.period, fi.rut AS tenedor, fi.insurance_type AS ramo,
                    fi.unidad_monetaria AS mon, upper(trim(fi.nemotecnico)) AS nemo,
-                   ltrim(fi.rut_emisor, '0') AS inf, {fusion_sql("ltrim(fi.rut_emisor, '0')")} AS fus,
+                   fi.tipo_instrumento AS tipo, ltrim(fi.rut_emisor, '0') AS inf, {fusion_sql("ltrim(fi.rut_emisor, '0')")} AS fus,
                    {emisor_efectivo()} AS efe,
                    {nominal_sql()} AS nominal
             FROM cmf_insurer_portfolio_fixed_income fi
             {canon_join()}
             WHERE fi.period IN ({lista})
               AND (ltrim(fi.rut_emisor, '0') IN ({eq_sql}) OR canon.rut_canon IN ({eq_sql})))
-        SELECT b.period, b.tenedor, b.ramo, b.mon, b.nemo, b.inf, b.fus, b.efe,
+        SELECT b.period, b.tenedor, b.ramo, b.mon, b.nemo, b.tipo, b.inf, b.fus, b.efe,
                {convertir_sql("b.nominal", "b.mon")} AS mm
         FROM b JOIN fx USING (period)
     """).fetchdf()
@@ -348,17 +389,27 @@ def issuer_holdings(db, rut: str, n_periods: int = 13) -> dict:
                 FROM cmf_mutual_fund_quota_values GROUP BY 1),
         h AS (
             SELECT p.period_year * 100 + p.period_month AS period, p.fund_run, p.fund_name,
+                   json_extract_string(p.raw_data, '$.FFM_6010400') AS tipo,
                    {_FFM_VAL} / 1e3 AS valor_mm_fondo
             FROM cmf_mutual_fund_portfolio p
             WHERE p.portfolio_type = 'NACI' AND {_FFM_RUT} IN ({eq_sql})
               AND p.period_year * 100 + p.period_month IN ({lista})
               AND {'FALSE' if rut in fusiones() else 'TRUE'})   -- un RUT absorbido no tiene tenencias propias
-        SELECT h.period, h.fund_run AS tenedor, any_value(h.fund_name) fondo, any_value(cur.agf) agf,
+        SELECT h.period, h.fund_run AS tenedor, h.tipo, any_value(h.fund_name) fondo, any_value(cur.agf) agf,
                COUNT(*) pos,
                SUM(h.valor_mm_fondo * CASE WHEN cur.currency = 'DOLAR' THEN fx.usd ELSE 1 END) mm
         FROM h JOIN fx USING (period) LEFT JOIN cur USING (fund_run)
-        GROUP BY 1, 2 ORDER BY 1, 2
+        GROUP BY 1, 2, 3 ORDER BY 1, 2
     """).fetchdf()
+    # Por tipo (último mes) y por fondo; `bloque` espera una fila por (período, fondo).
+    ffm_tipos, ffm_tipos_t = {}, {}
+    if not ffm.empty:
+        u = ffm[ffm.period == ffm.period.max()]
+        ffm_tipos = u.groupby("tipo", dropna=False).mm.sum().to_dict()
+        ffm_tipos_t = {t: ", ".join(str(c) for c in g.sort_values("mm", ascending=False).tipo.dropna().tolist())
+                       for t, g in u.groupby("tenedor")}
+        ffm = (ffm.groupby(["period", "tenedor"], as_index=False)
+               .agg(fondo=("fondo", "first"), agf=("agf", "first"), pos=("pos", "sum"), mm=("mm", "sum")))
 
     # --- AFP: por AFP y mes (cartera desagregada SP, por nombre de emisor) -------------------
     glosas = [g for g, r in mapa_emisores_sp(db).items() if r == rut]
@@ -377,12 +428,46 @@ def issuer_holdings(db, rut: str, n_periods: int = 13) -> dict:
               AND glosa IN ({','.join('?' * len(glosas))})
             GROUP BY 1, 2 ORDER BY 1, 2""", glosas).fetchdf()
 
+    # Tipo de instrumento (SP, último período). La SP informa, por (AFP, fondo, emisor), el monto
+    # total y el % del fondo en cada código de instrumento (ACC, DEB, BEF…), no el monto por
+    # código: se reparte el monto total en proporción a esos %. Es un reparto proporcional (el
+    # exacto no existe en la fuente) y el panel lo dice.
+    afp_tipos, afp_tipos_t = {}, {}
+    if afp is not None and not afp.empty:
+        ult_afp = int(afp.period.max())
+        det = db.conn.execute(f"""
+            SELECT afp, fondo, glosa, columna, metrica, valor FROM sp_cartera_detalle
+            WHERE tabla = 'emisor_nac' AND period = ? AND afp <> 'TOTAL'
+              AND glosa IN ({','.join('?' * len(glosas))})
+              AND (metrica = 'porcentaje' OR (columna = 'total' AND metrica = 'monto_pesos'))""",
+                              [ult_afp] + glosas).fetchdf()
+        for (a_, f_, g_), grp in det.groupby(["afp", "fondo", "glosa"]):
+            total_ = grp[(grp.columna == "total") & (grp.metrica == "monto_pesos")].valor.sum()
+            pesos = grp[grp.metrica == "porcentaje"].set_index("columna").valor
+            pesos = pesos[pesos > 0]
+            if not total_ or pesos.empty:
+                continue
+            for cod, w in pesos.items():
+                m = float(total_) * float(w) / float(pesos.sum())
+                afp_tipos[cod] = afp_tipos.get(cod, 0.0) + m
+                afp_tipos_t.setdefault(a_, {})[cod] = afp_tipos_t.setdefault(a_, {}).get(cod, 0.0) + m
+        afp_tipos_t = {a_: ", ".join(c for c, _ in sorted(d.items(), key=lambda kv: -kv[1]))
+                       for a_, d in afp_tipos_t.items()}
+
     from api.insurer_glossary import clean_company_name
     nombres_cias = dict(db.conn.execute("""
         SELECT rut, arg_max(company_name, period) FROM cmf_insurer_portfolio_control
         WHERE company_name <> '' GROUP BY 1""").fetchall())
 
-    def bloque(df, etiqueta, periodos=periodos):
+    seg_tipos, seg_tipos_t = {}, {}
+    if not seg_efe.empty:
+        u_ = seg_efe[seg_efe.period == seg_efe.period.max()]
+        seg_tipos = u_.groupby("tipo", dropna=False).mm.sum().to_dict()
+        seg_tipos_t = {t_: ", ".join(str(c) for c in g_.groupby("tipo").mm.sum()
+                                     .sort_values(ascending=False).index)
+                       for t_, g_ in u_.groupby("tenedor")}
+
+    def bloque(df, etiqueta, periodos=periodos, tipos=None, tipos_t=None):
         if df.empty:
             return None
         tot = df.groupby("period").agg(mm=("mm", "sum"), pos=("pos", "sum"),
@@ -417,7 +502,7 @@ def issuer_holdings(db, rut: str, n_periods: int = 13) -> dict:
                 sub = (agf.replace("ADMINISTRADORA GENERAL DE FONDOS", "AGF").title()
                        .replace("Agf", "AGF").replace("S.A.", "S.A."))
             filas.append({"tenedor": str(t), "nombre": nom, "sub": sub, "ult": v1, "prev": v0,
-                          "hace12": v12,
+                          "hace12": v12, "tipos": (tipos_t or {}).get(t, ""),
                           "d_prev": (v1 or 0) - (v0 or 0) if prev else None,
                           "d_12": (v1 or 0) - (v12 or 0) if hace12 else None})
         filas.sort(key=lambda f: -(f["ult"] or 0))
@@ -425,12 +510,15 @@ def issuer_holdings(db, rut: str, n_periods: int = 13) -> dict:
         for f in filas:
             f["peso"] = (f["ult"] or 0) / total_ult * 100 if total_ult else None
         return {"serie": serie, "tenedores": filas, "ult": ult, "prev": prev, "hace12": hace12,
+                "por_tipo": _por_tipo(tipos or {}),
                 "sin_fx": int(df["sin_fx"].sum()) if "sin_fx" in df else 0}
 
     return {"rut": rut, "nombre": nombre, "razon": razon, "tipo": tipo,
             "tipo_label": TIPO_LABEL.get(tipo or "", tipo),
-            "periodos": periodos, "seguros": bloque(seg, "seguros"), "ffmm": bloque(ffm, "ffmm"),
-            "afp": bloque(afp, "afp", afp_per) if afp is not None else None, "afp_glosas": glosas,
+            "periodos": periodos, "seguros": bloque(seg, "seguros", tipos=seg_tipos, tipos_t=seg_tipos_t),
+            "ffmm": bloque(ffm, "ffmm", tipos=ffm_tipos, tipos_t=ffm_tipos_t),
+            "afp": (bloque(afp, "afp", afp_per, tipos=afp_tipos, tipos_t=afp_tipos_t)
+                    if afp is not None else None), "afp_glosas": glosas,
             "reasignados": reasignados, "absorbidos": eq[1:], "sucesor": fusiones().get(rut)}
 
 

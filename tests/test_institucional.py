@@ -200,3 +200,43 @@ def test_endpoints_de_concentracion_por_emisor(real_db_readonly):
         assert r.status_code == 200, url
     assert 'class="emisor-det"' in c.get("/seguros/cartera/emisores?ramo=vida").text
     assert c.get("/seguros/cartera/emisores?limit=9999").status_code == 422     # tope de 500
+
+
+# --- Tipo de instrumento en la exposición por emisor (plan 19-nov, F5) ------------------------
+
+def test_catalogo_de_tipos_de_instrumento():
+    from db.cross import etiqueta_tipo, familia_de
+    assert familia_de("BE") == familia_de("DEB") == "Bono corporativo"
+    assert familia_de("acc") == "Acción"                       # sin distinguir mayúsculas
+    assert familia_de("MHA") == "Mutuo hipotecario endosable" and familia_de("CLEAS") == "Leasing inmobiliario"
+    assert familia_de("ZZZ") is None and familia_de(None) is None
+    assert etiqueta_tipo("ZZZ") == "ZZZ (sin glosa)"           # lo no documentado se muestra crudo
+    assert etiqueta_tipo(None) == "sin tipo informado"
+
+
+def test_tipos_empresas_cmpc_no_emite_bonos(db):
+    """Empresas CMPC solo tiene acciones; sus bonos son de Inversiones CMPC (DEB en la SP, BE en B.1)."""
+    from db.cross import issuer_holdings
+    emp = issuer_holdings(db, "90222000")
+    if emp["afp"]:
+        assert [t["codigo"] for t in emp["afp"]["por_tipo"]] == ["ACC"]
+    if emp["ffmm"]:
+        assert [t["codigo"] for t in emp["ffmm"]["por_tipo"]] == ["ACC"]
+    inv = issuer_holdings(db, "96596540")
+    if inv["seguros"]:
+        assert inv["seguros"]["por_tipo"][0]["codigo"] == "BE"
+    if inv["afp"]:
+        assert inv["afp"]["por_tipo"][0]["codigo"] == "DEB"
+
+
+def test_por_tipo_suma_el_total_del_bloque(db):
+    from db.cross import issuer_holdings
+    h = issuer_holdings(db, "97004000")                         # Banco de Chile: las tres fuentes
+    for k in ("seguros", "ffmm", "afp"):
+        b = h[k]
+        if not b:
+            continue
+        total = [s for s in b["serie"] if s["period"] == b["ult"]][0]["mm"]
+        assert abs(sum(t["mm"] for t in b["por_tipo"]) - total) / total < 0.005, k
+        assert abs(sum(t["pct"] for t in b["por_tipo"]) - 100) < 1e-6, k
+        assert all("tipos" in f for f in b["tenedores"])
