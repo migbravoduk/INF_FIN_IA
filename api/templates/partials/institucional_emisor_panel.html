@@ -65,6 +65,9 @@
 
 {% if not h %}
 {{ ui.vacio("No reconozco " ~ (("«" ~ q ~ "»") if q else "ese emisor") ~ ". Escribe un RUT o elige un nombre de la lista.") }}
+{% elif h.sucesor and not h.seguros and not h.ffmm and not h.afp %}
+{{ ui.vacio("El RUT " ~ h.rut ~ ((" (" ~ h.nombre ~ ")") if h.nombre else "") ~ " fue absorbido en una fusión: sus posiciones se suman a RUT " ~ h.sucesor ~ ".") }}
+<p class="nota"><a href="/inversion-institucional/emisor?rut={{ h.sucesor }}">Ver el emisor que lo absorbió (RUT {{ h.sucesor }})</a></p>
 {% elif not h.seguros and not h.ffmm and not h.afp %}
 {{ ui.vacio("RUT " ~ h.rut ~ ((" (" ~ h.nombre ~ ")") if h.nombre else "") ~ ": sin posiciones de seguros, fondos mutuos ni AFP en los últimos " ~ (h.periodos|length) ~ " meses.") }}
 {% else %}
@@ -85,6 +88,11 @@
 </div>
 
 {% set ra = h.reasignados %}
+{% if h.absorbidos %}
+<p class="nota">Incluye las posiciones que las carteras siguen informando con {{ 'el RUT' if h.absorbidos|length == 1 else 'los RUT' }}
+    {{ (h.absorbidos[:-1]|join(', ') ~ ' y ' ~ h.absorbidos[-1]) if h.absorbidos|length > 1 else h.absorbidos[0] }}, de {{ 'una entidad absorbida' if h.absorbidos|length == 1 else 'entidades absorbidas' }} por este emisor en una fusión
+    {%- if ra and ra.fusion_pos %} (seguros, {{ ra.period|string|mes_es }}: {{ ra.fusion_pos|es(0) }} {{ 'posición' if ra.fusion_pos == 1 else 'posiciones' }}, {{ ra.fusion_mm|es(0) }} MM$){% endif %}.</p>
+{% endif %}
 {% if ra and ra.entran_pos %}
 <p class="nota">Seguros, {{ ra.period|string|mes_es }}: {{ ra.entran_pos|es(0) }} {{ 'posición' if ra.entran_pos == 1 else 'posiciones' }}
     ({{ ra.entran_mm|es(0) }} MM$) que algunas compañías informaron con otro RUT se atribuyen a este emisor, porque es

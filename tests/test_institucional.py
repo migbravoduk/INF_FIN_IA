@@ -65,6 +65,24 @@ def test_nombres_curados(db):
     assert nombres.get("99514870") == "MetLife Chile Administradora de Mutuos Hipotecarios S.A."
 
 
+def test_fusiones_config():
+    from db.cross import fusion_sql, fusiones, ruts_equivalentes
+    f = fusiones()
+    assert f["76645030"] == "97023000" and f["97053000"] == "97080000"   # Itaú–Corpbanca, BICE–Security
+    assert set(ruts_equivalentes("97023000")) >= {"97023000", "76645030", "97041000"}
+    assert "WHEN '76645030' THEN '97023000'" in fusion_sql("x")
+
+
+def test_fusion_itau(db):
+    from db.cross import issuer_holdings
+    viejo = issuer_holdings(db, "76645030")
+    assert viejo["sucesor"] == "97023000" and not viejo["seguros"] and not viejo["ffmm"]
+    itau = issuer_holdings(db, "97023000")
+    if not itau["periodos"]:
+        pytest.skip("sin carteras")
+    assert "76645030" in itau["absorbidos"] and itau["seguros"]
+
+
 def test_cmpc_renta_fija_va_a_inversiones_cmpc(db):
     """Empresas CMPC no emite bonos: el BCMPC-S que EuroAmerica le atribuyó es de Inversiones CMPC."""
     from db.cross import issuer_holdings

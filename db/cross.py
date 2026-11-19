@@ -65,6 +65,45 @@ TIPOS_ORIGINADOR = ("MHA", "MHB", "CLEAS")
 _TIPOS_ORIG_SQL = "('MHA', 'MHB', 'CLEAS')"
 
 
+_FUSIONES: dict = {}
+
+
+def fusiones() -> dict[str, str]:
+    """{RUT absorbido: RUT sucesor}, de `config/entidades.yaml` (sección `fusiones`)."""
+    if "mapa" not in _FUSIONES:
+        from db.entities import load_config
+        cfg = load_config().get("fusiones") or {}
+        mapa = {}
+        for viejo, f in cfg.items():
+            viejo, nuevo = str(viejo).lstrip("0"), str(f["sucesor"]).lstrip("0")
+            if not (viejo.isdigit() and nuevo.isdigit()):
+                raise ValueError(f"fusión con RUT inválido: {viejo} → {nuevo}")
+            mapa[viejo] = nuevo
+        # Encadenadas (A → B → C): se resuelven al último sucesor.
+        for k in mapa:
+            seen = {k}
+            while mapa[k] in mapa and mapa[k] not in seen:
+                seen.add(mapa[k])
+                mapa[k] = mapa[mapa[k]]
+        _FUSIONES["mapa"] = mapa
+    return _FUSIONES["mapa"]
+
+
+def fusion_sql(expr: str) -> str:
+    """`expr` (un RUT sin ceros a la izquierda) pasado por la tabla de fusiones."""
+    mapa = fusiones()
+    if not mapa:
+        return expr
+    casos = " ".join(f"WHEN '{v}' THEN '{n}'" for v, n in sorted(mapa.items()))
+    return f"(CASE {expr} {casos} ELSE {expr} END)"
+
+
+def ruts_equivalentes(rut: str) -> list[str]:
+    """El RUT y los que absorbió: las posiciones informadas con cualquiera de ellos son suyas."""
+    rut = str(rut).lstrip("0")
+    return [rut] + sorted(v for v, n in fusiones().items() if n == rut)
+
+
 def emisor_canonico_cte(periods_sql: str, rut: str | None = None) -> str:
     """
     CTE `canon(period, nemo, rut_canon)` con el emisor canónico de cada nemotécnico de B.1
@@ -76,16 +115,18 @@ def emisor_canonico_cte(periods_sql: str, rut: str | None = None) -> str:
     """
     filtro = ""
     if rut:
-        if not str(rut).isdigit():
+        ruts = ruts_equivalentes(rut)
+        if not all(r.isdigit() for r in ruts):
             raise ValueError(f"RUT inválido: {rut!r}")
+        lista = ", ".join(f"'{r}'" for r in ruts)
         filtro = f"""AND upper(trim(fi.nemotecnico)) IN (
                 SELECT upper(trim(x.nemotecnico)) FROM cmf_insurer_portfolio_fixed_income x
-                WHERE x.period IN (SELECT period FROM canon_p) AND ltrim(x.rut_emisor, '0') = '{rut}')"""
+                WHERE x.period IN (SELECT period FROM canon_p) AND ltrim(x.rut_emisor, '0') IN ({lista}))"""
     return f"""
         canon_p AS ({periods_sql}),
         canon_n AS (
-            SELECT fi.period, upper(trim(fi.nemotecnico)) AS nemo, ltrim(fi.rut_emisor, '0') AS rut,
-                   COUNT(*) AS n
+            SELECT fi.period, upper(trim(fi.nemotecnico)) AS nemo,
+                   {fusion_sql("ltrim(fi.rut_emisor, '0')")} AS rut, COUNT(*) AS n
             FROM cmf_insurer_portfolio_fixed_income fi
             WHERE fi.period IN (SELECT period FROM canon_p)
               AND fi.tipo_instrumento NOT IN {_TIPOS_ORIG_SQL}
@@ -99,7 +140,7 @@ def emisor_canonico_cte(periods_sql: str, rut: str | None = None) -> str:
             WHERE (period, nemo) IN (SELECT period, nemo FROM canon_n GROUP BY 1, 2 HAVING COUNT(*) > 1)),
         canon_f AS (
             SELECT p.period_year * 100 + p.period_month AS period, upper(trim({_FFM_NEMO})) AS nemo,
-                   {_FFM_RUT} AS rut, COUNT(*) AS n_ffm
+                   {fusion_sql(_FFM_RUT)} AS rut, COUNT(*) AS n_ffm
             FROM cmf_mutual_fund_portfolio p
             WHERE p.portfolio_type = 'NACI'
               AND p.period_year * 100 + p.period_month IN (SELECT DISTINCT period FROM canon_m)
@@ -121,9 +162,11 @@ def canon_join(alias: str = "fi") -> str:
             f"AND {alias}.tipo_instrumento NOT IN {_TIPOS_ORIG_SQL}")
 
 
-def emisor_efectivo(alias: str = "fi") -> str:
-    """RUT del emisor que se usa al leer B.1: el canónico si existe, si no el informado."""
-    return f"coalesce(canon.rut_canon, ltrim({alias}.rut_emisor, '0'))"
+def emisor_efectivo(alias: str = "fi", con_fusiones: bool = True) -> str:
+    """RUT del emisor que se usa al leer B.1: el canónico si existe, si no el informado; y si
+    ese RUT fue absorbido (sección `fusiones` de entidades.yaml), el del sucesor."""
+    base = f"coalesce(canon.rut_canon, ltrim({alias}.rut_emisor, '0'))"
+    return fusion_sql(base) if con_fusiones else base
 
 
 def issuer_options(db, limit: int = 600) -> list[dict]:
@@ -143,7 +186,7 @@ def issuer_options(db, limit: int = 600) -> list[dict]:
             {canon_join()}
             WHERE fi.period = ? AND fi.rut_emisor IS NOT NULL GROUP BY 1),
         ffm AS (
-            SELECT {_FFM_RUT} rut, COUNT(*) n FROM cmf_mutual_fund_portfolio p
+            SELECT {fusion_sql(_FFM_RUT)} rut, COUNT(*) n FROM cmf_mutual_fund_portfolio p
             WHERE p.portfolio_type = 'NACI' AND p.period_year * 100 + p.period_month = ?
             GROUP BY 1),
         fondos AS (SELECT fund_run rut, arg_max(fund_name, date) nombre
@@ -199,32 +242,36 @@ def issuer_holdings(db, rut: str, n_periods: int = 13) -> dict:
            ORDER BY 1 DESC LIMIT ?""", [n_periods]).fetchall()]
     periodos = sorted(set(seg_per) | set(ffm_per))[-n_periods:]
     if not periodos:
-        return {"rut": rut, "nombre": nombre, "periodos": [], "seguros": None, "ffmm": None}
+        return {"rut": rut, "nombre": nombre, "periodos": [], "seguros": None, "ffmm": None,
+                "sucesor": fusiones().get(rut)}
     lista = ",".join(str(int(p)) for p in periodos)
     meses = f"SELECT unnest([{lista}]) AS period"
+    eq = ruts_equivalentes(rut)                    # el RUT y los que absorbió (fusiones)
+    eq_sql = ", ".join(f"'{r}'" for r in eq)
 
     # --- Seguros: por compañía y mes ---------------------------------------------------
-    # Posiciones donde este RUT es el emisor informado o el canónico (F3 del plan del 19-nov):
-    # `efe` es el que se usa; `inf` es lo que escribió la compañía.
+    # Posiciones donde este RUT (o uno que absorbió) es el emisor informado o el canónico:
+    # `efe` es el que se usa; `inf` es lo que escribió la compañía; `fus` = `inf` tras fusiones.
     seg_all = db.conn.execute(f"""
         WITH {_fx_cte(meses)},
         {emisor_canonico_cte(meses, rut=rut)},
         b AS (
             SELECT fi.period, fi.rut AS tenedor, fi.insurance_type AS ramo,
                    fi.unidad_monetaria AS mon, upper(trim(fi.nemotecnico)) AS nemo,
-                   ltrim(fi.rut_emisor, '0') AS inf, {emisor_efectivo()} AS efe,
+                   ltrim(fi.rut_emisor, '0') AS inf, {fusion_sql("ltrim(fi.rut_emisor, '0')")} AS fus,
+                   {emisor_efectivo()} AS efe,
                    CASE WHEN coalesce(fi.valor_nominal_vig, 0) > 0 THEN fi.valor_nominal_vig
                         ELSE fi.valor_nominal END AS nominal
             FROM cmf_insurer_portfolio_fixed_income fi
             {canon_join()}
             WHERE fi.period IN ({lista})
-              AND (ltrim(fi.rut_emisor, '0') = ? OR canon.rut_canon = ?))
-        SELECT b.period, b.tenedor, b.ramo, b.mon, b.nemo, b.inf, b.efe,
+              AND (ltrim(fi.rut_emisor, '0') IN ({eq_sql}) OR canon.rut_canon IN ({eq_sql})))
+        SELECT b.period, b.tenedor, b.ramo, b.mon, b.nemo, b.inf, b.fus, b.efe,
                CASE b.mon WHEN 'UF' THEN b.nominal * fx.uf
                           WHEN '$$' THEN b.nominal
                           WHEN 'PROM' THEN b.nominal * fx.usd END / 1e6 AS mm
         FROM b JOIN fx USING (period)
-    """, [rut, rut]).fetchdf()
+    """).fetchdf()
     seg_efe = seg_all[seg_all.efe == rut]
     if seg_efe.empty:
         seg = seg_efe.assign(pos=0, sin_fx=0)[["period", "tenedor", "ramo", "pos", "mm", "sin_fx"]]
@@ -234,20 +281,24 @@ def issuer_holdings(db, rut: str, n_periods: int = 13) -> dict:
                .agg(ramo=("ramo", "first"), pos=("mon", "size"), mm=("mm", "sum"), sin_fx=("sin_fx", "sum"))
                .sort_values(["period", "tenedor"]))
 
-    # Reasignaciones del último mes de seguros: lo que las compañías informaron con otro RUT y la
-    # regla atribuye a este emisor (entran), y lo informado con este RUT que va a otro (salen).
+    # Reasignaciones del último mes de seguros: lo informado con el RUT de un emisor que este
+    # absorbió (fusion), lo que la regla de mayoría le atribuye aunque se informó con otro RUT
+    # (entran), y lo informado con este RUT que va a otro emisor (salen).
     reasignados = None
     if not seg_all.empty:
         ult_seg = int(seg_all.period.max())
         u = seg_all[seg_all.period == ult_seg]
-        ent_ = u[(u.efe == rut) & (u.inf != rut)]
+        fus_ = u[(u.efe == rut) & (u.inf != rut) & (u.fus == rut)]
+        ent_ = u[(u.efe == rut) & (u.fus != rut)]
         sal_ = u[(u.inf == rut) & (u.efe != rut)]
-        if len(ent_) or len(sal_):
+        if len(fus_) or len(ent_) or len(sal_):
             destinos = sal_.groupby("efe").mm.sum().sort_values(ascending=False)
             nombres_d = dict(db.conn.execute(
                 "SELECT rut, coalesce(nombre_corto, nombre_canonico) FROM dim_entidad").fetchall())
             reasignados = {
                 "period": ult_seg,
+                "fusion_pos": int(len(fus_)), "fusion_mm": float(fus_.mm.sum()),
+                "fusion_de": sorted(fus_.inf.unique().tolist()),
                 "entran_pos": int(len(ent_)), "entran_mm": float(ent_.mm.sum()),
                 "entran_nemos": sorted(ent_.nemo.unique().tolist())[:8],
                 "salen_pos": int(len(sal_)), "salen_mm": float(sal_.mm.sum()),
@@ -265,14 +316,15 @@ def issuer_holdings(db, rut: str, n_periods: int = 13) -> dict:
             SELECT p.period_year * 100 + p.period_month AS period, p.fund_run, p.fund_name,
                    {_FFM_VAL} / 1e3 AS valor_mm_fondo
             FROM cmf_mutual_fund_portfolio p
-            WHERE p.portfolio_type = 'NACI' AND {_FFM_RUT} = ?
-              AND p.period_year * 100 + p.period_month IN ({lista}))
+            WHERE p.portfolio_type = 'NACI' AND {_FFM_RUT} IN ({eq_sql})
+              AND p.period_year * 100 + p.period_month IN ({lista})
+              AND {'FALSE' if rut in fusiones() else 'TRUE'})   -- un RUT absorbido no tiene tenencias propias
         SELECT h.period, h.fund_run AS tenedor, any_value(h.fund_name) fondo, any_value(cur.agf) agf,
                COUNT(*) pos,
                SUM(h.valor_mm_fondo * CASE WHEN cur.currency = 'DOLAR' THEN fx.usd ELSE 1 END) mm
         FROM h JOIN fx USING (period) LEFT JOIN cur USING (fund_run)
         GROUP BY 1, 2 ORDER BY 1, 2
-    """, [rut]).fetchdf()
+    """).fetchdf()
 
     # --- AFP: por AFP y mes (cartera desagregada SP, por nombre de emisor) -------------------
     glosas = [g for g, r in mapa_emisores_sp(db).items() if r == rut]
@@ -345,7 +397,7 @@ def issuer_holdings(db, rut: str, n_periods: int = 13) -> dict:
             "tipo_label": TIPO_LABEL.get(tipo or "", tipo),
             "periodos": periodos, "seguros": bloque(seg, "seguros"), "ffmm": bloque(ffm, "ffmm"),
             "afp": bloque(afp, "afp", afp_per) if afp is not None else None, "afp_glosas": glosas,
-            "reasignados": reasignados}
+            "reasignados": reasignados, "absorbidos": eq[1:], "sucesor": fusiones().get(rut)}
 
 
 def common_issuers(db, limit: int = 40) -> dict:
@@ -458,5 +510,7 @@ def mapa_emisores_sp(db) -> dict[str, str]:
             mapa[g] = manual[n]
         elif len(por_nombre.get(n, ())) == 1:      # nombre ambiguo (dos RUT): no se asigna
             mapa[g] = next(iter(por_nombre[n]))
+    fus = fusiones()                               # un emisor absorbido se suma a su sucesor
+    mapa = {g: fus.get(r, r) for g, r in mapa.items()}
     _MAPA_SP.update(clave=clave, mapa=mapa)
     return mapa

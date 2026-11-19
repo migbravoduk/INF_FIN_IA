@@ -47,7 +47,7 @@ No hay F3: lo hizo Opus antes del plan (sección «Ya hecho»); la numeración s
 5. **Contrato de plantillas:** `scripts/ui_guard.py check` debe decir «Contrato intacto».
    - Si una fase agrega ids, `name=` o `hx-*` nuevos, regenera la línea base con `scripts/ui_guard.py snapshot` en esa misma fase y dilo en el commit.
    - No se borra ni se renombra nada existente.
-6. **Tests:** `pytest -q` debe pasar entero. Hoy son 104; cada fase suma los suyos. Puedes
+6. **Tests:** `pytest -q` debe pasar entero. Hoy son 106; cada fase suma los suyos. Puedes
    editar `tests/`. Los tests que leen la base real usan el fixture `real_db_readonly`, que se
    salta si la base está tomada.
 7. **Presentación:**
@@ -133,7 +133,7 @@ aparezca expuesta en renta fija a Empresas CMPC?»**
 ## F0 — Preparación y línea base
 
 1. `git status` limpio y en `feature/web-api-skeleton`.
-2. Levanta `:8001`. Corre `pytest -q` (104 tests) y `ui_guard.py check`.
+2. Levanta `:8001`. Corre `pytest -q` (106 tests) y `ui_guard.py check`.
 3. Toma la línea base:
 
    ```
@@ -223,7 +223,7 @@ señala la forma de la curva.
   - `issuer_options`, `issuer_holdings` (bloque seguros) y `common_issuers`;
   - `get_insurer_issuer_exposure` y `count_insurer_issuers` (`db/repos/fecu.py`).
 - `issuer_holdings` devuelve `reasignados` (`entran_*` / `salen_*` del último mes de seguros). `partials/institucional_emisor_panel.html` lo dice en una nota.
-- Tests en `tests/test_institucional.py`: regla de mayoría, empate por fondos mutuos, originadores, nombres curados, caso CMPC. En total 104 tests.
+- Tests en `tests/test_institucional.py`: regla de mayoría, empate por fondos mutuos, originadores, nombres curados, caso CMPC y fusiones. En total 106 tests.
 
 **Medición (202609).**
 - Se reasignan 612 posiciones de 177 nemotécnicos: 1,23 billones de pesos a valor par, el 2,4% de los 52 billones de B.1.
@@ -231,9 +231,9 @@ señala la forma de la curva.
 
   | Informado | Canónico | Monto | Lectura |
   |---|---|---|---|
-  | 97023000 Itaú | 76645030 (sin nombre) | 209.839 MM$ | Itaú, ver abajo |
-  | 76645030 | 97023000 Itaú | 149.428 MM$ | Itaú, ver abajo |
-  | 97080000 BICE | 97053000 Security | 143.292 MM$ | fusión ya documentada |
+  | 97023000 Itaú | 76645030 | 209.839 MM$ | Itaú–Corpbanca, ya unificado por fusión |
+  | 76645030 | 97023000 Itaú | 149.428 MM$ | ídem |
+  | 97080000 BICE | 97053000 Security | 143.292 MM$ | BICE–Security, ya unificado por fusión |
   | 89900400 | 76000739 ESVAL | 104.125 MM$ | |
   | 96920010 | 76496130 Costanera Norte | 95.253 MM$ | |
   | 96579330 | 76833300 ESSBIO | 75.381 MM$ | |
@@ -241,7 +241,13 @@ señala la forma de la curva.
   | 76411321 CGE | 90042000 CGE | 42.751 MM$ | los dos RUT de CGE |
   | 97018000 Scotiabank | 97051000 y 97032000 | 29.206 y 25.866 MM$ | bonos `DES…` y `UBBV…` cuyos tenedores siguen informando el RUT antiguo |
 
-- **Itaú:** los dos RUT se reparten sus bonos por nemotécnico. Para unificarlos falta confirmar qué es 76645030. Va a la nota de cierre como pregunta al usuario; no se agregan fusiones sin evidencia.
+- **Fusiones** (`config/entidades.yaml`, sección `fusiones:`, RUT absorbido → sucesor):
+  - 76645030 y 97041000 → 97023000 (Itaú–Corpbanca; sobrevive Itaú Chile, confirmado por el usuario el 19-nov). Itaú suma 113 posiciones de seguros (539.870 MM$) que venían con los RUT antiguos.
+  - 97053000 → 97080000 (BICE absorbió a Security, nov-2025). BICE suma 810 posiciones (286.775 MM$).
+  - Se aplican en `emisor_efectivo` y también en la votación de mayoría, en los fondos mutuos (`issuer_options`, `issuer_holdings`) y en el cruce de nombres de la SP (`mapa_emisores_sp`).
+  - Funciones: `fusiones()`, `fusion_sql(expr)` y `ruts_equivalentes(rut)`.
+  - El panel de un RUT absorbido remite al sucesor; el del sucesor dice qué RUT absorbidos incluye.
+  - **Por confirmar con el usuario:** Scotiabank (97018000) y los RUT 97032000 (ex BBVA) y 97051000 (ex Banco del Desarrollo). Sus bonos `UBBV…` y `DES…` se informan con los dos RUT. No se agrega la fusión sin su confirmación.
 
 **Originadores de mutuos sin nombre** (para preguntar al usuario en la nota de cierre). Son 25 RUT
 de `MHA`/`MHB`; los de leasing (`CLEAS`) ya tienen nombre. Los mayores en 202609, con número de
@@ -617,7 +623,7 @@ una fecha (`class="corte"` aparece al menos 4 veces más que antes).
 ## F12 — Cierre
 
 1. Este archivo: tabla de estado con commits y una «Nota de cierre» con:
-   - las preguntas al usuario de la sección «Ya hecho»: originadores de mutuos sin nombre y RUT 76645030 de Itaú;
+   - las preguntas al usuario de la sección «Ya hecho»: originadores de mutuos sin nombre y fusiones de Scotiabank por confirmar;
    - la cobertura de seguros antes y después (F7);
    - el número de empresas con Z'' (F8);
    - el resultado de F11.

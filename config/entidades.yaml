@@ -53,6 +53,17 @@ emisores:
   # PENDIENTE: 77844703 (bonos BTBD… y depósitos FNTBD…). Parece un banco nuevo, pero no está
   # en cmf_bank_statements; confirmar en el registro de la CMF antes de nombrarlo.
 
+# Fusiones: RUT absorbido → RUT que sobrevive. Algunas carteras siguen informando bonos con el
+# RUT de un emisor que ya no existe; al leer (db/cross.emisor_efectivo) esas posiciones se suman
+# al sucesor. La tabla de origen no cambia. Mismo criterio de evidencia que el resto del archivo.
+fusiones:
+  # Itaú–Corpbanca: sobrevive Itaú Chile, que la CMF (bank_code 039) y los fondos mutuos informan
+  # con 97023000. En B.1 202609, 76645030 solo trae nemotécnicos BITA…/UITA…/BCOR…, los mismos de 97023000.
+  "76645030": {sucesor: "97023000", evidencia: "usuario 19-nov-2026 (fusión Itaú–Corpbanca); nemotécnicos BITA/UITA/BCOR"}
+  "97041000": {sucesor: "97023000", evidencia: "nemotécnicos BITA…/FNIT…/BCOR… iguales a 97023000 (ver emisores)"}
+  # BICE absorbió a Security (nov-2025): ver la nota del banco 028 arriba.
+  "97053000": {sucesor: "97080000", evidencia: "fusión BICE–Security nov-2025; bonos BSEC… vigentes con el RUT de BICE"}
+
 # AFP: los valores cuota de la SP las identifican por nombre (`afp_name`), sin RUT.
 # Evidencia (2026-11-17): la cartera desagregada de la SP (XML mensual, collectors/sp_cartera_detalle)
 # trae <afp><rut><numero>…</numero><dv>…</dv></rut><nombre>…</nombre> en cada cuadro por AFP.
