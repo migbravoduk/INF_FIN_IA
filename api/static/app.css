@@ -342,6 +342,8 @@ input[type="checkbox"] { accent-color: var(--accent); width: 16px; height: 16px;
 .stat-delta.pos { color: var(--pos); }  .stat-delta.neg { color: var(--neg); }
 .stat-ctx { font-size: var(--fs-sm); color: var(--muted); line-height: 1.45; }
 .stat > .corte { margin: auto 0 0; padding-top: var(--sp-2); align-self: flex-start; }
+/* La etiqueta «dato a … · fuente» puede ser larga: en una tarjeta angosta salta de línea en vez de salirse. */
+.stat > .corte { white-space: normal; max-width: 100%; border-radius: var(--r); }
 .stats--compactas .stat { padding: var(--sp-3); }
 .stats--compactas .stat-valor { font-size: var(--fs-xl); }
 

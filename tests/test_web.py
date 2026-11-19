@@ -157,3 +157,35 @@ def test_nombre_siglas_con_guion():
     assert _nombre("CMB-PRIME ADMINISTRADORA GENERAL DE FONDOS S.A.") == "CMB-Prime Administradora General de Fondos S.A."
     assert _nombre("SANTANDER-CHILE") == "Santander-Chile"
     assert _nombre("MBI ADMINISTRADORA GENERAL DE FONDOS S.A.") == "MBI Administradora General de Fondos S.A."
+
+
+# --- Portada: indicadores de mercado con fecha y fuente (plan 19-nov, F10) ------------------
+
+def test_portada_y_tarjetas_responden(client):
+    assert client.get("/").status_code == 200
+    assert client.get("/api/kpi/overview/cards").status_code == 200
+
+
+def test_tarjetas_originales_muestran_fecha_y_fuente(client):
+    html = client.get("/api/kpi/overview/cards").text
+    bloques = {b.split("</div>")[0].strip(): b for b in html.split('<div class="stat">')[1:]}
+    for etiqueta in ("PIB (var. anual)", "IMACEC (var. anual)", "IPC a 12 meses", "USD/CLP"):
+        bloque = next(b for k, b in bloques.items() if k.startswith(etiqueta.split(" (")[0]) or etiqueta in k)
+        assert 'class="corte"' in bloque and "Banco Central" in bloque, etiqueta
+
+
+def test_indicadores_de_mercado_nuevos(client, real_db_readonly):
+    mk = real_db_readonly.get_overview_kpis()["mercado2"]
+    for clave in ("tpm", "pendiente", "inflacion_esperada", "eee_ipc_11m", "spread_depositos", "cobre", "ipsa",
+                  "ust_10y", "fed", "desempleo"):
+        assert clave in mk                                  # (None si la serie faltara, pero la clave existe)
+    ok = [c for c, v in mk.items() if v]
+    assert len(ok) >= 8 and all(mk[c]["fecha"] for c in ok)     # cada uno con su propia fecha
+    html = client.get("/api/kpi/overview/cards").text
+    for texto in ("Tasa de política monetaria", "Pendiente swap pesos", "Inflación esperada a 2 años", "Cobre", "IPSA",
+                  "Desempleo", "Depósitos − swap a 90 días", "Tasa de la Reserva Federal"):
+        assert texto in html, texto
+    # La API JSON conserva las claves anteriores y suma las nuevas (sin NaN: debe ser JSON válido).
+    j = client.get("/api/kpi/overview").json()
+    assert {"macro", "banca", "afp_returns", "mercado", "curva_soberana", "tasas_colocacion", "mercado2"} <= set(j)
+    assert j["macro"]["fechas"]["usd"]
