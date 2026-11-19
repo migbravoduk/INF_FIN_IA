@@ -354,6 +354,7 @@ input[type="checkbox"] { accent-color: var(--accent); width: 16px; height: 16px;
 .viz-cuerpo { margin-top: auto; min-width: 0; }
 .viz-sm { height: var(--viz-sm); }  .viz-md { height: var(--viz-md); }  .viz-lg { height: var(--viz-lg); }
 .viz .chart { background: transparent; border: 0; border-radius: 0; padding: 0; }
+.viz-lee { font-size: var(--fs-xs); color: var(--muted); margin: var(--sp-2) 0 0; max-width: 75ch; }
 .viz-pie { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem 0.8rem; margin-top: var(--sp-3);
            padding-top: var(--sp-2); border-top: 1px dashed var(--line); font-size: var(--fs-xs); color: var(--muted); }
 .viz-pie .corte { margin-left: auto; }

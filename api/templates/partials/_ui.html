@@ -39,13 +39,14 @@
 {%- endmacro %}
 
 {# Tarjeta de gráfico. Conserva el id del div del gráfico. alto: sm | md | lg (tokens). #}
-{% macro viz(id, titulo, sub=none, fuente=none, fecha=none, alto="md", nota=none, clase="") -%}
+{% macro viz(id, titulo, sub=none, fuente=none, fecha=none, alto="md", nota=none, clase="", lee=none) -%}
 <figure class="viz {{ clase }}">
     <figcaption class="viz-head">
         <span class="viz-titulo">{{ titulo }}</span>
         {% if sub %}<span class="viz-sub">{{ sub }}</span>{% endif %}
     </figcaption>
     <div id="{{ id }}" class="chart viz-cuerpo viz-{{ alto }}" role="img" aria-label="{{ titulo|striptags }}"></div>
+    {% if lee %}<p class="viz-lee">{{ lee }}</p>{% endif %}
     {% if fuente or fecha or nota %}
     <div class="viz-pie">{% if nota %}<span>{{ nota }}</span>{% endif %}{% if fuente %}<span>Fuente: {{ fuente }}</span>{% endif %}{{ corte(fecha) if fecha }}</div>
     {% endif %}
